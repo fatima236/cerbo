@@ -1,0 +1,33 @@
+package com.example.cerbo.entity;
+
+import com.example.cerbo.entity.enums.NotificationStatus;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "notifications")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Notification {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String content;
+
+    private LocalDateTime sentDate;
+
+    @Enumerated(EnumType.STRING)
+    private NotificationStatus status = NotificationStatus.NON_LUE;
+
+    @ManyToOne
+    @JoinColumn(name = "recipient_id", nullable = false)
+    private User recipient;
+}
