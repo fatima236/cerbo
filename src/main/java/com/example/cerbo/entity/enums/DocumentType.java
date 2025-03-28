@@ -1,6 +1,6 @@
 package com.example.cerbo.entity.enums;
 
-public enum TypeDocument {
+public enum DocumentType {
     DESCRIPTIF_PROJET,
     CONSIDERATION_ETHIQUE,
     FICHE_INFORMATION_FRANCAIS,

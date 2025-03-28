@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "evenements")
+@Table(name = "events")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,28 +21,26 @@ public class Event {
     private Long id;
 
     @Column(nullable = false)
-    private String titre;
+    private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false)
-    private LocalDateTime dateDebut;
+    private LocalDateTime startDate;
 
-    private LocalDateTime dateFin;
+    private LocalDateTime endDate;
 
-    private String lieu;
+    private String location;
 
-    private String type; // Conférence, Séminaire, Webinaire, etc.
+    private String type; // Conference, Seminar, Webinar, etc.
 
-    private Integer nombrePlaces;
+    private Integer numberOfSeats;
 
-    private Boolean inscriptionRequise = false;
+    private Boolean registrationRequired = false;
 
+    private String organizer;
 
-    private String organisateur;
-
-
-    @OneToMany(mappedBy = "evenement", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Document> documents = new ArrayList<>();
 }

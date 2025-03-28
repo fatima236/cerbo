@@ -1,8 +1,6 @@
 package com.example.cerbo.entity;
 
-
-
-import com.example.cerbo.entity.enums.StatutNotification;
+import com.example.cerbo.entity.enums.NotificationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,14 +20,14 @@ public class Notification {
     private Long id;
 
     @Column(nullable = false)
-    private String contenu;
+    private String content;
 
-    private LocalDateTime dateEnvoi;
+    private LocalDateTime sentDate;
 
     @Enumerated(EnumType.STRING)
-    private StatutNotification statut = StatutNotification.NON_LUE;
+    private NotificationStatus status = NotificationStatus.NON_LUE;
 
     @ManyToOne
-    @JoinColumn(name = "destinataire_id", nullable = false)
-    private User destinataire;
+    @JoinColumn(name = "recipient_id", nullable = false)
+    private User recipient;
 }

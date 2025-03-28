@@ -1,6 +1,5 @@
 package com.example.cerbo.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,36 +10,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "formations")
+@Table(name = "trainings")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Formation {
+public class Training {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String titre;
+    private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false)
-    private LocalDateTime dateDebut;
+    private LocalDateTime startDate;
 
-    private LocalDateTime dateFin;
+    private LocalDateTime endDate;
 
-    private String lieu;
+    private String location;
 
-    private Integer nombrePlaces;
+    private Integer availableSeats;
 
-    private Boolean inscriptionRequise = false;
+    private Boolean registrationRequired = false;
 
+    private String organizer;
 
-    private String organisateur;
-
-    @OneToMany(mappedBy = "formation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "training", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Document> documents = new ArrayList<>();
 }

@@ -1,6 +1,5 @@
 package com.example.cerbo.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,11 +12,11 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "reunions")
+@Table(name = "meetings")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Reunion {
+public class Meeting {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,20 +26,20 @@ public class Reunion {
 
     @ManyToMany
     @JoinTable(
-            name = "reunion_membres",
-            joinColumns = @JoinColumn(name = "reunion_id"),
-            inverseJoinColumns = @JoinColumn(name = "utilisateur_id")
+            name = "meeting_members",
+            joinColumns = @JoinColumn(name = "meeting_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> membres = new HashSet<>();
+    private Set<User> members = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
-            name = "reunion_projets",
-            joinColumns = @JoinColumn(name = "reunion_id"),
-            inverseJoinColumns = @JoinColumn(name = "projet_id")
+            name = "meeting_projects",
+            joinColumns = @JoinColumn(name = "meeting_id"),
+            inverseJoinColumns = @JoinColumn(name = "project_id")
     )
-    private List<Project> projetsDiscutes = new ArrayList<>();
+    private List<Project> discussedProjects = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
-    private String pv;
+    private String minutes;
 }

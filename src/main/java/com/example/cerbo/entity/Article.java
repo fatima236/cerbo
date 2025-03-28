@@ -21,22 +21,21 @@ public class Article {
     private Long id;
 
     @Column(nullable = false)
-    private String titre;
+    private String title;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    private String contenu;
+    private String content;
 
     @Column(columnDefinition = "TEXT")
-    private String resume;
+    private String summary;
 
-    private LocalDateTime datePublication;
+    private LocalDateTime publicationDate;
 
-    private Boolean publie = false;
+    private Boolean published = false;
 
-
-    private String auteur;
+    private String author;
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Document> pieceJointes = new ArrayList<>();
+    private List<Document> attachments = new ArrayList<>();
 
 }

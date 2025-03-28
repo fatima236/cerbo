@@ -1,6 +1,6 @@
 package com.example.cerbo.entity;
 
-import com.example.cerbo.entity.enums.ProjectStatut;
+import com.example.cerbo.entity.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "projets")
+@Table(name = "projects")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,42 +27,42 @@ public class Project {
     private String reference;
 
     @Column(nullable = false)
-    private String titre;
+    private String title;
 
     @Column(nullable = false)
-    private LocalDateTime dateSoumission;
+    private LocalDateTime submissionDate;
 
     @Enumerated(EnumType.STRING)
-    private ProjectStatut etat = ProjectStatut.EN_COURS;
+    private ProjectStatus status = ProjectStatus.EN_COURS;
 
-    private String dureeEtude;
+    private String studyDuration;
 
-    private String populationCible;
-    private String typeConsentement;
-    private Boolean prelevement;
-    private String typePrelevement;
-    private Integer quantitePrelevement;
-    private String sourceFinancement;
-    private String programmeFinancement;
+    private String targetPopulation;
+    private String consentType;
+    private Boolean sampling;
+    private String sampleType;
+    private Integer sampleQuantity;
+    private String fundingSource;
+    private String fundingProgram;
 
     @ManyToOne
-    @JoinColumn(name = "investigateur_id", nullable = false)
-    private User investigateurPrincipal;
+    @JoinColumn(name = "principal_investigator_id", nullable = false)
+    private User principalInvestigator;
 
     @ManyToMany
     @JoinTable(
-            name = "projet_evaluateurs",
-            joinColumns = @JoinColumn(name = "projet_id"),
-            inverseJoinColumns = @JoinColumn(name = "evaluateur_id")
+            name = "project_reviewers",
+            joinColumns = @JoinColumn(name = "project_id"),
+            inverseJoinColumns = @JoinColumn(name = "reviewer_id")
     )
-    private Set<User> evaluateurs = new HashSet<>();
+    private Set<User> reviewers = new HashSet<>();
 
-    @OneToMany(mappedBy = "projet", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Document> documents = new ArrayList<>();
 
-    @OneToMany(mappedBy = "projet", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Remarque> remarques = new ArrayList<>();
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Remark> remarks = new ArrayList<>();
 
-    @OneToMany(mappedBy = "projet", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Rapport> rapports = new ArrayList<>();
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Report> reports = new ArrayList<>();
 }

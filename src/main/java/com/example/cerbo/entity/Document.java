@@ -1,7 +1,6 @@
 package com.example.cerbo.entity;
 
-
-import com.example.cerbo.entity.enums.TypeDocument;
+import com.example.cerbo.entity.enums.DocumentType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,29 +20,29 @@ public class Document {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    private TypeDocument type;
+    private DocumentType type;
 
-    private String nom;
-    private String chemin;
+    private String name;
+    private String path;
     private String contentType;
-    private Long taille;
+    private Long size;
 
-    private LocalDateTime dateCreation;
-    private LocalDateTime dateModification;
+    private LocalDateTime creationDate;
+    private LocalDateTime modificationDate;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
-    private Project projet;
+    private Project project;
 
     @ManyToOne
-    @JoinColumn(name = "formation_id")
-    private Formation formation;
+    @JoinColumn(name = "training_id")
+    private Training training;
 
     @ManyToOne
     @JoinColumn(name = "article_id")
     private Article article;
 
     @ManyToOne
-    @JoinColumn(name = "evenement_id")
-    private Event evenement;
+    @JoinColumn(name = "event_id")
+    private Event event;
 }

@@ -1,6 +1,6 @@
 package com.example.cerbo.entity.enums;
 
-public enum ProjectStatut {
+public enum ProjectStatus {
     EN_COURS,
     REVISION_MINEURE,
     REVISION_MAJEURE,
