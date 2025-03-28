@@ -5,34 +5,18 @@ import com.example.cerbo.dto.LoginRequest;
 import com.example.cerbo.dto.SignupRequest;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.service.UserService;
+import com.example.cerbo.dto.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-import com.example.cerbo.entity.User;
-import com.example.cerbo.dto.JwtTokenUtil;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -42,6 +26,15 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenUtil jwtTokenUtil;
 
     @PostMapping("/request-investigateur")
     public ResponseEntity<?> requestInvestigateurSignup(@RequestBody SignupRequest request) {
@@ -70,36 +63,35 @@ public class UserController {
         try {
             User approvedUser = userService.approveInvestigateur(pendingUserId);
 
-            String responseHtml = """
-            <html>
-                <body style="font-family: Arial, sans-serif;">
-                    <h1 style="color: #4CAF50;">Demande approuvée avec succès</h1>
-                    <p>L'utilisateur <strong>%s</strong> a été créé.</p>
-                    <p>Un email de confirmation a été envoyé à l'investigateur.</p>
-                    <a href="http://localhost:3000/admin" 
-                       style="color: #2e6c80; text-decoration: none;">
-                        Retour au tableau de bord
-                    </a>
-                </body>
-            </html>""".formatted(approvedUser.getEmail());
+            String responseHtml = "<html>" +
+                    "<body style=\"font-family: Arial, sans-serif;\">" +
+                    "<h1 style=\"color: #4CAF50;\">Demande approuvée avec succès</h1>" +
+                    "<p>L'utilisateur <strong>" + approvedUser.getEmail() + "</strong> a été créé.</p>" +
+                    "<p>Un email de confirmation a été envoyé à l'investigateur.</p>" +
+                    "<a href=\"http://localhost:3000/admin\" " +
+                    "style=\"color: #2e6c80; text-decoration: none;\">" +
+                    "Retour au tableau de bord" +
+                    "</a>" +
+                    "</body>" +
+                    "</html>";
 
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
                     .body(responseHtml);
         } catch (Exception e) {
-            String errorHtml = """
-            <html>
-                <body style="font-family: Arial, sans-serif;">
-                    <h1 style="color: #f44336;">Erreur lors de l'approbation</h1>
-                    <p>%s</p>
-                </body>
-            </html>""".formatted(e.getMessage());
+            String errorHtml = "<html>" +
+                    "<body style=\"font-family: Arial, sans-serif;\">" +
+                    "<h1 style=\"color: #f44336;\">Erreur lors de l'approbation</h1>" +
+                    "<p>" + e.getMessage() + "</p>" +
+                    "</body>" +
+                    "</html>";
 
             return ResponseEntity.badRequest()
                     .contentType(MediaType.TEXT_HTML)
                     .body(errorHtml);
         }
     }
+
     @GetMapping("/reject/{pendingUserId}")
     @PreAuthorize("hasRole('ADMIN')")
     public String rejectInvestigateurHtml(@PathVariable Long pendingUserId) {
@@ -110,12 +102,7 @@ public class UserController {
             return "<html><body><h1>Erreur</h1><p>" + e.getMessage() + "</p></body></html>";
         }
     }
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenUtil jwtTokenUtil;
+
     @PostMapping("/logininv")
     public ResponseEntity<?> loginInvestigateur(@RequestBody LoginRequest loginRequest) {
         User user = userService.findByEmail(loginRequest.getEmail());
@@ -135,7 +122,6 @@ public class UserController {
         String fakeJwt = "fake-jwt-token-" + user.getEmail();
         return ResponseEntity.ok(new JwtResponse(fakeJwt, "INVESTIGATEUR"));
     }
-
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
