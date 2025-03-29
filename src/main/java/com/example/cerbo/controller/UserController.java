@@ -68,7 +68,7 @@ public class UserController {
                     "<h1 style=\"color: #4CAF50;\">Demande approuvée avec succès</h1>" +
                     "<p>L'utilisateur <strong>" + approvedUser.getEmail() + "</strong> a été créé.</p>" +
                     "<p>Un email de confirmation a été envoyé à l'investigateur.</p>" +
-                    "<a href=\"http://localhost:3000/admin\" " +
+                    "<a href=\"http://localhost:3000/investigateur/dashboard\" " +
                     "style=\"color: #2e6c80; text-decoration: none;\">" +
                     "Retour au tableau de bord" +
                     "</a>" +

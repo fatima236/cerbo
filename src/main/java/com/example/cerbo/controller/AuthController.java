@@ -5,10 +5,12 @@ import com.example.cerbo.service.UserService;
 import com.example.cerbo.dto.LoginRequest;
 import com.example.cerbo.dto.JwtResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -21,21 +23,24 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> loginAdmin(@RequestBody LoginRequest loginRequest) {
         User user = userService.findByEmail(loginRequest.getEmail());
         if (user == null) {
-            return ResponseEntity.status(403).body("Utilisateur non trouvé");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Utilisateur non trouvé");
         }
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(403).body("Mot de passe incorrect");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Mot de passe incorrect");
+        }
+
+        // Vérification spécifique du rôle
+        if (!user.getRoles().contains("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès réservé aux admins");
         }
 
         String fakeJwt = "fake-jwt-token-" + user.getEmail();
-
-        return ResponseEntity.ok(new JwtResponse(fakeJwt, user.getRoles().iterator().next()));
+        return ResponseEntity.ok(new JwtResponse(fakeJwt, "ADMIN"));
     }
 
     @PostMapping("/signup")

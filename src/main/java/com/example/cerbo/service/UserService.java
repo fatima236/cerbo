@@ -158,7 +158,7 @@ public class UserService implements UserDetailsService {
                     "<h2 style=\"color: #2e6c80;\">Félicitations !</h2>" +
                     "<p>Votre inscription en tant qu'investigateur a été approuvée.</p>" +
                     "<p>Vous pouvez maintenant vous connecter à votre compte :</p>" +
-                    "<a href=\"http://localhost:3000/login\" " +
+                    "<a href=\"http://localhost:3000/investigateur/dashboard\" " +
                     "style=\"background-color: #4CAF50; color: white; " +
                     "padding: 10px 20px; text-decoration: none; " +
                     "border-radius: 5px; display: inline-block;\">" +
