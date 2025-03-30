@@ -34,13 +34,24 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Mot de passe incorrect");
         }
 
-        // Vérification spécifique du rôle
-        if (!user.getRoles().contains("ADMIN")) {
+        // Vérification flexible des rôles
+        boolean isAdmin = false;
+        if (user.getRoles() != null) {
+            for (String role : user.getRoles()) {
+                // Accepte ADMIN, Role_ADMIN, etc.
+                if (role != null && role.toUpperCase().contains("ADMIN")) {
+                    isAdmin = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isAdmin) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès réservé aux admins");
         }
 
-        String fakeJwt = "fake-jwt-token-" + user.getEmail();
-        return ResponseEntity.ok(new JwtResponse(fakeJwt, "ADMIN"));
+        String token = "fake-jwt-token-" + user.getEmail();
+        return ResponseEntity.ok(new JwtResponse(token, "ADMIN"));
     }
 
     @PostMapping("/signup")

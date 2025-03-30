@@ -8,6 +8,7 @@ public class CerboApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(CerboApplication.class, args);
+
     }
 
 }
