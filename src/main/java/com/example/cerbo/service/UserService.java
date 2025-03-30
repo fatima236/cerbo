@@ -18,7 +18,14 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -248,5 +255,28 @@ public class UserService implements UserDetailsService {
 
     public User findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Autowired
+    private FileStorageService storageService;
+
+    public User updateProfile(String email, String firstName, String lastName,
+                              String phone, String bio, MultipartFile photo) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        if (firstName != null) user.setFirstName(firstName);
+        if (lastName != null) user.setLastName(lastName);
+        if (phone != null) user.setPhone(phone);
+        if (bio != null) user.setBio(bio);
+
+        if (photo != null && !photo.isEmpty()) {
+            String filename = storageService.store(photo);
+            user.setPhoto("/uploads/" + filename);
+        }
+
+        return userRepository.save(user);
     }
 }

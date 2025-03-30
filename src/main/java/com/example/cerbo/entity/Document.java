@@ -31,18 +31,18 @@ public class Document {
     private LocalDateTime modificationDate;
 
     @ManyToOne
-    @JoinColumn(name = "project_id", nullable = false)
+    @JoinColumn(name = "project_id", nullable = true)
     private Project project;
 
     @ManyToOne
-    @JoinColumn(name = "training_id")
+    @JoinColumn(name = "training_id",nullable = true)
     private Training training;
 
     @ManyToOne
-    @JoinColumn(name = "article_id")
+    @JoinColumn(name = "article_id",nullable = true)
     private Article article;
 
     @ManyToOne
-    @JoinColumn(name = "event_id")
+    @JoinColumn(name = "event_id",nullable = true)
     private Event event;
 }
