@@ -37,34 +37,17 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
-                        .anyRequest().authenticated()
-                )
-                .formLogin(form -> form
-                        .loginProcessingUrl("/api/auth/login")
-                        .successHandler((request, response, authentication) -> {
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"status\": \"SUCCESS\", \"message\": \"Login réussi\"}");
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"status\": \"ERROR\", \"message\": \"Email ou mot de passe incorrect\"}");
-                        })
+//                        .requestMatchers("/api/auth/**").permitAll()
+//                        .requestMatchers("/admin/**").hasRole("ADMIN")
+//                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
+//                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+                        .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 )
-                .logout(logout -> logout
-                        .logoutUrl("/api/auth/logout")
-                        .logoutSuccessHandler((request, response, authentication) -> {
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"status\": \"SUCCESS\", \"message\": \"Déconnexion réussie\"}");
-                        })
-                );
+
+                ;
 
         return http.build();
     }

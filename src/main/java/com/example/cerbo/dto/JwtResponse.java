@@ -1,19 +1,12 @@
 package com.example.cerbo.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@AllArgsConstructor @NoArgsConstructor
+@Data
 public class JwtResponse {
     private String token;
     private String role;
-
-    public JwtResponse(String token, String role) {
-        this.token = token;
-        this.role = role;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public String getRole() {
-        return role;
-    }
 }

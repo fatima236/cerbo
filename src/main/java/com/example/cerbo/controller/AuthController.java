@@ -25,6 +25,7 @@ public class AuthController {
     private PasswordEncoder passwordEncoder;
     @PostMapping("/login")
     public ResponseEntity<?> loginAdmin(@RequestBody LoginRequest loginRequest) {
+        System.out.println(loginRequest);
         User user = userService.findByEmail(loginRequest.getEmail());
         if (user == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Utilisateur non trouvé");
