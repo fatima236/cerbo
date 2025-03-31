@@ -19,8 +19,15 @@ public class EventController {
 
     @GetMapping
     public ResponseEntity<List<Event>> getAllEvents() {
-        return ResponseEntity.ok(eventRepository.findAll());
+        List<Event> events = eventRepository.findAll();
+        events.forEach(event -> {
+            event.getDocuments().forEach(document -> {
+                document.setEvent(null);  // Éliminer la référence à l'événement dans chaque document
+            });
+        });
+        return ResponseEntity.ok(events);
     }
+
 
     @PostMapping("/addEvent")
     public ResponseEntity<Event> addEvent(@Valid @RequestBody Event event) {

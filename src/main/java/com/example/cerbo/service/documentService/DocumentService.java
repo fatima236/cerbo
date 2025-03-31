@@ -1,6 +1,7 @@
 package com.example.cerbo.service.documentService;
 
 import com.example.cerbo.entity.Document;
+import com.example.cerbo.entity.Event;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

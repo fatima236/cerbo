@@ -65,7 +65,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         Document document = new Document();
-        document.setName(file.getOriginalFilename());
+        document.setName(filename);
         document.setPath(filePath);
         document.setContentType(file.getContentType());
         document.setSize(file.getSize());
@@ -143,4 +143,7 @@ public class DocumentServiceImpl implements DocumentService {
         return "Document supprimé";
 
     }
+
+
+
 }
