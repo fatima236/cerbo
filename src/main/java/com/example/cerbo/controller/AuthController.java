@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -23,9 +24,9 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-    @PostMapping("/login")
-    public ResponseEntity<?> loginAdmin(@RequestBody LoginRequest loginRequest) {
-        System.out.println(loginRequest);
+
+    @PostMapping("/loginadmin")
+    public ResponseEntity<?> loginEvl(@RequestBody LoginRequest loginRequest) {
         User user = userService.findByEmail(loginRequest.getEmail());
         if (user == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Utilisateur non trouvé");
@@ -35,24 +36,24 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Mot de passe incorrect");
         }
 
-        // Vérification flexible des rôles
-        boolean isAdmin = false;
-        if (user.getRoles() != null) {
-            for (String role : user.getRoles()) {
-                // Accepte ADMIN, Role_ADMIN, etc.
-                if (role != null && role.toUpperCase().contains("ADMIN")) {
-                    isAdmin = true;
-                    break;
-                }
-            }
+        if (!user.getRoles().contains("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès réservé aux ADMIN");
         }
 
-        if (!isAdmin) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès réservé aux admins");
-        }
+        String fakeJwt = "fake-jwt-token-" + user.getEmail();
 
-        String token = "fake-jwt-token-" + user.getEmail();
-        return ResponseEntity.ok(new JwtResponse(token, "ADMIN"));
+        // Créez simplement un objet qui contient à la fois le JwtResponse ET l'email
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", fakeJwt);
+        response.put("role", "ADMIN");
+        response.put("email", user.getEmail()); // Juste ajouté cette ligne
+
+        // Retournez explicitement l'email dans la réponse
+        return ResponseEntity.ok(Map.of(
+                "token", fakeJwt,
+                "role", "ADMIN",
+                "email", user.getEmail() // Cette ligne est cruciale
+        ));
     }
 
     @PostMapping("/signup")
