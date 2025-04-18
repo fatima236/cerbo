@@ -4,6 +4,7 @@ import com.example.cerbo.entity.User;
 import com.example.cerbo.service.UserService;
 import com.example.cerbo.dto.LoginRequest;
 import com.example.cerbo.dto.JwtResponse;
+import org.apache.catalina.connector.Request;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -70,5 +71,6 @@ public class AuthController {
 
         return ResponseEntity.ok("Compte créé avec succès !");
     }
+
 
 }
