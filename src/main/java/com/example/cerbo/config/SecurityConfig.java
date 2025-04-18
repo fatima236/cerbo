@@ -36,11 +36,10 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**").permitAll()
-//                        .requestMatchers("/admin/**").hasRole("ADMIN")
-//                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-//                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**").permitAll()
+                       .requestMatchers("/admin/**").hasRole("ADMIN")
+                       .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
+                      .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
