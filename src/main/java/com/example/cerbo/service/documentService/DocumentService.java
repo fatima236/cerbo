@@ -16,6 +16,7 @@ public interface DocumentService {
     public List<Document> documentsOfProject(Long projectId);
     public List<Document> documentsOfEvent(Long eventId);
     public String  removeDocumentById(Long id);
+    public String updateDocument(Long documentId, MultipartFile newFile);
 
 
 }
