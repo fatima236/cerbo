@@ -37,6 +37,8 @@ public class Training {
 
     private Boolean registrationRequired = false;
 
+    private String registrationLink;
+
     private String organizer;
 
     @OneToMany(mappedBy = "training", cascade = CascadeType.ALL, orphanRemoval = true)
