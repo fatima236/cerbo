@@ -4,6 +4,7 @@ import com.example.cerbo.dto.JwtResponse;
 import com.example.cerbo.dto.LoginRequest;
 import com.example.cerbo.dto.SignupRequest;
 import com.example.cerbo.entity.User;
+import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.UserService;
 import com.example.cerbo.dto.JwtTokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,8 +14,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -105,36 +109,45 @@ public class UserController {
             return "<html><body><h1>Erreur</h1><p>" + e.getMessage() + "</p></body></html>";
         }
     }
-
+    @Autowired
+    private UserRepository userRepository;
     @PostMapping("/logininv")
     public ResponseEntity<?> loginInvestigateur(@RequestBody LoginRequest loginRequest) {
-        User user = userService.findByEmail(loginRequest.getEmail());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Utilisateur non trouvé");
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
+
+            User user = userRepository.findByEmail(loginRequest.getEmail());
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("{\"error\":\"Utilisateur non trouvé\"}");
+            }
+
+            if (!user.getRoles().contains("INVESTIGATEUR")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("{\"error\":\"Accès réservé aux investigateurs\"}");
+            }
+
+            String token = jwtTokenUtil.generateToken(authentication);
+
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "role", "INVESTIGATEUR",
+                    "email", user.getEmail(),
+                    "expiresIn", jwtTokenUtil.getExpiration()
+            ));
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("{\"error\":\"Email ou mot de passe incorrect\"}");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\":\"Erreur serveur: " + e.getMessage() + "\"}");
         }
-
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Mot de passe incorrect");
-        }
-
-        if (!user.getRoles().contains("INVESTIGATEUR")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès réservé aux investigateurs");
-        }
-
-        String fakeJwt = "fake-jwt-token-" + user.getEmail();
-
-        // Créez simplement un objet qui contient à la fois le JwtResponse ET l'email
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", fakeJwt);
-        response.put("role", "INVESTIGATEUR");
-        response.put("email", user.getEmail()); // Juste ajouté cette ligne
-
-        // Retournez explicitement l'email dans la réponse
-        return ResponseEntity.ok(Map.of(
-                "token", fakeJwt,
-                "role", "INVESTIGATEUR",
-                "email", user.getEmail() // Cette ligne est cruciale
-        ));
     }
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
@@ -214,6 +227,52 @@ public class UserController {
             ));
         }
     }
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    @PostMapping("/loginevaluateur")
+    public ResponseEntity<?> loginEvaluateur(@RequestBody LoginRequest loginRequest) {
+        try {
+            // Authentifier l'utilisateur
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
+
+            // Récupérer l'utilisateur depuis la base
+            User user = userRepository.findByEmail(loginRequest.getEmail());
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Utilisateur non trouvé"));
+            }
+
+            // Vérifier que l'utilisateur a le rôle EVALUATEUR
+            if (!user.getRoles().contains("EVALUATEUR")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Accès réservé aux évaluateurs"));
+            }
+
+            // Générer un token JWT
+            String token = jwtTokenUtil.generateToken(authentication);
+
+            // Retourner une réponse JSON compatible avec le frontend
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "role", "EVALUATEUR",
+                    "email", user.getEmail(),
+                    "expiresIn", jwtTokenUtil.getExpiration()
+            ));
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Email ou mot de passe incorrect"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur serveur: " + e.getMessage()));
+        }
+    }
+
+
 
 
 

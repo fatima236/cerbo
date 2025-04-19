@@ -22,6 +22,7 @@ public class User {
     private String photo;
 
     @ElementCollection(fetch = FetchType.EAGER)
+    @Column(name = "roles")
     private Set<String> roles;
     private boolean validated = false;
 

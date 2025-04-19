@@ -1,17 +1,22 @@
 package com.example.cerbo.controller;
+
+import com.example.cerbo.dto.JwtTokenUtil;
+import com.example.cerbo.dto.LoginRequest;
 import com.example.cerbo.dto.SignupRequest;
 import com.example.cerbo.entity.User;
+import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.UserService;
-import com.example.cerbo.dto.LoginRequest;
-import com.example.cerbo.dto.JwtResponse;
-import org.apache.catalina.connector.Request;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,43 +29,63 @@ public class AuthController {
     private UserService userService;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JwtTokenUtil jwtTokenUtil;
+
     @PostMapping("/loginadmin")
-    public ResponseEntity<?> loginEvl(@RequestBody LoginRequest loginRequest) {
-        User user = userService.findByEmail(loginRequest.getEmail());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Utilisateur non trouvé");
+    public ResponseEntity<?> loginAdmin(@RequestBody LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
+
+            // Version sans Optional
+            User user = userRepository.findByEmail(loginRequest.getEmail());
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Utilisateur non trouvé"));
+            }
+
+            if (!user.getRoles().contains("ADMIN")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Accès réservé aux administrateurs"));
+            }
+
+            String token = jwtTokenUtil.generateToken(authentication);
+
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "role", "ADMIN",
+                    "email", user.getEmail(),
+                    "expiresIn", jwtTokenUtil.getExpiration()
+            ));
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Email ou mot de passe incorrect"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur serveur: " + e.getMessage()));
         }
-
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Mot de passe incorrect");
-        }
-
-        if (!user.getRoles().contains("ADMIN")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès réservé aux ADMIN");
-        }
-
-        String fakeJwt = "fake-jwt-token-" + user.getEmail();
-
-        // Créez simplement un objet qui contient à la fois le JwtResponse ET l'email
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", fakeJwt);
-        response.put("role", "ADMIN");
-        response.put("email", user.getEmail()); // Juste ajouté cette ligne
-
-        // Retournez explicitement l'email dans la réponse
-        return ResponseEntity.ok(Map.of(
-                "token", fakeJwt,
-                "role", "ADMIN",
-                "email", user.getEmail() // Cette ligne est cruciale
-        ));
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest signupRequest) {
-        if (userService.findByEmail(signupRequest.getEmail()) != null) {
-            return ResponseEntity.status(400).body("Cet utilisateur existe déjà !");
+        User existingUser = userRepository.findByEmail(signupRequest.getEmail());
+        if (existingUser != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Cet utilisateur existe déjà !"));
         }
 
         User newUser = userService.createUser(
@@ -69,8 +94,9 @@ public class AuthController {
                 Set.of(signupRequest.getRole())
         );
 
-        return ResponseEntity.ok("Compte créé avec succès !");
+        return ResponseEntity.ok(Map.of(
+                "message", "Compte créé avec succès !",
+                "email", newUser.getEmail()
+        ));
     }
-
-
 }
