@@ -1,12 +1,9 @@
 package com.example.cerbo.controller;
 
-import com.example.cerbo.dto.JwtResponse;
-import com.example.cerbo.dto.LoginRequest;
-import com.example.cerbo.dto.SignupRequest;
+import com.example.cerbo.dto.*;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.UserService;
-import com.example.cerbo.dto.JwtTokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,16 +12,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -36,8 +34,8 @@ public class UserController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
-
     @Autowired
+
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -132,10 +130,15 @@ public class UserController {
                         .body("{\"error\":\"Accès réservé aux investigateurs\"}");
             }
 
-            String token = jwtTokenUtil.generateToken(authentication);
+            // Générer l'access token
+            String accessToken = jwtTokenUtil.generateToken(authentication);
+
+            // Générer un refresh token
+            String refreshToken = jwtTokenUtil.generateRefreshToken(authentication);
 
             return ResponseEntity.ok(Map.of(
-                    "token", token,
+                    "token", accessToken,
+                    "refreshToken", refreshToken, // Retourner aussi le refresh token
                     "role", "INVESTIGATEUR",
                     "email", user.getEmail(),
                     "expiresIn", jwtTokenUtil.getExpiration()
@@ -149,6 +152,7 @@ public class UserController {
                     .body("{\"error\":\"Erreur serveur: " + e.getMessage() + "\"}");
         }
     }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -180,36 +184,7 @@ public class UserController {
         ));
     }
 
-    @PreAuthorize("hasRole('INVESTIGATEUR')")
-    @PostMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 
-    public ResponseEntity<Map<String, Object>> updateProfile(
-            @RequestPart(value = "firstName", required = false) String firstName,
-            @RequestPart(value = "lastName", required = false) String lastName,
-            @RequestPart(value = "phone", required = false) String phone,
-            @RequestPart(value = "bio", required = false) String bio,
-            @RequestPart(value = "photo", required = false) MultipartFile photo,
-            Authentication authentication) {
-
-        try {
-            String email = authentication.getName();
-            User updatedUser = userService.updateProfile(email, firstName, lastName, phone, bio, photo);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("firstName", updatedUser.getFirstName());
-            response.put("lastName", updatedUser.getLastName());
-            response.put("phone", updatedUser.getPhone());
-            response.put("bio", updatedUser.getBio());
-            response.put("photo", updatedUser.getPhoto() != null ? updatedUser.getPhoto() : "/user-avatar.jpg");
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(errorResponse);
-        }
-    }
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         try {
@@ -229,5 +204,57 @@ public class UserController {
     }
 
 
+
+    // [Autres méthodes existantes...]
+
+
+    // Injection par constructeur
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+
+        try {
+            // 1. Validation du refresh token
+            if (!jwtTokenUtil.validateRefreshToken(refreshToken)) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token invalide");
+            }
+
+            // 2. Récupération de l'utilisateur
+            String username = jwtTokenUtil.getUsernameFromRefreshToken(refreshToken);
+            User user = userRepository.findByEmail(username);
+
+            if (user == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouvé");
+            }
+
+            // 3. Création de l'authentication
+            List<GrantedAuthority> authorities = user.getRoles().stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toList());
+
+            Authentication auth = new UsernamePasswordAuthenticationToken(
+                    user.getEmail(),
+                    null,
+                    authorities);
+
+            // 4. Génération des nouveaux tokens
+            String newAccessToken = jwtTokenUtil.generateToken(auth);
+            String newRefreshToken = jwtTokenUtil.generateRefreshToken(auth);
+
+            // 5. Retour de la réponse
+            return ResponseEntity.ok(Map.of(
+                    "token", newAccessToken,
+                    "refreshToken", newRefreshToken,
+                    "expiresIn", jwtTokenUtil.getAccessTokenExpiration()
+            ));
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Échec du rafraîchissement: " + e.getMessage()
+            );
+        }
+    }
 
 }

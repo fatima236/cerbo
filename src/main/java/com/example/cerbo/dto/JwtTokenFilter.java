@@ -3,16 +3,20 @@ package com.example.cerbo.dto;
 
 
 import com.example.cerbo.dto.JwtTokenUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class JwtTokenFilter extends OncePerRequestFilter {
 
@@ -25,24 +29,24 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+                                    FilterChain chain) throws IOException, ServletException {
+        String token = jwtTokenUtil.getTokenFromRequest(request);
 
-        try {
-            String token = jwtTokenUtil.getTokenFromRequest(request);
-            if (token != null && jwtTokenUtil.validateToken(token)) {
-                String email = jwtTokenUtil.getEmailFromToken(token);
+        if (token != null && jwtTokenUtil.validateToken(token)) {
+            String username = jwtTokenUtil.getUsernameFromToken(token);
+            // Utilisez la méthode publique qui utilise la clé par défaut
+            Claims claims = jwtTokenUtil.getClaimsFromToken(token, jwtTokenUtil.getAccessTokenSecretKey());
 
-                // Créez une authentification simple sans credentials et avec les rôles si nécessaire
-                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                        email, null, Collections.emptyList());
+            List<SimpleGrantedAuthority> authorities = ((List<?>) claims.get("roles"))
+                    .stream()
+                    .map(authority -> new SimpleGrantedAuthority(authority.toString()))
+                    .collect(Collectors.toList());
 
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            }
-        } catch (Exception e) {
-            SecurityContextHolder.clearContext();
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(
+                            username, null, authorities)
+            );
         }
-
-        filterChain.doFilter(request, response);
+        chain.doFilter(request, response);
     }
 }

@@ -257,26 +257,5 @@ public class UserService implements UserDetailsService {
         return userRepository.findByEmail(email);
     }
 
-    @Autowired
-    private FileStorageService storageService;
 
-    public User updateProfile(String email, String firstName, String lastName,
-                              String phone, String bio, MultipartFile photo) {
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            throw new RuntimeException("User not found");
-        }
-
-        if (firstName != null) user.setFirstName(firstName);
-        if (lastName != null) user.setLastName(lastName);
-        if (phone != null) user.setPhone(phone);
-        if (bio != null) user.setBio(bio);
-
-        if (photo != null && !photo.isEmpty()) {
-            String filename = storageService.store(photo);
-            user.setPhoto("/uploads/" + filename);
-        }
-
-        return userRepository.save(user);
-    }
 }

@@ -44,8 +44,7 @@ public class CerboApplication {
             User user = new User();
             user.setEmail("aoudayy@example.com");
             user.setPassword(passwordEncoder.encode("xxx"));
-            user.setFirstName("x");
-            user.setLastName("x");
+
             userRepository.save(user);
 
         };

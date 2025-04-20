@@ -14,12 +14,14 @@ public class User {
 
     private String email;
     private String password;
+    private String nom;
+    private String prenom;
+    // Nouveaux champs
+    private String civilite; // Mr, Mme, etc.
 
-    private String firstName;
-    private String lastName;
-    private String phone;
-    private String bio; // Description du métier/statut (doctorant, docteur, professeur, etc.)
-    private String photo;
+    private String titre;
+    private String laboratoire;
+    private String affiliation;
 
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<String> roles;
@@ -28,7 +30,5 @@ public class User {
 
 
     // Méthode pratique pour obtenir le nom complet
-    public String getFullName() {
-        return firstName + " " + lastName;
-    }
+
 }
