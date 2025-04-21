@@ -25,6 +25,7 @@ public class User {
     private String affiliation;
 
     @ElementCollection(fetch = FetchType.EAGER)
+    @Column(name = "roles")
     private Set<String> roles;
     private boolean validated = false;
     private String photoUrl; // URL de la photo stockée

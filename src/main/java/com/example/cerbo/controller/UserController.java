@@ -202,6 +202,52 @@ public class UserController {
             ));
         }
     }
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    @PostMapping("/loginevaluateur")
+    public ResponseEntity<?> loginEvaluateur(@RequestBody LoginRequest loginRequest) {
+        try {
+            // Authentifier l'utilisateur
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
+
+            // Récupérer l'utilisateur depuis la base
+            User user = userRepository.findByEmail(loginRequest.getEmail());
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Utilisateur non trouvé"));
+            }
+
+            // Vérifier que l'utilisateur a le rôle EVALUATEUR
+            if (!user.getRoles().contains("EVALUATEUR")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Accès réservé aux évaluateurs"));
+            }
+
+            // Générer un token JWT
+            String token = jwtTokenUtil.generateToken(authentication);
+
+            // Retourner une réponse JSON compatible avec le frontend
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "role", "EVALUATEUR",
+                    "email", user.getEmail(),
+                    "expiresIn", jwtTokenUtil.getExpiration()
+            ));
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Email ou mot de passe incorrect"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur serveur: " + e.getMessage()));
+        }
+    }
+
+
 
 
 

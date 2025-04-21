@@ -144,6 +144,47 @@ public class DocumentServiceImpl implements DocumentService {
 
     }
 
+    public String updateDocument(Long documentId, MultipartFile newFile) {
+        Document document = documentRepository.findById(documentId).orElse(null);
+        if (document == null) {
+            return "Document introuvable avec l'ID : " + documentId;
+        }
+
+        // Si un nouveau fichier est fourni
+        if (newFile != null && !newFile.isEmpty()) {
+            // Supprimer l'ancien fichier
+            File oldFile = new File(document.getPath());
+            if (oldFile.exists() && oldFile.isFile()) {
+                oldFile.delete();
+            }
+
+            // Générer nouveau chemin
+            String newFilename = UUID.randomUUID().toString() + "_" + newFile.getOriginalFilename();
+            String newPath = Paths.get(uploadDir, newFilename).toString();
+
+            try {
+                newFile.transferTo(new File(newPath));
+            } catch (IOException e) {
+                return "Erreur lors de l'enregistrement du nouveau fichier : " + e.getMessage();
+            }
+
+            // Mettre à jour les infos du document
+            document.setName(newFilename);
+            document.setPath(newPath);
+            document.setContentType(newFile.getContentType());
+            document.setSize(newFile.getSize());
+        }
+
+        // Mettre à jour la date de modification
+        document.setModificationDate(LocalDateTime.now());
+
+        // Enregistrer les modifications
+        documentRepository.save(document);
+
+        return "Document mis à jour avec succès";
+    }
+
+
 
 
 }

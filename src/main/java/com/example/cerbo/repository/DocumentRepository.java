@@ -11,4 +11,6 @@ public interface DocumentRepository extends JpaRepository<Document,Long> {
     List<Document> findDocumentsByArticleId(Long articleId);
     List<Document> findDocumentsByProjectId(Long projectId);
     List<Document> findDocumentsByEventId(Long eventId);
+
+    Document getFirstByEvent(Event event);
 }

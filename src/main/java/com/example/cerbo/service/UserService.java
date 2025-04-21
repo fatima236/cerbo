@@ -134,6 +134,7 @@ public class UserService implements UserDetailsService {
         }
     }
 
+
     public User approveInvestigateur(Long pendingUserId) {
         PendingUser pendingUser = pendingUserRepository.findById(pendingUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande introuvable"));
@@ -182,6 +183,7 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("Échec d'envoi de la confirmation");
         }
     }
+
 
     public void rejectInvestigateur(Long pendingUserId) {
         if (!pendingUserRepository.existsById(pendingUserId)) {
