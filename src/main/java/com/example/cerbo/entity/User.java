@@ -2,6 +2,7 @@ package com.example.cerbo.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Set;
 
@@ -26,8 +27,12 @@ public class User {
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<String> roles;
     private boolean validated = false;
+    private String photoUrl; // URL de la photo stockée
 
+    @Transient
+    private MultipartFile photoFile; // Pour la réception du fichier
 
+    // Méthode pour vérifier si le profil est complet
 
     // Méthode pratique pour obtenir le nom complet
 
