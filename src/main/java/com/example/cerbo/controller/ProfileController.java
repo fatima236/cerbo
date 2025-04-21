@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 import java.util.HashMap;
 
@@ -46,7 +45,29 @@ public class ProfileController {
         }
     }
 
+    @PostMapping("/profile")
+    public ResponseEntity<?> createOrUpdateProfile(@RequestBody Map<String, String> payload, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email);
 
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utilisateur introuvable");
+            }
+
+            updateUserFields(user, payload);
+            userRepository.save(user);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Profil mis à jour avec succès");
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(createErrorResponse("Erreur interne du serveur"));
+        }
+    }
 
     private void updateUserFields(User user, Map<String, String> payload) {
         if (payload.containsKey("civilite")) {
