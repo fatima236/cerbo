@@ -1,6 +1,7 @@
 package com.example.cerbo.dto;
 
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class UpdateProfileRequest {
@@ -10,4 +11,5 @@ public class UpdateProfileRequest {
     private String titre;
     private String laboratoire;
     private String affiliation;
+    private MultipartFile photoFile;
 }

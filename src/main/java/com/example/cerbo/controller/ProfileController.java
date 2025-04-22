@@ -1,112 +1,92 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.UpdateProfileRequest;
 import com.example.cerbo.entity.User;
-import com.example.cerbo.repository.UserRepository;
+import com.example.cerbo.service.ProfileService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.HashMap;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/profile")
 public class ProfileController {
 
-    private final UserRepository userRepository;
+    private final ProfileService profileService;
+    private final ObjectMapper objectMapper; // Add this line
 
-    public ProfileController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public ProfileController(ProfileService profileService, ObjectMapper objectMapper) {
+        this.profileService = profileService;
+        this.objectMapper = objectMapper; // Initialize via constructor injection
     }
 
-    @GetMapping("/profile")
+    @GetMapping
     public ResponseEntity<?> getProfile(Authentication authentication) {
         try {
             String email = authentication.getName();
-            User user = userRepository.findByEmail(email);
+            User user = profileService.getUserProfile(email);
 
             if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utilisateur introuvable");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Utilisateur introuvable");
             }
 
-            Map<String, String> profile = new HashMap<>();
-            profile.put("civilite", user.getCivilite());
-            profile.put("nom", user.getNom());
-            profile.put("prenom", user.getPrenom());
-            profile.put("email", user.getEmail());
-            profile.put("titre", user.getTitre());
-            profile.put("laboratoire", user.getLaboratoire());
-            profile.put("affiliation", user.getAffiliation());
+            Map<String, Object> response = new HashMap<>();
+            response.put("civilite", user.getCivilite() != null ? user.getCivilite() : "");
+            response.put("nom", user.getNom() != null ? user.getNom() : "");
+            response.put("prenom", user.getPrenom() != null ? user.getPrenom() : "");
+            response.put("email", user.getEmail() != null ? user.getEmail() : "");
+            response.put("titre", user.getTitre() != null ? user.getTitre() : "");
+            response.put("laboratoire", user.getLaboratoire() != null ? user.getLaboratoire() : "");
+            response.put("affiliation", user.getAffiliation() != null ? user.getAffiliation() : "");
+            response.put("photoUrl", user.getPhotoUrl() != null ? user.getPhotoUrl() : "");
 
-            return ResponseEntity.ok(profile);
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(createErrorResponse("Erreur interne du serveur"));
-        }
-    }
-
-    @PostMapping("/profile")
-    public ResponseEntity<?> createOrUpdateProfile(@RequestBody Map<String, String> payload, Authentication authentication) {
-        try {
-            String email = authentication.getName();
-            User user = userRepository.findByEmail(email);
-
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utilisateur introuvable");
-            }
-
-            updateUserFields(user, payload);
-            userRepository.save(user);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Profil mis à jour avec succès");
             return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(createErrorResponse("Erreur interne du serveur"));
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors de la récupération du profil: " + e.getMessage());
         }
     }
 
-    private void updateUserFields(User user, Map<String, String> payload) {
-        if (payload.containsKey("civilite")) {
-            user.setCivilite(payload.get("civilite"));
-        }
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<?> updateProfile(
+            @RequestPart(value = "formData") String formDataStr,
+            @RequestPart(value = "photoFile", required = false) MultipartFile photoFile,
+            Authentication authentication) {
 
-        if (payload.containsKey("nom")) {
-            String nom = payload.get("nom");
-            if (nom == null || nom.trim().isEmpty()) {
-                throw new IllegalArgumentException("Le nom est obligatoire");
+        try {
+            UpdateProfileRequest request = objectMapper.readValue(formDataStr, UpdateProfileRequest.class);
+
+            // Validation
+            if (StringUtils.isEmpty(request.getCivilite()) ||
+                    StringUtils.isEmpty(request.getNom()) ||
+                    StringUtils.isEmpty(request.getPrenom())) {
+                return ResponseEntity.badRequest()
+                        .body("Civilité, nom et prénom sont obligatoires");
             }
-            user.setNom(nom);
-        }
 
-        if (payload.containsKey("prenom")) {
-            String prenom = payload.get("prenom");
-            if (prenom == null || prenom.trim().isEmpty()) {
-                throw new IllegalArgumentException("Le prénom est obligatoire");
-            }
-            user.setPrenom(prenom);
-        }
+            User updatedUser = profileService.updateUserProfile(authentication.getName(), request, photoFile);
 
-        if (payload.containsKey("titre")) {
-            user.setTitre(payload.get("titre"));
-        }
+            // Retourner l'URL complète de la photo
+            String fullPhotoUrl = updatedUser.getPhotoUrl() != null ?
+                    "/uploads/" + updatedUser.getPhotoUrl() : null;
 
-        if (payload.containsKey("laboratoire")) {
-            user.setLaboratoire(payload.get("laboratoire"));
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Profil mis à jour",
+                    "user", updatedUser,
+                    "photoUrl", fullPhotoUrl
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body("Erreur serveur: " + e.getMessage());
         }
-
-        if (payload.containsKey("affiliation")) {
-            user.setAffiliation(payload.get("affiliation"));
-        }
-    }
-
-    private Map<String, String> createErrorResponse(String message) {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", message);
-        response.put("status", "error");
-        return response;
     }
 }
