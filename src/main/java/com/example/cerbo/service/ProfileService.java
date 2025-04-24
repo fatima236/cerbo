@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Service
 public class ProfileService {
 
@@ -21,7 +23,11 @@ public class ProfileService {
     public User getUserProfile(String email) {
         return userRepository.findByEmail(email);
     }
+// Dans ProfileService.java
 
+    public List<User> getAllProfiles() {
+        return userRepository.findAll(); // Supposant que vous utilisez JPA
+    }
     @Transactional
     public User updateUserProfile(String email, UpdateProfileRequest request, MultipartFile photoFile) {
         User user = userRepository.findByEmail(email);

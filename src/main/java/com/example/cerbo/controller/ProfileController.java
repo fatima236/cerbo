@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -87,6 +89,33 @@ public class ProfileController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body("Erreur serveur: " + e.getMessage());
+        }
+    }
+    // Dans ProfileController.java
+
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllProfiles() {
+        try {
+            List<User> users = profileService.getAllProfiles();
+
+            // Simplifier la réponse pour le frontend
+            List<Map<String, Object>> response = users.stream().map(user -> {
+                Map<String, Object> userMap = new HashMap<>();
+                userMap.put("id", user.getId());
+                userMap.put("civilite", user.getCivilite());
+                userMap.put("nom", user.getNom());
+                userMap.put("prenom", user.getPrenom());
+                userMap.put("email", user.getEmail());
+                userMap.put("titre", user.getTitre());
+                userMap.put("affiliation", user.getAffiliation());
+                userMap.put("photoUrl", user.getPhotoUrl());
+                return userMap;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors de la récupération des profils: " + e.getMessage());
         }
     }
 }
