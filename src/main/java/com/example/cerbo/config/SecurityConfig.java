@@ -4,6 +4,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -72,12 +73,15 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/profile").authenticated()
+                        .requestMatchers("/api/meetings/**").authenticated()
 
-                       .requestMatchers("/admin/**").hasRole("ADMIN")
-                       .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-                      .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
+                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
