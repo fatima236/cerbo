@@ -2,6 +2,7 @@ package com.example.cerbo.service;
 
 import com.example.cerbo.entity.Meeting;
 import com.example.cerbo.repository.MeetingRepository;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,11 @@ import java.util.List;
 public class MeetingService {
 
     private final MeetingRepository meetingRepository;
+    private final EmailService emailService;
 
-    public MeetingService(MeetingRepository meetingRepository) {
+    public MeetingService(MeetingRepository meetingRepository, EmailService emailService) {
         this.meetingRepository = meetingRepository;
+        this.emailService = emailService;
     }
 
     private Meeting createMeeting(int year, int month, int day, DayOfWeek dayOfWeek, int hour, int minute) {
@@ -45,14 +48,23 @@ public class MeetingService {
         Meeting meeting = meetingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Meeting not found"));
 
-        // Ne permettre que la modification du statut entre Planifiée et Annulée
+        // Mettre à jour tous les champs modifiables
+        if (meetingDetails.getDate() != null) {
+            meeting.setDate(meetingDetails.getDate());
+        }
+
+        if (meetingDetails.getTime() != null) {
+            meeting.setTime(meetingDetails.getTime());
+        }
+
         if (meetingDetails.getStatus() != null &&
                 ("Planifiée".equals(meetingDetails.getStatus()) ||
-                        "Annulée".equals(meetingDetails.getStatus()))) {
+                        "Annulée".equals(meetingDetails.getStatus()) ||
+                        "Terminée".equals(meetingDetails.getStatus()))) {
             meeting.setStatus(meetingDetails.getStatus());
         }
 
-        // Vérifier si la réunion est passée pour mettre à jour automatiquement le statut
+        // Vérifier si la réunion est passée
         if (isPastMeeting(meeting)) {
             meeting.setStatus("Terminée");
         }
@@ -64,12 +76,10 @@ public class MeetingService {
         LocalDate now = LocalDate.now();
         LocalDate meetingDate = meeting.getDate();
 
-        // Si la date est passée
         if (meetingDate.isBefore(now)) {
             return true;
         }
 
-        // Si c'est aujourd'hui, vérifier l'heure
         if (meetingDate.isEqual(now)) {
             LocalTime nowTime = LocalTime.now();
             LocalTime meetingTime = meeting.getTime();
@@ -104,7 +114,6 @@ public class MeetingService {
         List<Meeting> savedMeetings = new ArrayList<>();
         for (Meeting meeting : meetings) {
             try {
-                // Vérifier si la réunion est passée avant de sauvegarder
                 if (isPastMeeting(meeting)) {
                     meeting.setStatus("Terminée");
                 }
@@ -115,5 +124,35 @@ public class MeetingService {
         }
 
         return savedMeetings;
+    }
+
+    @Scheduled(cron = "0 0 9 * * ?") // Exécuté tous les jours à 9h du matin
+    public void checkMeetingReminders() {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        List<Meeting> tomorrowMeetings = meetingRepository.findByDate(tomorrow);
+
+        for (Meeting meeting : tomorrowMeetings) {
+            String status = meeting.getStatus();
+            String subject = "Rappel: Réunion " + (status.equals("Annulée") ? "ANNULÉE" : "prévue");
+            String text = "La réunion du " + meeting.getDate() + " à " + meeting.getTime() +
+                    " est " + (status.equals("Annulée") ? "annulée." : "prévue.");
+
+            List<String> participantEmails = getParticipantEmailsForMeeting(meeting.getId());
+
+            if (participantEmails != null && !participantEmails.isEmpty()) {
+                for (String email : participantEmails) {
+                    try {
+                        emailService.sendReminderEmail(email, subject, text);
+                    } catch (Exception e) {
+                        System.err.println("Erreur lors de l'envoi du rappel à " + email + ": " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    private List<String> getParticipantEmailsForMeeting(Long meetingId) {
+        // Implémentez cette méthode pour retourner la liste des emails des participants
+        return Arrays.asList("participant1@example.com", "participant2@example.com");
     }
 }

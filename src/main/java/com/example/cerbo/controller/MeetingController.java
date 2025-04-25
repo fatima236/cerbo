@@ -27,13 +27,9 @@ public class MeetingController {
             @PathVariable Long id,
             @RequestBody Meeting meetingUpdates) {
 
-        // Créer un objet Meeting avec seulement les champs modifiables
-        Meeting updates = new Meeting();
-        updates.setStatus(meetingUpdates.getStatus()); // Seul le statut peut être modifié
-
-        return ResponseEntity.ok(meetingService.updateMeeting(id, updates));
+        // Transmettre tous les champs modifiables au service
+        return ResponseEntity.ok(meetingService.updateMeeting(id, meetingUpdates));
     }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMeeting(@PathVariable Long id) {
         meetingService.deleteMeeting(id);
