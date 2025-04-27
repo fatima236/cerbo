@@ -1,45 +1,30 @@
 package com.example.cerbo.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalTime;
 
 @Entity
-@Table(name = "meetings")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Meeting {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private LocalDateTime date;
+    private String month;
 
-    @ManyToMany
-    @JoinTable(
-            name = "meeting_members",
-            joinColumns = @JoinColumn(name = "meeting_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> members = new HashSet<>();
+    private String status;
+    @Column(nullable = false)
+    private int year;
+    // Ajoutez ces annotations pour le formatage JSON
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate date;
 
-    @ManyToMany
-    @JoinTable(
-            name = "meeting_projects",
-            joinColumns = @JoinColumn(name = "meeting_id"),
-            inverseJoinColumns = @JoinColumn(name = "project_id")
-    )
-    private List<Project> discussedProjects = new ArrayList<>();
-
-    @Column(columnDefinition = "TEXT")
-    private String minutes;
+    @JsonFormat(pattern = "HH:mm")
+    private LocalTime time;
+    // Getters et setters (générés par @Data de Lombok)
 }

@@ -22,7 +22,9 @@ public class JwtTokenUtil {
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
     // Assurez-vous que la clé correspond EXACTEMENT à celle du client
-    private final SecretKey accessTokenSecretKey;
+    private final SecretKey accessTokenSecretKey = Keys.hmacShaKeyFor(
+            "votre-cle-secrete-pour-les-access-tokens-d-au-moins-64-caracteres-1234567890abcdef".getBytes()
+    );
     public JwtTokenUtil(
             @Value("${jwt.access.secret}") String accessSecret,
             @Value("${jwt.refresh.secret}") String refreshSecret,
@@ -37,7 +39,6 @@ public class JwtTokenUtil {
         }
 
 
-        this.accessTokenSecretKey = Keys.hmacShaKeyFor(accessSecret.getBytes(StandardCharsets.UTF_8));
         this.refreshTokenSecretKey = Keys.hmacShaKeyFor(refreshSecret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpiration = accessExpiration;
         this.refreshTokenExpiration = refreshExpiration;
@@ -75,12 +76,9 @@ public class JwtTokenUtil {
 
     // Méthode privée pour construire les tokens
     private String buildToken(String username, Collection<String> roles, SecretKey key, long expiration) {
-        List<String> cleanedRoles = roles.stream()
-                .map(role -> role.replace("ROLE_", ""))
-                .collect(Collectors.toList());
         return Jwts.builder()
                 .setSubject(username)
-                .claim("roles", cleanedRoles)
+                .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, SignatureAlgorithm.HS256) // Changé de HS512 à HS256

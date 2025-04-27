@@ -23,8 +23,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.example.cerbo.dto.JwtTokenFilter;
 import com.example.cerbo.dto.JwtTokenUtil;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 @Configuration
@@ -53,10 +51,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Autorisez votre frontend
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -65,69 +62,55 @@ public class SecurityConfig {
     @Bean
     public JwtTokenUtil jwtTokenUtil() {
         return new JwtTokenUtil(
-                accessTokenSecret, // Utilisez la variable injectée
-                refreshTokenSecret, // Utilisez la variable injectée
-                accessTokenExpiration,
-                refreshTokenExpiration
+                "votre-cle-secrete-pour-les-access-tokens-d-au-moins-64-caracteres-1234567890abcdef", // Doit correspondre à jwt.access.secret
+                "votre-cle-secrete-pour-les-refresh-tokens-d-au-moins-64-caracteres-1234567890abcdef", // Doit correspondre à jwt.refresh.secret
+                3600000, // jwt.access.expiration
+                86400000 // jwt.refresh.expiration
         );
     }
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-           http
+        http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Autoriser les OPTIONS
-                        // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
-
-
-                        // Role-based endpoints
-
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
-
+                        .requestMatchers("/api/meetings/").authenticated()
                         // Authenticated endpoints
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/projects/**").authenticated()
                         .requestMatchers("/api/projects/**/**").authenticated()
 
-                        .anyRequest().authenticated()
+
+
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                       .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
+                      .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+                        .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 )
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Unauthorized");
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.sendError(HttpStatus.FORBIDDEN.value(), "Forbidden");
-                        })
-                )
                 .addFilterBefore(new JwtTokenFilter(jwtTokenUtil()), UsernamePasswordAuthenticationFilter.class)
-        ;
+                ;
 
         return http.build();
     }
     @Bean
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder.withSecretKey(
-                Keys.hmacShaKeyFor(accessTokenSecret.getBytes(StandardCharsets.UTF_8))
+                Keys.hmacShaKeyFor("votre-cle-secrete-pour-les-access-tokens-d-au-moins-64-caracteres-1234567890abcdef".getBytes())
         ).build();
     }
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("");
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles"); // Correspond au claim dans le JWT
+        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-        jwtAuthenticationConverter.setPrincipalClaimName("sub");
-
 
         return jwtAuthenticationConverter;
     }
