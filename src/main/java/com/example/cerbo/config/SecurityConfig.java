@@ -76,25 +76,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/profile").authenticated()
-                        .requestMatchers("/api/notifications").authenticated()
-                        .requestMatchers("/api/meetings/").authenticated()
-                        // Authenticated endpoints
-                        .requestMatchers("/api/profile").authenticated()
-                        .requestMatchers("/api/projects/**").authenticated()
-                        .requestMatchers("/api/projects/**/**").authenticated()
-
+                        .requestMatchers("/api/meetings/**").authenticated()
 
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                       .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-                      .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
+                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 )
                 .addFilterBefore(new JwtTokenFilter(jwtTokenUtil()), UsernamePasswordAuthenticationFilter.class)
-                ;
+        ;
 
         return http.build();
     }

@@ -21,9 +21,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Pageable;
 
-
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -44,38 +45,81 @@ public class ProjectController {
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
 
-
-    // Nouveau endpoint pour la soumission avec fichiers
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('INVESTIGATEUR')")
     public ResponseEntity<ProjectDTO> submitProject(
-            @ModelAttribute ProjectSubmissionDTO submissionDTO,
+            @RequestPart("projectData") ProjectSubmissionDTO submissionDTO,
+            @RequestPart(value = "infoSheetFr", required = false) MultipartFile infoSheetFr,
+            @RequestPart(value = "infoSheetAr", required = false) MultipartFile infoSheetAr,
+            @RequestPart(value = "consentFormFr", required = false) MultipartFile consentFormFr,
+            @RequestPart(value = "consentFormAr", required = false) MultipartFile consentFormAr,
+            @RequestPart(value = "commitmentCertificate", required = false) MultipartFile commitmentCertificate,
+            @RequestPart(value = "cv", required = false) MultipartFile cv,
+            @RequestPart(value = "projectDescriptionFile", required = false) MultipartFile projectDescriptionFile,
+            @RequestPart(value = "ethicalConsiderationsFile", required = false) MultipartFile ethicalConsiderationsFile,
+            @RequestPart(value = "otherDocuments", required = false) List<MultipartFile> otherDocuments,
             @AuthenticationPrincipal User principal) {
 
-        // Validation manuelle supplémentaire
         if (submissionDTO.getTitle() == null || submissionDTO.getTitle().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
 
-        // Associer l'utilisateur connecté comme investigateur principal
         submissionDTO.setPrincipalInvestigatorId(principal.getId());
 
-        Project project = projectService.submitProject(submissionDTO);
-        ProjectDTO projectDTO = convertToDto(project);
+        try {
+            // Traitement des fichiers principaux
+            if (infoSheetFr != null) {
+                submissionDTO.setInfoSheetFr(fileStorageService.storeFile(infoSheetFr));
+            }
+            if (infoSheetAr != null) {
+                submissionDTO.setInfoSheetAr(fileStorageService.storeFile(infoSheetAr));
+            }
+            if (consentFormFr != null) {
+                submissionDTO.setConsentFormFr(fileStorageService.storeFile(consentFormFr));
+            }
+            if (consentFormAr != null) {
+                submissionDTO.setConsentFormAr(fileStorageService.storeFile(consentFormAr));
+            }
+            if (commitmentCertificate != null) {
+                submissionDTO.setCommitmentCertificate(fileStorageService.storeFile(commitmentCertificate));
+            }
+            if (cv != null) {
+                submissionDTO.setCv(fileStorageService.storeFile(cv));
+            }
 
-        return new ResponseEntity<>(projectDTO, HttpStatus.CREATED);
+            // Traitement des fichiers supplémentaires
+            if (projectDescriptionFile != null) {
+                // Stockez le fichier et sauvegardez la référence si nécessaire
+            }
+            if (ethicalConsiderationsFile != null) {
+                // Stockez le fichier et sauvegardez la référence si nécessaire
+            }
+            if (otherDocuments != null && !otherDocuments.isEmpty()) {
+                // Traitez chaque fichier dans la liste
+            }
+
+            Project project = projectService.submitProject(submissionDTO);
+            return new ResponseEntity<>(convertToDto(project), HttpStatus.CREATED);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
-    // Endpoint pour télécharger un document
     @GetMapping("/documents/{filename}")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable String filename) {
-        byte[] fileContent = fileStorageService.loadFileAsBytes(filename);
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
-                .body(fileContent);
+        try {
+            byte[] fileContent = fileStorageService.loadFileAsBytes(filename);
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .body(fileContent);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
+    // Les autres méthodes restent inchangées...
     @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
     public ResponseEntity<List<ProjectDTO>> getAllProjects() {
         List<Project> projects = projectRepository.findAll();
         List<ProjectDTO> projectDTOs = projects.stream()
@@ -106,7 +150,6 @@ public class ProjectController {
         project.setStatus(ProjectStatus.APPROUVE);
         project.setDecisionDate(LocalDateTime.now());
 
-        // Ajouter un commentaire
         Remark remark = new Remark();
         remark.setContent("Projet approuvé: " + comment);
         remark.setReviewer(admin);
@@ -115,7 +158,6 @@ public class ProjectController {
 
         projectRepository.save(project);
 
-        // Notification
         notificationService.notifyProjectStatusChange(project);
 
         return ResponseEntity.ok(Map.of(
@@ -179,8 +221,6 @@ public class ProjectController {
         return ResponseEntity.ok(projectDTOs);
     }
 
-
-
     @PostMapping("/{id}/assign-evaluator")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> assignEvaluator(
@@ -209,7 +249,7 @@ public class ProjectController {
         return ResponseEntity.ok(Map.of(
                 "message", "Evaluator assigned successfully",
                 "project", convertToDto(project)
-        )     );
+        ));
     }
 
     @PutMapping("/{id}/status")
@@ -239,7 +279,6 @@ public class ProjectController {
                 project.setDecisionDate(LocalDateTime.now());
             }
 
-            // Create remark
             Remark remark = new Remark();
             remark.setContent("Status changed to " + status.getDisplayName() + ": " + comment);
             remark.setCreationDate(LocalDateTime.now());
@@ -260,7 +299,6 @@ public class ProjectController {
         }
     }
 
-    // Méthode utilitaire pour convertir Project en DTO
     private ProjectDTO convertToDto(Project project) {
         ProjectDTO dto = new ProjectDTO();
         dto.setId(project.getId());
@@ -290,17 +328,6 @@ public class ProjectController {
                     .collect(Collectors.toList()));
         }
 
-
         return dto;
     }
-    @GetMapping("/investigator")
-    public ResponseEntity<List<ProjectDTO>> getInvestigatorProjects(
-            @AuthenticationPrincipal User user) {
-
-        List<Project> projects = projectRepository.findByPrincipalInvestigatorId(user.getId());
-        return ResponseEntity.ok(projects.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList()));
-    }
-
 }
