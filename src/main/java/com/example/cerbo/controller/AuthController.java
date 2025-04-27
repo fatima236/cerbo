@@ -13,12 +13,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -98,5 +100,27 @@ public class AuthController {
                 "message", "Compte créé avec succès !",
                 "email", newUser.getEmail()
         ));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User userp = userService.findByEmail(user.getEmail());
+        if (userp == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Map<String, Object> response = Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "firstName", user.getPrenom(),
+                "lastName", user.getNom(),
+                "roles", user.getRoles()
+        );
+
+        return ResponseEntity.ok(response);
     }
 }

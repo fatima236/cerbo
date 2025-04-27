@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name = "projects")
@@ -32,22 +33,39 @@ public class Project {
     @Column(nullable = false)
     private LocalDateTime submissionDate;
 
+    private LocalDateTime reviewDate;
+    private LocalDateTime decisionDate;
+
     @Enumerated(EnumType.STRING)
-    private ProjectStatus status = ProjectStatus.EN_COURS;
+    private ProjectStatus status = ProjectStatus.SOUMIS; // Changé de EN_COURS à SOUMIS
 
     private String studyDuration;
-
     private String targetPopulation;
     private String consentType;
     private Boolean sampling;
     private String sampleType;
-    private Integer sampleQuantity;
+    private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
+
+    @Column(columnDefinition = "TEXT")
+    private String projectDescription;
+
+    @Column(columnDefinition = "TEXT")
+    private String ethicalConsiderations;
 
     @ManyToOne
     @JoinColumn(name = "principal_investigator_id", nullable = false)
     private User principalInvestigator;
+
+    // Ajout des co-investigateurs
+    @ManyToMany
+    @JoinTable(
+            name = "project_investigators",
+            joinColumns = @JoinColumn(name = "project_id"),
+            inverseJoinColumns = @JoinColumn(name = "investigator_id")
+    )
+    private Set<User> investigators = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
@@ -65,4 +83,14 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Report> reports = new ArrayList<>();
+
+    // Méthode pour générer la référence automatiquement
+    @PrePersist
+    public void generateReference() {
+        if (this.reference == null) {
+            this.reference = "PROJ-" + LocalDateTime.now().getYear() + "-" +
+                    String.format("%06d", (int)(Math.random() * 1000000));
+            this.submissionDate = LocalDateTime.now();
+        }
+    }
 }

@@ -1,25 +1,40 @@
 package com.example.cerbo.service;
 
+import com.example.cerbo.entity.ApplicationEvent;
 import com.example.cerbo.entity.Notification;
+import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.User;
+import com.example.cerbo.entity.enums.EventType;
 import com.example.cerbo.entity.enums.NotificationStatus;
 import com.example.cerbo.repository.NotificationRepository;
 import com.example.cerbo.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
+
+    private final ApplicationEventPublisher eventPublisher;
+    private final EmailService emailService;
+
 
     @Autowired
     private NotificationRepository notificationRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     /**
      * Récupère toutes les notifications d'un utilisateur
@@ -78,5 +93,70 @@ public class NotificationService {
         notification.setStatus(NotificationStatus.NON_LUE);
 
         return notificationRepository.save(notification);
+    }
+
+    public void notifyProjectSubmitted(Project project) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("projectId", project.getId());
+        data.put("projectTitle", project.getTitle());
+
+        eventPublisher.publishEvent(new ApplicationEvent(
+                EventType.PROJECT_SUBMITTED, data));
+    }
+
+    @Async
+    @EventListener
+    public void handleProjectSubmitted(ApplicationEvent event) {
+        if (event.getType() == EventType.PROJECT_SUBMITTED) {
+
+            // 1. Notifier les admins
+            List<User> admins = userRepository.findAll().stream()
+                    .filter(user -> user.getRoles().contains("ADMIN"))
+                    .collect(Collectors.toList());
+            admins.forEach(admin -> {
+                // Notification in-app
+                createInAppNotification(admin, "Nouveau projet soumis",
+                        "Le projet " + event.getData().get("projectTitle") + " a été soumis.");
+
+                // Email
+                emailService.sendEmail(
+                        admin.getEmail(),
+                        "Nouveau projet soumis",
+                        "notification-project-submitted",
+                        Map.of("projectName", event.getData().get("projectTitle"))
+                );
+            });
+        }
+    }
+
+
+
+    private void createInAppNotification(User user, String title, String message) {
+        // Implémentez la création de notification in-app
+    }
+
+    @Async
+    public void notifyProjectStatusChange(Project project) {
+        String message = "Votre projet " + project.getTitle() + " a été " +
+                project.getStatus().getDisplayName();
+
+        Notification notification = new Notification();
+        notification.setRecipient(project.getPrincipalInvestigator());
+        notification.setContent(message);
+        notification.setSentDate(LocalDateTime.now());
+        notification.setStatus(NotificationStatus.NON_LUE);
+
+        notificationRepository.save(notification);
+
+        // Envoyer un email
+        emailService.sendEmail(
+                project.getPrincipalInvestigator().getEmail(),
+                "Statut de votre projet mis à jour",
+                "project-status-updated",
+                Map.of(
+                        "projectName", project.getTitle(),
+                        "status", project.getStatus().getDisplayName()
+                )
+        );
     }
 }

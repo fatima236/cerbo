@@ -27,7 +27,7 @@ public class Document {
     private String contentType;
     private Long size;
 
-    private LocalDateTime creationDate;
+    private LocalDateTime creationDate = LocalDateTime.now();
     private LocalDateTime modificationDate;
 
     @ManyToOne
