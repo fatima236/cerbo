@@ -1,5 +1,6 @@
 package com.example.cerbo.dto;
 
+import com.example.cerbo.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,7 +54,20 @@ public class JwtTokenUtil {
 
         return buildToken(username, roles, accessTokenSecretKey, accessTokenExpiration);
     }
+    public String generateAccessToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("roles", user.getRoles().stream()
+                .map(role -> role.replace("ROLE_", "")) // Enlevez le préfixe car il sera rajouté plus tard
+                .collect(Collectors.toList()));
 
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(user.getPrenom())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
+                .signWith(SignatureAlgorithm.HS512, accessTokenSecretKey)
+                .compact();
+    }
     // Génère un token à partir d'un username et roles
     public String generateToken(String username, Collection<String> roles) {
         return buildToken(username, roles, accessTokenSecretKey, accessTokenExpiration);

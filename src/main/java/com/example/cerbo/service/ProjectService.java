@@ -3,39 +3,26 @@ package com.example.cerbo.service;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import lombok.SneakyThrows;
 import com.example.cerbo.entity.*;
-
-import java.util.HashSet;
-import org.springframework.data.domain.Pageable;
-import java.util.Set;
-import org.springframework.web.server.ResponseStatusException;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.BadRequestException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -46,10 +33,15 @@ public class ProjectService {
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
 
-
     @Transactional
-    @SneakyThrows
     public Project submitProject(ProjectSubmissionDTO submissionDTO) {
+        // Validation des champs obligatoires
+        if (submissionDTO.getPrincipalInvestigatorId() == null ||
+                submissionDTO.getTitle() == null ||
+                submissionDTO.getConsentType() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Champs obligatoires manquants");
+        }
+
         // 1. Créer le projet de base
         Project project = new Project();
         project.setTitle(submissionDTO.getTitle());
@@ -63,9 +55,7 @@ public class ProjectService {
         project.setProjectDescription(submissionDTO.getProjectDescription());
         project.setEthicalConsiderations(submissionDTO.getEthicalConsiderations());
         project.setStatus(ProjectStatus.SOUMIS);
-        Project savedProject = projectRepository.save(project);
-
-
+        project.setSubmissionDate(LocalDateTime.now());
 
         // 2. Définir l'investigateur principal
         User principalInvestigator = userRepository.findById(submissionDTO.getPrincipalInvestigatorId())
@@ -74,7 +64,7 @@ public class ProjectService {
 
         // 3. Ajouter les co-investigateurs
         Set<User> investigators = new HashSet<>();
-        investigators.add(principalInvestigator); // L'investigateur principal est inclus
+        investigators.add(principalInvestigator);
 
         if (submissionDTO.getInvestigatorIds() != null) {
             for (Long investigatorId : submissionDTO.getInvestigatorIds()) {
@@ -88,45 +78,36 @@ public class ProjectService {
         // 4. Gérer les documents
         List<Document> documents = new ArrayList<>();
 
-        // Documents obligatoires
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFr(), DocumentType.FICHE_INFORMATION_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetAr(), DocumentType.FICHE_INFORMATION_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormFr(), DocumentType.FICHE_CONSENTEMENT_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormAr(), DocumentType.FICHE_CONSENTEMENT_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificate(), DocumentType.ATTESTATION_ENGAGEMENT, project);
-        addDocumentIfPresent(documents, submissionDTO.getCv(), DocumentType.CV_INVESTIGATEUR, project);
-
-        // Documents optionnels
-        if (submissionDTO.getProjectDescriptionFile() != null) {
-            addDocumentIfPresent(documents, submissionDTO.getProjectDescriptionFile(), DocumentType.DESCRIPTIF_PROJET, project);
-        }
-
-        if (submissionDTO.getEthicalConsiderationsFile() != null) {
-            addDocumentIfPresent(documents, submissionDTO.getEthicalConsiderationsFile(), DocumentType.CONSIDERATION_ETHIQUE, project);
-        }
-
-        if (submissionDTO.getOtherDocuments() != null) {
-            for (MultipartFile file : submissionDTO.getOtherDocuments()) {
-                addDocumentIfPresent(documents, file, DocumentType.AUTRE, project);
-            }
-        }
-
-        // Validation des champs obligatoires
-        if (submissionDTO.getPrincipalInvestigatorId() == null ||
-                submissionDTO.getTitle() == null ||
-                submissionDTO.getConsentType() == null) {
-            throw new IllegalArgumentException("Champs obligatoires manquants");
-        }
-
+        // Documents principaux (chemins des fichiers)
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFrPath(), DocumentType.FICHE_INFORMATION_FR, project);
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetArPath(), DocumentType.FICHE_INFORMATION_AR, project);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormFrPath(), DocumentType.FICHE_CONSENTEMENT_FR, project);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormArPath(), DocumentType.FICHE_CONSENTEMENT_AR, project);
+        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificatePath(), DocumentType.ATTESTATION_ENGAGEMENT, project);
+        addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.CV_INVESTIGATEUR, project);
         project.setDocuments(documents);
 
+        // 5. Sauvegarder le projet
+        Project savedProject = projectRepository.save(project);
+
+        // 6. Envoyer les notifications
         notificationService.notifyProjectSubmitted(savedProject);
 
-
-        // 5. Sauvegarder le projet
-        return projectRepository.save(project);
+        return savedProject;
     }
 
+    private void addDocumentIfPresent(List<Document> documents, String fileName, DocumentType type, Project project) {
+        if (fileName != null && !fileName.isEmpty()) {
+            Document document = new Document();
+            document.setType(type);
+            document.setName(fileName); // Utilisez le nom de fichier stocké
+            document.setPath(fileName); // Le chemin est le même que le nom dans ce cas
+            document.setProject(project);
+            documents.add(document);
+        }
+    }
+
+    // Les autres méthodes restent inchangées...
     public Page<Project> findFilteredProjects(ProjectStatus status, String search, Pageable pageable) {
         Specification<Project> spec = Specification.where(null);
 
@@ -145,24 +126,7 @@ public class ProjectService {
 
         return projectRepository.findAll(spec, pageable);
     }
-    @SneakyThrows
-    private void addDocumentIfPresent(List<Document> documents, MultipartFile file, DocumentType type, Project project) {
-        if (file != null && !file.isEmpty()) {
-            String fileName = fileStorageService.storeFile(file);
 
-            Document document = new Document();
-            document.setType(type);
-            document.setName(file.getOriginalFilename());
-            document.setPath(fileName);
-            document.setContentType(file.getContentType());
-            document.setSize(file.getSize());
-            document.setProject(project);
-
-            documents.add(document);
-        }
-    }
-// 1. Ajoutez cette injection de dépendance en haut de la classe
-    // 2. Modifiez la méthode assignReviewers
     @Transactional
     public Project assignReviewers(Long projectId, Set<Long> reviewerIds) {
         Project project = projectRepository.findById(projectId)
@@ -173,7 +137,7 @@ public class ProjectService {
                 .collect(Collectors.toSet());
 
         if (reviewers.size() != reviewerIds.size()) {
-            throw new ResponseStatusException(BAD_REQUEST, "Some users are not evaluators");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Some users are not evaluators");
         }
 
         project.setReviewers(reviewers);
@@ -195,18 +159,4 @@ public class ProjectService {
 
         return projectRepository.findAll(spec);
     }
-
-    public void notifyProjectSubmitted(Project project) {
-        // Notification pour l'admin
-        String message = "Nouveau projet soumis: " + project.getTitle();
-        notificationService.createNotification("admin@email.com", message);
-
-        // Notification pour l'investigateur
-        String userMessage = "Votre projet a été soumis avec succès";
-        notificationService.createNotification(
-                project.getPrincipalInvestigator().getEmail(),
-                userMessage
-        );
-    }
-
 }
