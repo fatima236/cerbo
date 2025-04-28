@@ -78,14 +78,13 @@ public class ProjectService {
         // 4. Gérer les documents
         List<Document> documents = new ArrayList<>();
 
-        // Documents principaux (noms de fichiers)
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFr(), DocumentType.FICHE_INFORMATION_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetAr(), DocumentType.FICHE_INFORMATION_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormFr(), DocumentType.FICHE_CONSENTEMENT_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormAr(), DocumentType.FICHE_CONSENTEMENT_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificate(), DocumentType.ATTESTATION_ENGAGEMENT, project);
-        addDocumentIfPresent(documents, submissionDTO.getCv(), DocumentType.CV_INVESTIGATEUR, project);
-
+        // Documents principaux (chemins des fichiers)
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFrPath(), DocumentType.FICHE_INFORMATION_FR, project);
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetArPath(), DocumentType.FICHE_INFORMATION_AR, project);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormFrPath(), DocumentType.FICHE_CONSENTEMENT_FR, project);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormArPath(), DocumentType.FICHE_CONSENTEMENT_AR, project);
+        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificatePath(), DocumentType.ATTESTATION_ENGAGEMENT, project);
+        addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.CV_INVESTIGATEUR, project);
         project.setDocuments(documents);
 
         // 5. Sauvegarder le projet

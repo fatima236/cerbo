@@ -77,7 +77,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
-
+                        .requestMatchers("/api/meetings/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/projects").authenticated()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")

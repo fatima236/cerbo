@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.JwtTokenUtil;
 import com.example.cerbo.dto.ProjectDTO;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.*;
@@ -11,6 +12,8 @@ import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.ProjectService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,13 +26,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -44,11 +45,13 @@ public class ProjectController {
     private final ProjectService projectService;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
+    private final ObjectMapper objectMapper;
+
+    private final JwtTokenUtil jwtTokenUtil; // Injection de JwtTokenUtil
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('INVESTIGATEUR')")
-    public ResponseEntity<ProjectDTO> submitProject(
-            @RequestPart("projectData") ProjectSubmissionDTO submissionDTO,
+    public ResponseEntity<Project> submitProject(
+            @RequestPart("projectData") String projectDataJson,
             @RequestPart(value = "infoSheetFr", required = false) MultipartFile infoSheetFr,
             @RequestPart(value = "infoSheetAr", required = false) MultipartFile infoSheetAr,
             @RequestPart(value = "consentFormFr", required = false) MultipartFile consentFormFr,
@@ -57,54 +60,53 @@ public class ProjectController {
             @RequestPart(value = "cv", required = false) MultipartFile cv,
             @RequestPart(value = "projectDescriptionFile", required = false) MultipartFile projectDescriptionFile,
             @RequestPart(value = "ethicalConsiderationsFile", required = false) MultipartFile ethicalConsiderationsFile,
-            @RequestPart(value = "otherDocuments", required = false) List<MultipartFile> otherDocuments,
-            @AuthenticationPrincipal User principal) {
-
-        if (submissionDTO.getTitle() == null || submissionDTO.getTitle().isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        submissionDTO.setPrincipalInvestigatorId(principal.getId());
+            @RequestPart(value = "otherDocuments", required = false) MultipartFile[] otherDocuments,
+            @RequestHeader("Authorization") String authHeader) {
 
         try {
-            // Traitement des fichiers principaux
-            if (infoSheetFr != null) {
-                submissionDTO.setInfoSheetFr(fileStorageService.storeFile(infoSheetFr));
-            }
-            if (infoSheetAr != null) {
-                submissionDTO.setInfoSheetAr(fileStorageService.storeFile(infoSheetAr));
-            }
-            if (consentFormFr != null) {
-                submissionDTO.setConsentFormFr(fileStorageService.storeFile(consentFormFr));
-            }
-            if (consentFormAr != null) {
-                submissionDTO.setConsentFormAr(fileStorageService.storeFile(consentFormAr));
-            }
-            if (commitmentCertificate != null) {
-                submissionDTO.setCommitmentCertificate(fileStorageService.storeFile(commitmentCertificate));
-            }
-            if (cv != null) {
-                submissionDTO.setCv(fileStorageService.storeFile(cv));
+            // Vérification du token
+            String token = authHeader.substring(7); // Enlever "Bearer "
+            if (!jwtTokenUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            // Traitement des fichiers supplémentaires
-            if (projectDescriptionFile != null) {
-                // Stockez le fichier et sauvegardez la référence si nécessaire
-            }
-            if (ethicalConsiderationsFile != null) {
-                // Stockez le fichier et sauvegardez la référence si nécessaire
-            }
-            if (otherDocuments != null && !otherDocuments.isEmpty()) {
-                // Traitez chaque fichier dans la liste
+            // Parse JSON
+            ProjectSubmissionDTO submissionDTO = objectMapper.readValue(projectDataJson, ProjectSubmissionDTO.class);
+
+            // Process files
+            submissionDTO.setInfoSheetFrPath(processFile(infoSheetFr));
+            submissionDTO.setInfoSheetArPath(processFile(infoSheetAr));
+            submissionDTO.setConsentFormFrPath(processFile(consentFormFr));
+            submissionDTO.setConsentFormArPath(processFile(consentFormAr));
+            submissionDTO.setCommitmentCertificatePath(processFile(commitmentCertificate));
+            submissionDTO.setCvPath(processFile(cv));
+            submissionDTO.setProjectDescriptionFilePath(processFile(projectDescriptionFile));
+            submissionDTO.setEthicalConsiderationsFilePath(processFile(ethicalConsiderationsFile));
+
+            // Process other documents
+            if (otherDocuments != null) {
+                List<String> otherDocsPaths = new ArrayList<>();
+                for (MultipartFile doc : otherDocuments) {
+                    if (doc != null && !doc.isEmpty()) {
+                        otherDocsPaths.add(processFile(doc));
+                    }
+                }
+                submissionDTO.setOtherDocumentsPaths(otherDocsPaths);
             }
 
             Project project = projectService.submitProject(submissionDTO);
-            return new ResponseEntity<>(convertToDto(project), HttpStatus.CREATED);
+            return ResponseEntity.ok(project);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid project data: " + e.getMessage());
         }
     }
 
+    private String processFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        return fileStorageService.storeFile(file);
+    }
     @GetMapping("/documents/{filename}")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable String filename) {
         try {

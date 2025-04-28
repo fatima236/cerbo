@@ -20,16 +20,26 @@ public class ProjectSubmissionDTO {
     private String ethicalConsiderations;
     private Long principalInvestigatorId;
     private Set<Long> investigatorIds;
-    private String infoSheetFr; // Changé de MultipartFile à String
-    private String infoSheetAr;
-    private String consentFormFr;
-    private String consentFormAr;
-    private String commitmentCertificate;
-    private String cv;
 
-    // Pour les fichiers
-    private MultipartFile projectDescriptionFile;
-    private MultipartFile ethicalConsiderationsFile;
+    // Fields for file paths (to be set after storage)
+    private String infoSheetFrPath;
+    private String infoSheetArPath;
+    private String consentFormFrPath;
+    private String consentFormArPath;
+    private String commitmentCertificatePath;
+    private String cvPath;
+    private String projectDescriptionFilePath;
+    private String ethicalConsiderationsFilePath;
+    private List<String> otherDocumentsPaths;
 
-    private List<MultipartFile> otherDocuments;
+    // Fields for receiving files (transient, not stored in DB)
+    private transient MultipartFile infoSheetFr;
+    private transient MultipartFile infoSheetAr;
+    private transient MultipartFile consentFormFr;
+    private transient MultipartFile consentFormAr;
+    private transient MultipartFile commitmentCertificate;
+    private transient MultipartFile cv;
+    private transient MultipartFile projectDescriptionFile;
+    private transient MultipartFile ethicalConsiderationsFile;
+    private transient List<MultipartFile> otherDocuments;
 }

@@ -41,7 +41,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 List<String> roles = claims.get("roles", List.class);
 
                 List<SimpleGrantedAuthority> authorities = roles.stream()
-                        .map(SimpleGrantedAuthority::new) // Utilise directement le rôle avec préfixe
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role)) // Ajout du préfixe ROLE_
                         .collect(Collectors.toList());
 
                 UsernamePasswordAuthenticationToken authentication =
