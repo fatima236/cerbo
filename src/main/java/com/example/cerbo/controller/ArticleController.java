@@ -19,7 +19,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("api/articles")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @AllArgsConstructor
 public class ArticleController {
 

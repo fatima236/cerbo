@@ -1,30 +1,27 @@
 package com.example.cerbo.config;
 
-import io.jsonwebtoken.security.Keys;
+import com.example.cerbo.dto.JwtTokenFilter;
+import com.example.cerbo.dto.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-// Ajoutez ces imports en haut de SecurityConfig.java
-import com.example.cerbo.dto.JwtTokenFilter;
-import com.example.cerbo.dto.JwtTokenUtil;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import java.util.Arrays;
 
+@EnableMethodSecurity
 @Configuration
 public class SecurityConfig {
 
@@ -40,17 +37,23 @@ public class SecurityConfig {
     @Value("${jwt.refresh.expiration}")
     private long refreshTokenExpiration;
 
+    @Lazy
+    private final JwtTokenFilter jwtTokenFilter;
 
+    public SecurityConfig(JwtTokenFilter jwtTokenFilter) {
+        this.jwtTokenFilter = jwtTokenFilter;
+    }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-    // Ajoutez cette méthode dans votre SecurityConfig
+
+    // Configuration CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Autorisez votre frontend
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Autoriser le frontend
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
@@ -59,60 +62,33 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-    @Bean
-    public JwtTokenUtil jwtTokenUtil() {
-        return new JwtTokenUtil(
-                "votre-cle-secrete-pour-les-access-tokens-d-au-moins-64-caracteres-1234567890abcdef", // Doit correspondre à jwt.access.secret
-                "votre-cle-secrete-pour-les-refresh-tokens-d-au-moins-64-caracteres-1234567890abcdef", // Doit correspondre à jwt.refresh.secret
-                3600000, // jwt.access.expiration
-                86400000 // jwt.refresh.expiration
-        );
-    }
+
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll() // Autoriser l'accès aux routes d'authentification
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
-                        .requestMatchers("/api/meetings/").authenticated()
-                        // Authenticated endpoints
-                        .requestMatchers("/api/profile").authenticated()
+                        .requestMatchers("/api/meetings/**").authenticated()
                         .requestMatchers("/api/projects/**").authenticated()
-                        .requestMatchers("/api/projects/**/**").authenticated()
-
-
-
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                       .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-                      .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+                        .requestMatchers("/api/events").permitAll()
+                        .requestMatchers("/api/articles").permitAll()
+                        .requestMatchers("/api/trainings").permitAll()
+                        .requestMatchers("/api/events/**").hasRole("ADMIN")
+                        .requestMatchers("/api/articles/**").hasRole("ADMIN")
+                        .requestMatchers("/api/trainings/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/evaluateur/**").hasAuthority("ROLE_EVALUATEUR")
+                        .requestMatchers("/investigateur/**").hasAuthority("ROLE_INVESTIGATEUR")
                         .anyRequest().permitAll()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                )
-                .addFilterBefore(new JwtTokenFilter(jwtTokenUtil()), UsernamePasswordAuthenticationFilter.class)
-                ;
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withSecretKey(
-                Keys.hmacShaKeyFor("votre-cle-secrete-pour-les-access-tokens-d-au-moins-64-caracteres-1234567890abcdef".getBytes())
-        ).build();
-    }
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
-
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-
-        return jwtAuthenticationConverter;
     }
 
     @Bean

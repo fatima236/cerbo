@@ -3,7 +3,7 @@ package com.example.cerbo.controller;
 import com.example.cerbo.dto.*;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.UserRepository;
-import com.example.cerbo.service.UserService;
+import com.example.cerbo.service.UserDetailsServiceImp;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class UserController {
 
     @Autowired
-    private UserService userService;
+    private UserDetailsServiceImp userDetailsServiceImp;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -48,7 +48,7 @@ public class UserController {
             userRequest.setEmail(request.getEmail());
             userRequest.setPassword(request.getPassword());
 
-            userService.requestInvestigateurSignup(userRequest);
+            userDetailsServiceImp.requestInvestigateurSignup(userRequest);
 
             return ResponseEntity.ok(Map.of(
                     "status", "PENDING",
@@ -66,7 +66,7 @@ public class UserController {
     @GetMapping("/approve/{pendingUserId}")
     public ResponseEntity<String> approveInvestigateur(@PathVariable Long pendingUserId) {
         try {
-            User approvedUser = userService.approveInvestigateur(pendingUserId);
+            User approvedUser = userDetailsServiceImp.approveInvestigateur(pendingUserId);
 
             String responseHtml = "<html>" +
                     "<body style=\"font-family: Arial, sans-serif;\">" +
@@ -101,7 +101,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public String rejectInvestigateurHtml(@PathVariable Long pendingUserId) {
         try {
-            userService.rejectInvestigateur(pendingUserId);
+            userDetailsServiceImp.rejectInvestigateur(pendingUserId);
             return "<html><body><h1>Demande rejetée</h1><p>La demande a été supprimée.</p></body></html>";
         } catch (Exception e) {
             return "<html><body><h1>Erreur</h1><p>" + e.getMessage() + "</p></body></html>";
@@ -157,7 +157,7 @@ public class UserController {
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         try {
-            userService.requestPasswordReset(email);
+            userDetailsServiceImp.requestPasswordReset(email);
             return ResponseEntity.ok(Map.of(
                     "message", "Un email de réinitialisation a été envoyé",
                     "status", "EMAIL_SENT"
@@ -191,7 +191,7 @@ public class UserController {
             String token = request.get("token");
             String newPassword = request.get("newPassword");
 
-            userService.resetPassword(token, newPassword);
+            userDetailsServiceImp.resetPassword(token, newPassword);
             return ResponseEntity.ok(Map.of(
                     "message", "Mot de passe mis à jour avec succès",
                     "status", "PASSWORD_RESET"
@@ -202,7 +202,6 @@ public class UserController {
             ));
         }
     }
-    @PreAuthorize("hasRole('EVALUATEUR')")
     @PostMapping("/loginevaluateur")
     public ResponseEntity<?> loginEvaluateur(@RequestBody LoginRequest loginRequest) {
         try {

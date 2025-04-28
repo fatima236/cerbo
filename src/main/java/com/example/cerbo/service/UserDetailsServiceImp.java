@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,13 +22,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserDetailsServiceImp implements UserDetailsService {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    private static final Logger logger = LoggerFactory.getLogger(UserDetailsServiceImp.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -51,11 +55,17 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException("User not found or not validated: " + email);
         }
 
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPassword())
-                .roles(user.getRoles().toArray(new String[0]))
-                .build();
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(),          // Utilise l'email comme "username"
+                user.getPassword(),       // Mot de passe crypté (bcrypt en général)
+                mapRolesToAuthorities(user.getRoles()) // Convertir les rôles en authorities
+        );
+    }
+
+    private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Collection<String> roles) {
+        return roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
     public User createUser(String email, String password, Set<String> roles) {

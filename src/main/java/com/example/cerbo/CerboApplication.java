@@ -42,7 +42,7 @@ public class CerboApplication {
     public CommandLineRunner init() {
         return args -> {
             User user = new User();
-            user.setEmail("aoudayy@example.com");
+            user.setEmail("aouday@example.com");
             user.setPassword(passwordEncoder.encode("xxx"));
 
             userRepository.save(user);

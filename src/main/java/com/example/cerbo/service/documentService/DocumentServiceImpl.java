@@ -2,6 +2,7 @@ package com.example.cerbo.service.documentService;
 
 import com.example.cerbo.entity.*;
 import com.example.cerbo.repository.*;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,14 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Value("${upload.directory}") // le chemin d'upload
     private String uploadDir;
+
+    @PostConstruct
+    public void init() {
+        File dir = new File(uploadDir);
+        if (!dir.isAbsolute()) {
+            this.uploadDir = dir.getAbsolutePath();
+        }
+    }
 
     @Override
     public Document getDocumentById(Long id) {

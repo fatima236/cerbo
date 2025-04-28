@@ -22,14 +22,14 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/events")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @AllArgsConstructor
 public class EventController {
 
-    private EventRepository eventRepository;
-    private EventService eventService;
-    private DocumentService documentService;
-    private DocumentRepository documentRepository;
+    private final EventRepository eventRepository;
+    private final EventService eventService;
+    private final DocumentService documentService;
+    private final DocumentRepository documentRepository;
 
     @GetMapping
     public ResponseEntity<List<Event>> getAllEvents() {

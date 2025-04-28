@@ -21,10 +21,8 @@ public class JwtTokenUtil {
     private final SecretKey refreshTokenSecretKey;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
-    // Assurez-vous que la clé correspond EXACTEMENT à celle du client
-    private final SecretKey accessTokenSecretKey = Keys.hmacShaKeyFor(
-            "votre-cle-secrete-pour-les-access-tokens-d-au-moins-64-caracteres-1234567890abcdef".getBytes()
-    );
+    private final SecretKey accessTokenSecretKey ;
+
     public JwtTokenUtil(
             @Value("${jwt.access.secret}") String accessSecret,
             @Value("${jwt.refresh.secret}") String refreshSecret,
@@ -39,6 +37,7 @@ public class JwtTokenUtil {
         }
 
 
+        this.accessTokenSecretKey = Keys.hmacShaKeyFor(accessSecret.getBytes(StandardCharsets.UTF_8));
         this.refreshTokenSecretKey = Keys.hmacShaKeyFor(refreshSecret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpiration = accessExpiration;
         this.refreshTokenExpiration = refreshExpiration;
@@ -49,6 +48,7 @@ public class JwtTokenUtil {
         String username = authentication.getName();
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role) // <- ajouter ROLE_ si absent
                 .collect(Collectors.toList());
 
         return buildToken(username, roles, accessTokenSecretKey, accessTokenExpiration);
@@ -76,6 +76,7 @@ public class JwtTokenUtil {
 
     // Méthode privée pour construire les tokens
     private String buildToken(String username, Collection<String> roles, SecretKey key, long expiration) {
+        System.out.println(expiration);
         return Jwts.builder()
                 .setSubject(username)
                 .claim("roles", roles)
