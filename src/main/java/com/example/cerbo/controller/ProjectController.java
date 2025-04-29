@@ -61,7 +61,8 @@ public class ProjectController {
             @RequestPart(value = "projectDescriptionFile", required = false) MultipartFile projectDescriptionFile,
             @RequestPart(value = "ethicalConsiderationsFile", required = false) MultipartFile ethicalConsiderationsFile,
             @RequestPart(value = "otherDocuments", required = false) MultipartFile[] otherDocuments,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal User principal){
 
         try {
             // Vérification du token
@@ -69,10 +70,14 @@ public class ProjectController {
             if (!jwtTokenUtil.validateToken(token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
+            if (principal == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
 
             // Parse JSON
             ProjectSubmissionDTO submissionDTO = objectMapper.readValue(projectDataJson, ProjectSubmissionDTO.class);
 
+            submissionDTO.setPrincipalInvestigatorId(principal.getId());
             // Process files
             submissionDTO.setInfoSheetFrPath(processFile(infoSheetFr));
             submissionDTO.setInfoSheetArPath(processFile(infoSheetAr));
@@ -92,6 +97,10 @@ public class ProjectController {
                     }
                 }
                 submissionDTO.setOtherDocumentsPaths(otherDocsPaths);
+            }
+
+            if (submissionDTO.getPrincipalInvestigatorId() == null) {
+                throw new IllegalArgumentException("L'investigateur principal est obligatoire");
             }
 
             Project project = projectService.submitProject(submissionDTO);
@@ -212,6 +221,9 @@ public class ProjectController {
     @PreAuthorize("hasRole('INVESTIGATEUR')")
     public ResponseEntity<List<ProjectDTO>> getMyProjects(
             @AuthenticationPrincipal User principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         List<Project> projects = projectRepository.findByPrincipalInvestigatorIdOrInvestigatorsId(
                 principal.getId(), principal.getId());

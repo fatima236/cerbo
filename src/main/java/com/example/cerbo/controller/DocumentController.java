@@ -9,6 +9,7 @@ import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.service.documentService.DocumentService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -35,18 +36,20 @@ public class DocumentController {
 
 
     @PostMapping("/upload")
-    public String uploadFile(@RequestParam(value = "file",required = false) MultipartFile file,
+    public ResponseEntity<String>  uploadFile(
+                             @RequestParam(value = "file",required = false) MultipartFile file,
                              @RequestParam(value = "eventId",required = false) Long eventId,
                              @RequestParam(value = "articleId",required = false) Long articleId,
                              @RequestParam(value = "projectId",required = false) Long projectId,
                              @RequestParam(value = "trainingId",required = false) Long trainingId
                              ) throws IOException {
-        return documentService.uploadFile(file,eventId,articleId,projectId,trainingId);
-    }
+            String result = documentService.uploadFile(file, projectId, eventId, articleId, trainingId);
+            return ResponseEntity.ok(result);
+        }
 
     @PostMapping("/delete")
-    public String deleteDocumentById(@RequestParam(value = "id") Long id){
+    public ResponseEntity<String> deleteDocumentById(@RequestParam(value = "id") Long id){
 
-        return documentService.removeDocumentById(id);
-    }
+        String result = documentService.removeDocumentById(id);
+        return ResponseEntity.ok(result);    }
 }

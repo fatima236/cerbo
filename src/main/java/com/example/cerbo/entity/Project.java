@@ -3,6 +3,7 @@ package com.example.cerbo.entity;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -18,6 +19,7 @@ import java.util.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Project {
 
     @Id

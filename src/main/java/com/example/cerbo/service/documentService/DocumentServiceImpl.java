@@ -53,8 +53,8 @@ public class DocumentServiceImpl implements DocumentService {
                              Long projectId,
                              Long trainingId) {
 
-        if (file.isEmpty()) {
-            return "Le fichier est vide !";
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
         }
 
         File directory = new File(uploadDir);

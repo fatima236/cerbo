@@ -78,6 +78,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/events").permitAll()
                         .requestMatchers("/api/articles").permitAll()
                         .requestMatchers("/api/trainings").permitAll()
+                        // Routes protégées
+                        .requestMatchers(HttpMethod.GET, "/api/projects").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/projects").hasRole("INVESTIGATEUR")
+                        .requestMatchers("/api/projects/investigator/projects").hasRole("INVESTIGATEUR")
+                        .requestMatchers("/api/projects/**").authenticated()
+
+                        .requestMatchers("/api/projects/admin/**").hasRole("ADMIN")
+
                         .requestMatchers("/api/events/**").hasRole("ADMIN")
                         .requestMatchers("/api/articles/**").hasRole("ADMIN")
                         .requestMatchers("/api/trainings/**").hasRole("ADMIN")

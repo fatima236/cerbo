@@ -1,6 +1,7 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.dto.ProjectSubmissionDTO;
+import lombok.Builder;
 import lombok.SneakyThrows;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.DocumentType;
@@ -36,74 +37,81 @@ public class ProjectService {
     @Transactional
     public Project submitProject(ProjectSubmissionDTO submissionDTO) {
         // Validation des champs obligatoires
-        if (submissionDTO.getPrincipalInvestigatorId() == null ||
-                submissionDTO.getTitle() == null ||
-                submissionDTO.getConsentType() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Champs obligatoires manquants");
+        if (submissionDTO.getPrincipalInvestigatorId() == null) {
+            throw new IllegalArgumentException("L'investigateur principal est obligatoire");
         }
 
-        // 1. Créer le projet de base
-        Project project = new Project();
-        project.setTitle(submissionDTO.getTitle());
-        project.setStudyDuration(submissionDTO.getStudyDuration());
-        project.setTargetPopulation(submissionDTO.getTargetPopulation());
-        project.setConsentType(submissionDTO.getConsentType());
-        project.setSampling(submissionDTO.getSampling());
-        project.setSampleType(submissionDTO.getSampleType());
-        project.setSampleQuantity(submissionDTO.getSampleQuantity());
-        project.setFundingSource(submissionDTO.getFundingSource());
-        project.setProjectDescription(submissionDTO.getProjectDescription());
-        project.setEthicalConsiderations(submissionDTO.getEthicalConsiderations());
-        project.setStatus(ProjectStatus.SOUMIS);
-        project.setSubmissionDate(LocalDateTime.now());
+        // Construction du projet
+        Project project = Project.builder()
+                .title(submissionDTO.getTitle())
+                .studyDuration(submissionDTO.getStudyDuration())
+                .targetPopulation(submissionDTO.getTargetPopulation())
+                .consentType(submissionDTO.getConsentType())
+                .sampling(submissionDTO.getSampling())
+                .sampleType(submissionDTO.getSampleType())
+                .sampleQuantity(submissionDTO.getSampleQuantity())
+                .fundingSource(submissionDTO.getFundingSource())
+                .fundingProgram(submissionDTO.getFundingProgram())
+                .projectDescription(submissionDTO.getProjectDescription())
+                .ethicalConsiderations(submissionDTO.getEthicalConsiderations())
+                .status(ProjectStatus.SOUMIS)
+                .submissionDate(LocalDateTime.now())
+                .build();
 
-        // 2. Définir l'investigateur principal
-        User principalInvestigator = userRepository.findById(submissionDTO.getPrincipalInvestigatorId())
+        // Investigateur principal
+        User principal = userRepository.findById(submissionDTO.getPrincipalInvestigatorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Investigateur principal non trouvé"));
-        project.setPrincipalInvestigator(principalInvestigator);
+        project.setPrincipalInvestigator(principal);
 
-        // 3. Ajouter les co-investigateurs
+        // Co-investigateurs
         Set<User> investigators = new HashSet<>();
-        investigators.add(principalInvestigator);
-
+        investigators.add(principal);
         if (submissionDTO.getInvestigatorIds() != null) {
-            for (Long investigatorId : submissionDTO.getInvestigatorIds()) {
-                User investigator = userRepository.findById(investigatorId)
+            submissionDTO.getInvestigatorIds().forEach(id -> {
+                User inv = userRepository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Investigateur non trouvé"));
-                investigators.add(investigator);
-            }
+                investigators.add(inv);
+            });
         }
         project.setInvestigators(investigators);
 
-        // 4. Gérer les documents
+        // Documents
         List<Document> documents = new ArrayList<>();
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFrPath(), DocumentType.INFORMATION_SHEET_FR, project);
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetArPath(), DocumentType.INFORMATION_SHEET_AR, project);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormFrPath(), DocumentType.CONSENT_FORM_FR, project);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormArPath(), DocumentType.CONSENT_FORM_AR, project);
+        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificatePath(), DocumentType.COMMITMENT_CERTIFICATE, project);
+        addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.INVESTIGATOR_CV, project);
+        addDocumentIfPresent(documents, submissionDTO.getProjectDescriptionFilePath(), DocumentType.PROJECT_DESCRIPTION, project);
+        addDocumentIfPresent(documents, submissionDTO.getEthicalConsiderationsFilePath(), DocumentType.ETHICAL_CONSIDERATIONS, project);
 
-        // Documents principaux (chemins des fichiers)
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFrPath(), DocumentType.FICHE_INFORMATION_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetArPath(), DocumentType.FICHE_INFORMATION_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormFrPath(), DocumentType.FICHE_CONSENTEMENT_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormArPath(), DocumentType.FICHE_CONSENTEMENT_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificatePath(), DocumentType.ATTESTATION_ENGAGEMENT, project);
-        addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.CV_INVESTIGATEUR, project);
+        // Autres documents
+        if (submissionDTO.getOtherDocumentsPaths() != null) {
+            submissionDTO.getOtherDocumentsPaths().forEach(path ->
+                    addDocumentIfPresent(documents, path, DocumentType.OTHER, project));
+        }
+
         project.setDocuments(documents);
+        return projectRepository.save(project);
 
-        // 5. Sauvegarder le projet
-        Project savedProject = projectRepository.save(project);
 
         // 6. Envoyer les notifications
-        notificationService.notifyProjectSubmitted(savedProject);
+       // notificationService.notifyProjectSubmitted(savedProject);
 
-        return savedProject;
+       // return savedProject;
     }
 
-    private void addDocumentIfPresent(List<Document> documents, String fileName, DocumentType type, Project project) {
-        if (fileName != null && !fileName.isEmpty()) {
-            Document document = new Document();
-            document.setType(type);
-            document.setName(fileName); // Utilisez le nom de fichier stocké
-            document.setPath(fileName); // Le chemin est le même que le nom dans ce cas
-            document.setProject(project);
-            documents.add(document);
+    private void addDocumentIfPresent(List<Document> documents, String filePath, DocumentType type, Project project) {
+        if (filePath != null && !filePath.isEmpty()) {
+            Document doc = Document.builder()
+                    .type(type)
+                    .name(filePath.substring(filePath.lastIndexOf('/') + 1))
+                    .path(filePath)
+                    .project(project)
+                    .creationDate(LocalDateTime.now())
+                    .build();
+            documents.add(doc);
         }
     }
 
