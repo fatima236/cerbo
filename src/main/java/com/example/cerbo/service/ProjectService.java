@@ -41,7 +41,7 @@ public class ProjectService {
             throw new IllegalArgumentException("L'investigateur principal est obligatoire");
         }
 
-        // Construction du projet
+        // Construction du projet SANS documents pour l'instant
         Project project = Project.builder()
                 .title(submissionDTO.getTitle())
                 .studyDuration(submissionDTO.getStudyDuration())
@@ -56,6 +56,7 @@ public class ProjectService {
                 .ethicalConsiderations(submissionDTO.getEthicalConsiderations())
                 .status(ProjectStatus.SOUMIS)
                 .submissionDate(LocalDateTime.now())
+                .documents(new ArrayList<>()) // Empty list for now
                 .build();
 
         // Investigateur principal
@@ -75,31 +76,29 @@ public class ProjectService {
         }
         project.setInvestigators(investigators);
 
-        // Documents
+        // Save the project first to generate its ID
+        Project savedProject = projectRepository.save(project);
+
+        // Now create and associate documents with the saved project
         List<Document> documents = new ArrayList<>();
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFrPath(), DocumentType.INFORMATION_SHEET_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getInfoSheetArPath(), DocumentType.INFORMATION_SHEET_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormFrPath(), DocumentType.CONSENT_FORM_FR, project);
-        addDocumentIfPresent(documents, submissionDTO.getConsentFormArPath(), DocumentType.CONSENT_FORM_AR, project);
-        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificatePath(), DocumentType.COMMITMENT_CERTIFICATE, project);
-        addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.INVESTIGATOR_CV, project);
-        addDocumentIfPresent(documents, submissionDTO.getProjectDescriptionFilePath(), DocumentType.PROJECT_DESCRIPTION, project);
-        addDocumentIfPresent(documents, submissionDTO.getEthicalConsiderationsFilePath(), DocumentType.ETHICAL_CONSIDERATIONS, project);
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetFrPath(), DocumentType.INFORMATION_SHEET_FR, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getInfoSheetArPath(), DocumentType.INFORMATION_SHEET_AR, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormFrPath(), DocumentType.CONSENT_FORM_FR, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getConsentFormArPath(), DocumentType.CONSENT_FORM_AR, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getCommitmentCertificatePath(), DocumentType.COMMITMENT_CERTIFICATE, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.INVESTIGATOR_CV, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getProjectDescriptionFilePath(), DocumentType.PROJECT_DESCRIPTION, savedProject);
+        addDocumentIfPresent(documents, submissionDTO.getEthicalConsiderationsFilePath(), DocumentType.ETHICAL_CONSIDERATIONS, savedProject);
 
         // Autres documents
         if (submissionDTO.getOtherDocumentsPaths() != null) {
             submissionDTO.getOtherDocumentsPaths().forEach(path ->
-                    addDocumentIfPresent(documents, path, DocumentType.OTHER, project));
+                    addDocumentIfPresent(documents, path, DocumentType.OTHER, savedProject));
         }
 
-        project.setDocuments(documents);
-        return projectRepository.save(project);
-
-
-        // 6. Envoyer les notifications
-       // notificationService.notifyProjectSubmitted(savedProject);
-
-       // return savedProject;
+        // Set the documents and save again
+        savedProject.setDocuments(documents);
+        return projectRepository.save(savedProject);
     }
 
     private void addDocumentIfPresent(List<Document> documents, String filePath, DocumentType type, Project project) {
@@ -108,7 +107,7 @@ public class ProjectService {
                     .type(type)
                     .name(filePath.substring(filePath.lastIndexOf('/') + 1))
                     .path(filePath)
-                    .project(project)
+                    .project(project)  // Set the project reference
                     .creationDate(LocalDateTime.now())
                     .build();
             documents.add(doc);

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Component
 @AllArgsConstructor
 public class JwtTokenFilter extends OncePerRequestFilter {
-    private static final Logger logger = LoggerFactory.getLogger(JwtTokenFilter.class);
+    public static final Logger logger = LoggerFactory.getLogger(JwtTokenFilter.class);
     private final UserDetailsServiceImp userDetailsServiceImp;
     private final JwtTokenUtil jwtTokenUtil;
     private final BlacklistService blacklistService; // 🔥 Ajouté ici

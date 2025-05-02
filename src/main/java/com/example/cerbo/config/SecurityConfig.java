@@ -56,6 +56,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Autoriser le frontend
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -74,17 +75,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
-                        .requestMatchers("/api/projects/**").authenticated()
+
                         .requestMatchers("/api/events").permitAll()
                         .requestMatchers("/api/articles").permitAll()
                         .requestMatchers("/api/trainings").permitAll()
                         // Routes protégées
-                        .requestMatchers(HttpMethod.GET, "/api/projects").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/projects").hasRole("INVESTIGATEUR")
-                        .requestMatchers("/api/projects/investigator/projects").hasRole("INVESTIGATEUR")
-                        .requestMatchers("/api/projects/**").authenticated()
 
-                        .requestMatchers("/api/projects/admin/**").hasRole("ADMIN")
+                        // Ajouter ceci dans SecurityConfig
+                        .requestMatchers( "/api/projects").hasAnyRole("INVESTIGATEUR", "ADMIN")
+
 
                         .requestMatchers("/api/events/**").hasRole("ADMIN")
                         .requestMatchers("/api/articles/**").hasRole("ADMIN")

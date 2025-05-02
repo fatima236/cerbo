@@ -40,7 +40,8 @@ public class ProjectSubmissionDTO {
 
     private String projectDescription;
     private String ethicalConsiderations;
-
+    @Size(max = 50, message = "Status must be at most 50 characters")
+    private String status;
     @NotNull(message = "L'investigateur principal est obligatoire")
     private Long principalInvestigatorId;
 

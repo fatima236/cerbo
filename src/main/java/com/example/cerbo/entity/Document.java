@@ -22,6 +22,7 @@ public class Document {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 70) // ou la longueur appropriée pour votre cas
     private DocumentType type;
 
     private String name;
@@ -33,7 +34,7 @@ public class Document {
     private LocalDateTime modificationDate;
 
     @ManyToOne
-    @JoinColumn(name = "project_id", nullable = true)
+    @JoinColumn(name = "project_id", nullable = false) // Changé de nullable=true à false
     private Project project;
 
     @ManyToOne

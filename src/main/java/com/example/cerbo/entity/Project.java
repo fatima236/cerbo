@@ -39,6 +39,7 @@ public class Project {
     private LocalDateTime decisionDate;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50) // Adjust length as needed
     private ProjectStatus status = ProjectStatus.SOUMIS; // Changé de EN_COURS à SOUMIS
 
     private String studyDuration;
@@ -49,6 +50,7 @@ public class Project {
     private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
+
 
     @Column(columnDefinition = "TEXT")
     private String projectDescription;
@@ -95,4 +97,5 @@ public class Project {
             this.submissionDate = LocalDateTime.now();
         }
     }
+
 }
