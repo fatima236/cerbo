@@ -1,11 +1,6 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.dto.ProjectSubmissionDTO;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
-import lombok.Builder;
-import lombok.SneakyThrows;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.ProjectStatus;
@@ -22,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -121,35 +113,19 @@ public class ProjectService {
     public List<Project> findFilteredProjects(ProjectStatus status, String search) {
         Specification<Project> spec = Specification.where(null);
 
-        // Filtre par statut
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
 
-        // Filtre par recherche textuelle
         if (search != null && !search.isEmpty()) {
             String likePattern = "%" + search.toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> {
-                // Création d'une liste de prédicats pour la recherche
-                List<Predicate> predicates = new ArrayList<>();
-
-                // Recherche dans les champs de base du projet
-                predicates.add(cb.like(cb.lower(root.get("title")), likePattern));
-                predicates.add(cb.like(cb.lower(root.get("reference")), likePattern));
-                predicates.add(cb.like(cb.lower(root.get("projectDescription")), likePattern));
-
-                // Recherche dans les informations de l'investigateur principal
-                Join<Project, User> investigatorJoin = root.join("principalInvestigator", JoinType.LEFT);
-                predicates.add(cb.like(cb.lower(investigatorJoin.get("email")), likePattern));
-                predicates.add(cb.like(cb.lower(investigatorJoin.get("nom")), likePattern));
-                predicates.add(cb.like(cb.lower(investigatorJoin.get("prenom")), likePattern));
-
-                // Recherche dans les documents associés
-                Join<Project, Document> documentsJoin = root.join("documents", JoinType.LEFT);
-                predicates.add(cb.like(cb.lower(documentsJoin.get("name")), likePattern));
-
-                return cb.or(predicates.toArray(new Predicate[0]));
-            });
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("title")), likePattern),
+                    cb.like(cb.lower(root.get("reference")), likePattern),
+                    cb.like(cb.lower(root.get("principalInvestigator").get("email")), likePattern),
+                    cb.like(cb.lower(root.get("principalInvestigator").get("nom")), likePattern),
+                    cb.like(cb.lower(root.get("principalInvestigator").get("prenom")), likePattern)
+            ));
         }
 
         return projectRepository.findAll(spec);
@@ -166,8 +142,10 @@ public class ProjectService {
             spec = spec.and((root, query, cb) -> cb.or(
                     cb.like(cb.lower(root.get("title")), likePattern),
                     cb.like(cb.lower(root.get("reference")), likePattern),
-                    cb.like(cb.lower(root.get("projectDescription")), likePattern),
-                    cb.like(cb.lower(root.get("principalInvestigator").get("email")), likePattern)
+                    cb.like(cb.lower(root.get("principalInvestigator").get("email")), likePattern),
+                    cb.like(cb.lower(root.get("principalInvestigator").get("nom")), likePattern),
+                    cb.like(cb.lower(root.get("principalInvestigator").get("prenom")), likePattern)
+
             ));
         }
 
@@ -207,10 +185,7 @@ public class ProjectService {
         return projectRepository.findAll(spec);
     }
     // Ajoutez cette méthode dans votre ProjectService
-    public Project getProjectById(Long id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
-    }
+
 
     // ... autres dépendances
 
@@ -225,7 +200,11 @@ public class ProjectService {
     public List<Project> getAllProjects() {
         return projectRepository.findAllWithInvestigatorsAndReviewers();
     }
-
+    @Transactional
+    public Project getProjectById(Long id) {
+        return projectRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
+    }
     @Transactional
     public Project updateProjectStatus(Long id, String status, String comment) {
         Project project = projectRepository.findById(id)
