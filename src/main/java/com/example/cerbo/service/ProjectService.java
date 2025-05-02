@@ -1,6 +1,9 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.dto.ProjectSubmissionDTO;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import lombok.Builder;
 import lombok.SneakyThrows;
 import com.example.cerbo.entity.*;
@@ -115,6 +118,42 @@ public class ProjectService {
     }
 
     // Les autres méthodes restent inchangées...
+    public List<Project> findFilteredProjects(ProjectStatus status, String search) {
+        Specification<Project> spec = Specification.where(null);
+
+        // Filtre par statut
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+
+        // Filtre par recherche textuelle
+        if (search != null && !search.isEmpty()) {
+            String likePattern = "%" + search.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> {
+                // Création d'une liste de prédicats pour la recherche
+                List<Predicate> predicates = new ArrayList<>();
+
+                // Recherche dans les champs de base du projet
+                predicates.add(cb.like(cb.lower(root.get("title")), likePattern));
+                predicates.add(cb.like(cb.lower(root.get("reference")), likePattern));
+                predicates.add(cb.like(cb.lower(root.get("projectDescription")), likePattern));
+
+                // Recherche dans les informations de l'investigateur principal
+                Join<Project, User> investigatorJoin = root.join("principalInvestigator", JoinType.LEFT);
+                predicates.add(cb.like(cb.lower(investigatorJoin.get("email")), likePattern));
+                predicates.add(cb.like(cb.lower(investigatorJoin.get("nom")), likePattern));
+                predicates.add(cb.like(cb.lower(investigatorJoin.get("prenom")), likePattern));
+
+                // Recherche dans les documents associés
+                Join<Project, Document> documentsJoin = root.join("documents", JoinType.LEFT);
+                predicates.add(cb.like(cb.lower(documentsJoin.get("name")), likePattern));
+
+                return cb.or(predicates.toArray(new Predicate[0]));
+            });
+        }
+
+        return projectRepository.findAll(spec);
+    }
     public Page<Project> findFilteredProjects(ProjectStatus status, String search, Pageable pageable) {
         Specification<Project> spec = Specification.where(null);
 
@@ -127,6 +166,7 @@ public class ProjectService {
             spec = spec.and((root, query, cb) -> cb.or(
                     cb.like(cb.lower(root.get("title")), likePattern),
                     cb.like(cb.lower(root.get("reference")), likePattern),
+                    cb.like(cb.lower(root.get("projectDescription")), likePattern),
                     cb.like(cb.lower(root.get("principalInvestigator").get("email")), likePattern)
             ));
         }

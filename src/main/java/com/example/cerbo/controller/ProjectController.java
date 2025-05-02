@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.entity.enums.ProjectStatus;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.Project;
@@ -94,14 +95,30 @@ public class ProjectController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllProjects(Authentication authentication) {
+    public ResponseEntity<?> getAllProjects(        @RequestParam(required = false) String search,
+                                                    @RequestParam(required = false) String status,
+                                                    Authentication authentication) {
         try {
+            log.info("Search params - search: {}, status: {}", search, status);
+
             log.info("Attempting to get all projects");
             log.info("Authenticated user: {}", authentication.getName());
             log.info("User authorities: {}", authentication.getAuthorities());
 
+            // Convertir le statut string en enum si fourni
+            ProjectStatus statusEnum = null;
+            if (status != null && !status.isEmpty()) {
+                try {
+                    statusEnum = ProjectStatus.valueOf(status);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body("Statut invalide: " + status);
+                }
+            }
+
+            List<Project> projects = projectService.findFilteredProjects(statusEnum, search);
+
             // Ajoutez ce logging pour voir ce qui est récupéré depuis la base
-            List<Project> projects = projectService.getAllProjects();
+          //  List<Project> projects = projectService.getAllProjects();
             log.info("Number of projects retrieved from DB: {}", projects.size());
             projects.forEach(p -> log.info("Project ID: {}, Title: {}", p.getId(), p.getTitle()));
 
@@ -109,12 +126,14 @@ public class ProjectController {
                 Map<String, Object> projectMap = new HashMap<>();
                 projectMap.put("id", project.getId());
                 projectMap.put("title", project.getTitle());
+                projectMap.put("reference", project.getReference());
                 projectMap.put("status", project.getStatus());
                 projectMap.put("submissionDate", project.getSubmissionDate());
 
                 if (project.getPrincipalInvestigator() != null) {
                     Map<String, Object> investigator = new HashMap<>();
                     investigator.put("id", project.getPrincipalInvestigator().getId());
+                    investigator.put("email", project.getPrincipalInvestigator().getEmail());
                     investigator.put("name", project.getPrincipalInvestigator().getNom() + " " + project.getPrincipalInvestigator().getPrenom());
                     projectMap.put("principalInvestigator", investigator);
                 }
