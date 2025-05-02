@@ -30,5 +30,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     List<Project> findByPrincipalInvestigatorId(Long investigatorId);
     List<Project> findByStatus(ProjectStatus Status);
 
-
+    @Query("SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.investigators LEFT JOIN FETCH p.reviewers")
+    List<Project> findAllWithInvestigatorsAndReviewers();
 }

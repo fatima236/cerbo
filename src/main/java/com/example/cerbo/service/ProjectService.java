@@ -166,4 +166,70 @@ public class ProjectService {
 
         return projectRepository.findAll(spec);
     }
+    // Ajoutez cette méthode dans votre ProjectService
+    public Project getProjectById(Long id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
+    }
+
+    // ... autres dépendances
+
+    public List<Document> getProjectDocuments(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        return project.getDocuments();
+    }
+    // Add these methods to your ProjectService class
+
+    @Transactional(readOnly = true)
+    public List<Project> getAllProjects() {
+        return projectRepository.findAllWithInvestigatorsAndReviewers();
+    }
+
+    @Transactional
+    public Project updateProjectStatus(Long id, String status, String comment) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
+
+        try {
+            ProjectStatus newStatus = ProjectStatus.valueOf(status);
+            project.setStatus(newStatus);
+
+
+
+            // You might want to add additional logic here based on status changes
+            // For example, send notifications when status changes
+
+            return projectRepository.save(project);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status value: " + status);
+        }
+    }
+
+    @Transactional
+    public Project assignEvaluator(Long projectId, Long evaluatorId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+
+        User evaluator = userRepository.findById(evaluatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + evaluatorId));
+
+        // Check if the user is actually an evaluator
+        if (!evaluator.getRoles().contains("EVALUATEUR")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "User with id " + evaluatorId + " is not an evaluator");
+        }
+
+        Set<User> reviewers = project.getReviewers();
+        if (reviewers == null) {
+            reviewers = new HashSet<>();
+        }
+        reviewers.add(evaluator);
+        project.setReviewers(reviewers);
+
+        // You might want to update the status or send notifications here
+        project.setStatus(ProjectStatus.EN_COURS);
+
+        return projectRepository.save(project);
+    }
 }

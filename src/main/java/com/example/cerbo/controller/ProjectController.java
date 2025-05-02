@@ -1,4 +1,5 @@
 package com.example.cerbo.controller;
+
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.Project;
@@ -22,6 +23,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -54,10 +59,7 @@ public class ProjectController {
         }
 
         try {
-            // Add logging at the start
             log.info("Received project submission request");
-            // Get authenticated user
-            // Get authenticated user
             UserDetails userDetails = (UserDetails) auth.getPrincipal();
             User principalInvestigator = userRepository.findByEmail(userDetails.getUsername());
 
@@ -65,16 +67,9 @@ public class ProjectController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Authenticated user not found");
             }
 
-            // Parse JSON data
             ProjectSubmissionDTO submissionDTO = objectMapper.readValue(projectDataJson, ProjectSubmissionDTO.class);
-
-            // Override the principal investigator with the authenticated user
             submissionDTO.setPrincipalInvestigatorId(principalInvestigator.getId());
 
-            // Process files and create project
-            submissionDTO.setInfoSheetFrPath(processFile(infoSheetFr));
-            // ... other file processing
-            // Process files
             submissionDTO.setInfoSheetFrPath(processFile(infoSheetFr));
             submissionDTO.setInfoSheetArPath(processFile(infoSheetAr));
             submissionDTO.setConsentFormFrPath(processFile(consentFormFr));
@@ -83,9 +78,6 @@ public class ProjectController {
             submissionDTO.setCvPath(processFile(cv));
             submissionDTO.setProjectDescriptionFilePath(processFile(projectDescriptionFile));
             submissionDTO.setEthicalConsiderationsFilePath(processFile(ethicalConsiderationsFile));
-
-            // Process other documents
-
 
             Project project = projectService.submitProject(submissionDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(project);
@@ -101,17 +93,93 @@ public class ProjectController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<?> getAllProjects(Authentication authentication) {
+        try {
+            log.info("Attempting to get all projects");
+            log.info("Authenticated user: {}", authentication.getName());
+            log.info("User authorities: {}", authentication.getAuthorities());
+
+            // Ajoutez ce logging pour voir ce qui est récupéré depuis la base
+            List<Project> projects = projectService.getAllProjects();
+            log.info("Number of projects retrieved from DB: {}", projects.size());
+            projects.forEach(p -> log.info("Project ID: {}, Title: {}", p.getId(), p.getTitle()));
+
+            List<Map<String, Object>> response = projects.stream().map(project -> {
+                Map<String, Object> projectMap = new HashMap<>();
+                projectMap.put("id", project.getId());
+                projectMap.put("title", project.getTitle());
+                projectMap.put("status", project.getStatus());
+                projectMap.put("submissionDate", project.getSubmissionDate());
+
+                if (project.getPrincipalInvestigator() != null) {
+                    Map<String, Object> investigator = new HashMap<>();
+                    investigator.put("id", project.getPrincipalInvestigator().getId());
+                    investigator.put("name", project.getPrincipalInvestigator().getNom() + " " + project.getPrincipalInvestigator().getPrenom());
+                    projectMap.put("principalInvestigator", investigator);
+                }
+
+                return projectMap;
+            }).collect(Collectors.toList());
+
+            log.info("Successfully built response for {} projects", projects.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error retrieving projects", e);
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors de la récupération des projets: " + e.getMessage());
+        }
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<Project> getProjectById(@PathVariable Long id) {
+        try {
+            Project project = projectService.getProjectById(id);
+            return ResponseEntity.ok(project);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Project not found with id: " + id);
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Project> updateProjectStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String status = request.get("status");
+            String comment = request.get("comment");
+
+            Project updatedProject = projectService.updateProjectStatus(id, status, comment);
+            return ResponseEntity.ok(updatedProject);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error updating project status: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{projectId}/assign-evaluator")
+    public ResponseEntity<Project> assignEvaluatorToProject(
+            @PathVariable Long projectId,
+            @RequestBody Map<String, Long> request) {
+        try {
+            Long evaluatorId = request.get("evaluatorId");
+            Project project = projectService.assignEvaluator(projectId, evaluatorId);
+            return ResponseEntity.ok(project);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error assigning evaluator: " + e.getMessage());
+        }
+    }
+
     private String processFile(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
             return null;
         }
 
-        // Validate file type and size
         if (file.getSize() > 5 * 1024 * 1024) {
             throw new IllegalArgumentException("File size exceeds 5MB limit");
         }
 
         return fileStorageService.storeFile(file);
     }
-
 }

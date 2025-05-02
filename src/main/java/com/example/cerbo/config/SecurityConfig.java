@@ -81,8 +81,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/trainings").permitAll()
                         // Routes protégées
 
-                        // Ajouter ceci dans SecurityConfig
-                        .requestMatchers( "/api/projects").hasAnyRole("INVESTIGATEUR", "ADMIN")
+                        .requestMatchers("/api/projects").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
+                        .requestMatchers("/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
+
 
 
                         .requestMatchers("/api/events/**").hasRole("ADMIN")
