@@ -1,5 +1,7 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.exception.ResourceNotFoundException;
+import com.nimbusds.jose.util.Resource;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.Project;
@@ -12,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.common.util.internal.logging.InternalLogger;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,10 +136,62 @@ public class ProjectController {
         }
     }
     @GetMapping("/{id}")
-    public ResponseEntity<Project> getProjectById(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
             Project project = projectService.getProjectById(id);
-            return ResponseEntity.ok(project);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", project.getId());
+            response.put("title", project.getTitle());
+            response.put("status", project.getStatus().name());
+            response.put("submissionDate", project.getSubmissionDate());
+            response.put("reference", project.getReference());
+            response.put("studyDuration", project.getStudyDuration());
+            response.put("targetPopulation", project.getTargetPopulation());
+            response.put("consentType", project.getConsentType());
+            response.put("sampling", project.getSampling());
+            response.put("sampleType", project.getSampleType());
+            response.put("sampleQuantity", project.getSampleQuantity());
+            response.put("fundingSource", project.getFundingSource());
+            response.put("fundingProgram", project.getFundingProgram());
+
+            // Investigateur principal
+            if (project.getPrincipalInvestigator() != null) {
+                Map<String, Object> investigator = new HashMap<>();
+                investigator.put("id", project.getPrincipalInvestigator().getId());
+                investigator.put("email", project.getPrincipalInvestigator().getEmail());
+                investigator.put("firstName", project.getPrincipalInvestigator().getPrenom());
+                investigator.put("lastName", project.getPrincipalInvestigator().getNom());
+                response.put("principalInvestigator", investigator);
+            }
+
+            // Documents
+            List<Map<String, Object>> documents = project.getDocuments().stream()
+                    .map(doc -> {
+                        Map<String, Object> docMap = new HashMap<>();
+                        docMap.put("name", doc.getName());
+                        docMap.put("type", doc.getType().name());
+                        docMap.put("path", doc.getPath());
+                        docMap.put("size", doc.getSize()); // Assurez-vous d'avoir cette propriété
+                        return docMap;
+                    })
+                    .collect(Collectors.toList());
+            response.put("documents", documents);
+
+            // Évaluateurs
+            List<Map<String, Object>> reviewers = project.getReviewers().stream()
+                    .map(reviewer -> {
+                        Map<String, Object> reviewerMap = new HashMap<>();
+                        reviewerMap.put("id", reviewer.getId());
+                        reviewerMap.put("email", reviewer.getEmail());
+                        reviewerMap.put("firstName", reviewer.getPrenom());
+                        reviewerMap.put("lastName", reviewer.getNom());
+                        return reviewerMap;
+                    })
+                    .collect(Collectors.toList());
+            response.put("reviewers", reviewers);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Project not found with id: " + id);
@@ -181,5 +238,35 @@ public class ProjectController {
         }
 
         return fileStorageService.storeFile(file);
+    }
+// Dans ProjectController.java
+
+    @GetMapping("/{projectId}/documents/{documentName}/content")
+    public ResponseEntity<byte[]> getDocumentContent(
+            @PathVariable Long projectId,
+            @PathVariable String documentName) throws IOException {
+
+        // Vérifiez que le document appartient bien au projet
+        Project project = projectService.getProjectById(projectId);
+        boolean documentExists = project.getDocuments().stream()
+                .anyMatch(doc -> doc.getName().equals(documentName));
+
+        if (!documentExists) {
+            throw new ResourceNotFoundException("Document not found");
+        }
+
+        // Récupérez le contenu du fichier
+        byte[] content = fileStorageService.loadFileAsBytes(documentName);
+
+        // Déterminez le type MIME
+        String contentType = Files.probeContentType(Paths.get(documentName));
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + documentName + "\"")
+                .body(content);
     }
 }

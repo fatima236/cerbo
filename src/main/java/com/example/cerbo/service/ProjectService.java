@@ -1,8 +1,6 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.dto.ProjectSubmissionDTO;
-import lombok.Builder;
-import lombok.SneakyThrows;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.ProjectStatus;
@@ -19,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -167,10 +162,7 @@ public class ProjectService {
         return projectRepository.findAll(spec);
     }
     // Ajoutez cette méthode dans votre ProjectService
-    public Project getProjectById(Long id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
-    }
+
 
     // ... autres dépendances
 
@@ -185,7 +177,11 @@ public class ProjectService {
     public List<Project> getAllProjects() {
         return projectRepository.findAllWithInvestigatorsAndReviewers();
     }
-
+    @Transactional
+    public Project getProjectById(Long id) {
+        return projectRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
+    }
     @Transactional
     public Project updateProjectStatus(Long id, String status, String comment) {
         Project project = projectRepository.findById(id)

@@ -4,6 +4,7 @@ import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 
@@ -32,4 +34,9 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
 
     @Query("SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.investigators LEFT JOIN FETCH p.reviewers")
     List<Project> findAllWithInvestigatorsAndReviewers();
+    @EntityGraph(attributePaths = {"principalInvestigator", "investigators", "reviewers", "documents"})
+
+    @Query("SELECT p FROM Project p LEFT JOIN FETCH p.documents LEFT JOIN FETCH p.reviewers WHERE p.id = :id")
+    Optional<Project> findByIdWithDetails(@Param("id") Long id);
+
 }
