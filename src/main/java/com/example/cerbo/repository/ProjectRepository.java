@@ -1,6 +1,7 @@
 package com.example.cerbo.repository;
 
 import com.example.cerbo.entity.Project;
+import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -80,4 +81,11 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
 
     @EntityGraph(attributePaths = {"principalInvestigator"})
     Page<Project> findAll(Specification<Project> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"reviewers"})
+    @Query("SELECT p FROM Project p LEFT JOIN FETCH p.reviewers WHERE p.id = :id")
+    Optional<Project> findByIdWithReviewers(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT u FROM User u WHERE 'EVALUATEUR' MEMBER OF u.roles")
+    List<User> findAllEvaluators();
 }

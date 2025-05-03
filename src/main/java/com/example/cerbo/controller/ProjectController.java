@@ -2,6 +2,7 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.service.NotificationService;
 import com.nimbusds.jose.util.Resource;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
@@ -23,19 +24,21 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import com.example.cerbo.repository.ProjectRepository;
+import com.example.cerbo.entity.User;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -48,6 +51,9 @@ public class ProjectController {
     private final ObjectMapper objectMapper;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
+    private final NotificationService notificationService;
+
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Project> submitProject(
@@ -166,6 +172,8 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
+            Project projet = projectRepository.findByIdWithReviewers(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
             Project project = projectService.getProjectById(id);
 
             Map<String, Object> response = new HashMap<>();
@@ -241,6 +249,129 @@ public class ProjectController {
                     "Error updating project status: " + e.getMessage());
         }
     }
+
+    // Récupérer tous les évaluateurs
+    @GetMapping("/evaluators")
+    public ResponseEntity<List<Map<String, Object>>> getAllEvaluators() {
+        try {
+            List<User> evaluators = userRepository.findByRolesContaining("EVALUATEUR");
+
+            // Assurez-vous que les relations nécessaires sont chargées
+            evaluators.forEach(evaluator -> {
+                evaluator.setPassword(null); // Pour des raisons de sécurité
+            });
+
+            List<Map<String, Object>> response = evaluators.stream()
+                    .map(evaluator -> {
+                        Map<String, Object> evaluatorMap = new HashMap<>();
+                        evaluatorMap.put("id", evaluator.getId());
+                        evaluatorMap.put("email", evaluator.getEmail());
+                        evaluatorMap.put("firstName", evaluator.getPrenom());
+                        evaluatorMap.put("lastName", evaluator.getNom());
+                        return evaluatorMap;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting evaluators", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // Assigner plusieurs évaluateurs à un projet
+    @PostMapping("/{projectId}/assign-evaluators")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> assignEvaluatorsToProject(
+            @PathVariable Long projectId,
+            @RequestBody List<Long> evaluatorIds) {
+
+        try {
+
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            // Vérifier que tous les IDs correspondent à des évaluateurs
+            List<User> evaluators = userRepository.findAllById(evaluatorIds);
+            if (evaluators.size() != evaluatorIds.size()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Certains évaluateurs n'existent pas");
+            }
+
+            evaluators.forEach(evaluator -> {
+                if (!evaluator.getRoles().contains("EVALUATEUR")) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "User with id " + evaluator.getId() + " is not an evaluator");
+                }
+            });
+
+            // Mettre à jour les évaluateurs du projet
+            project.setReviewers(new HashSet<>(evaluators));
+            project.setStatus(ProjectStatus.EN_COURS);
+            project.setReviewDate(LocalDateTime.now());
+
+            Project updatedProject = projectRepository.save(project);
+
+            // Envoyer des notifications
+            evaluators.forEach(evaluator -> {
+                notificationService.createNotification(
+                        evaluator.getEmail(),
+                        "Vous avez été assigné au projet: " + project.getTitle()
+                );
+            });
+            return ResponseEntity.ok(Map.of(
+                    "message", "Evaluators assigned successfully",
+                    "projectId", project.getId(),
+                    "assignedEvaluators", evaluators.stream()
+                            .map(e -> e.getPrenom() + " " + e.getNom())
+                            .collect(Collectors.toList())
+            ));
+        } catch (Exception e) {
+            log.error("Error assigning evaluators", e);
+            return ResponseEntity.internalServerError()
+                    .body("Error assigning evaluators: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{projectId}/evaluators/{evaluatorId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> removeEvaluatorFromProject(
+            @PathVariable Long projectId,
+            @PathVariable Long evaluatorId) {
+
+        try {
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            User evaluator = userRepository.findById(evaluatorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Evaluator not found"));
+
+            Set<User> reviewers = project.getReviewers();
+            if (reviewers == null || !reviewers.contains(evaluator)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cet évaluateur n'est pas assigné à ce projet");
+            }
+
+            reviewers.remove(evaluator);
+            projectRepository.save(project);
+
+            // Envoyer une notification
+            notificationService.createNotification(
+                    evaluator.getEmail(),
+                    "Vous avez été retiré du projet: " + project.getTitle()
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Évaluateur retiré avec succès",
+                    "projectId", projectId,
+                    "removedEvaluatorId", evaluatorId
+            ));
+        } catch (Exception e) {
+            log.error("Error removing evaluator", e);
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors du retrait de l'évaluateur: " + e.getMessage());
+        }
+    }
+
 
     @PostMapping("/{projectId}/assign-evaluator")
     public ResponseEntity<Project> assignEvaluatorToProject(

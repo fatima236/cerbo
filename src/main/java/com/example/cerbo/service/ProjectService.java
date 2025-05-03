@@ -225,6 +225,8 @@ public class ProjectService {
         }
     }
 
+
+
     @Transactional
     public Project assignEvaluator(Long projectId, Long evaluatorId) {
         Project project = projectRepository.findById(projectId)
@@ -250,5 +252,70 @@ public class ProjectService {
         project.setStatus(ProjectStatus.EN_COURS);
 
         return projectRepository.save(project);
+    }
+
+    @Transactional
+    public Project assignEvaluators(Long projectId, List<Long> evaluatorIds) {
+        Project project = projectRepository.findByIdWithReviewers(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        // Vérifier les évaluateurs
+        Set<User> evaluators = new HashSet<>(userRepository.findAllById(evaluatorIds));
+        if (evaluators.size() != evaluatorIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Certains évaluateurs n'existent pas");
+        }
+
+        // Vérifier les rôles
+        evaluators.forEach(evaluator -> {
+            if (!evaluator.getRoles().contains("EVALUATEUR")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "L'utilisateur " + evaluator.getEmail() + " n'est pas un évaluateur");
+            }
+        });
+
+        // Fusionner avec les évaluateurs existants
+        Set<User> currentReviewers = project.getReviewers();
+        if (currentReviewers == null) {
+            currentReviewers = new HashSet<>();
+        }
+        currentReviewers.addAll(evaluators);
+
+        project.setReviewers(currentReviewers);
+        project.setStatus(ProjectStatus.EN_COURS);
+        project.setReviewDate(LocalDateTime.now());
+
+        // Envoyer des notifications
+        evaluators.forEach(evaluator -> {
+            notificationService.createNotification(
+                    evaluator.getEmail(),
+                    "Nouveau projet assigné: " + project.getTitle()
+            );
+        });
+
+        return projectRepository.save(project);
+    }
+
+    @Transactional
+    public void removeEvaluator(Long projectId, Long evaluatorId) {
+        Project project = projectRepository.findByIdWithReviewers(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        User evaluator = userRepository.findById(evaluatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evaluator not found"));
+
+        Set<User> reviewers = project.getReviewers();
+        if (reviewers == null || !reviewers.remove(evaluator)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cet évaluateur n'est pas assigné à ce projet");
+        }
+
+        projectRepository.save(project);
+
+        // Envoyer notification
+        notificationService.createNotification(
+                evaluator.getEmail(),
+                "Vous avez été retiré du projet: " + project.getTitle()
+        );
     }
 }

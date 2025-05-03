@@ -71,7 +71,7 @@ public class Project {
     )
     private Set<User> investigators = new HashSet<>();
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "project_reviewers",
             joinColumns = @JoinColumn(name = "project_id"),
