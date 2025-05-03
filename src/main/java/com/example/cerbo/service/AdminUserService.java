@@ -201,4 +201,21 @@ public class AdminUserService {
 
         userRepository.deleteById(userId);
     }
+    /**
+     * Modifie l'email d'un utilisateur existant
+     */
+    @Transactional
+    public User changeUserEmail(Long userId, String newEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé avec l'ID: " + userId));
+
+        // Vérifier si le nouvel email est déjà utilisé par un autre utilisateur
+        User existingUser = userRepository.findByEmail(newEmail);
+        if (existingUser != null && !existingUser.getId().equals(userId)) {
+            throw new IllegalArgumentException("Un utilisateur avec cet email existe déjà");
+        }
+
+        user.setEmail(newEmail);
+        return userRepository.save(user);
+    }
 }
