@@ -195,4 +195,21 @@ public class AdminUserController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+    /**
+     * Modifier l'email d'un utilisateur
+     */
+    @PutMapping("/{id}/email")
+    public ResponseEntity<?> changeUserEmail(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            String newEmail = request.get("email");
+            User updatedUser = adminUserService.changeUserEmail(id, newEmail);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Email mis à jour avec succès",
+                    "user", updatedUser
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }
