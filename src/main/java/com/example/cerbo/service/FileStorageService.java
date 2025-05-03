@@ -9,6 +9,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+
+import java.net.MalformedURLException;
+
 
 @Service
 public class FileStorageService {
@@ -41,6 +46,21 @@ public class FileStorageService {
             throw new RuntimeException("Échec du stockage: " + e.getMessage());
         }
     }
+
+    public Resource loadFileAsResource(String filename) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(filename).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+            if (resource.exists()) {
+                return resource;
+            } else {
+                throw new RuntimeException("File not found " + filename);
+            }
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException("File not found " + filename, ex);
+        }
+    }
+
     public Path loadFile(String filename) {
         return fileStorageLocation.resolve(filename);
     }
@@ -48,4 +68,6 @@ public class FileStorageService {
         Path filePath = loadFile(filename);
         return Files.readAllBytes(filePath);
     }
+
+
 }
