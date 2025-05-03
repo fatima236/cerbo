@@ -76,6 +76,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
 
+                        .requestMatchers("/api/admin/users/pending").authenticated()
+                        .requestMatchers("/api/admin/users/pending/**").authenticated()
+
                         .requestMatchers("/api/events").permitAll()
                         .requestMatchers("/api/articles").permitAll()
                         .requestMatchers("/api/trainings").permitAll()
