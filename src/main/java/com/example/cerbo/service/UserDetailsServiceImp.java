@@ -126,25 +126,24 @@ public class UserDetailsServiceImp implements UserDetailsService {
                     "text-decoration: none; border-radius: 5px; display: inline-block;'>Rejeter</a>" +
                     "</div>" +
                     "<p style='margin-top: 30px; font-size: 0.9em; color: #666;'>" +
-                    "Note: En approuvant, un email de confirmation sera automatiquement envoyé au candidat." +
+                    "Note: En approuvant, un email de confirmation sera automatiquement envoye au candidat." +
                     "</p>" +
                     "</body>" +
                     "</html>";
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setFrom("salma.azouzout23@ump.ac.ma");
-            helper.setTo("salma.azouzout03@gmail.com");
-            helper.setSubject("Demande d'inscription à approuver (#" + pendingUser.getId() + ")");
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+            helper.setTo("fatimazahrabouayadi93@gmail.com");
+            helper.setSubject("Demande d'inscription a approuver (#" + pendingUser.getId() + ")");
             helper.setText(emailContent, true);
             mailSender.send(message);
         } catch (Exception e) {
-            logger.error("Échec d'envoi d'email à l'admin", e);
+            logger.error("Echec d'envoi d'email a l'admin", e);
             pendingUserRepository.delete(pendingUser);
-            throw new RuntimeException("Échec d'envoi de la demande de validation");
+            throw new RuntimeException("Echec d'envoi de la demande de validation");
         }
     }
-
 
     public User approveInvestigateur(Long pendingUserId) {
         PendingUser pendingUser = pendingUserRepository.findById(pendingUserId)
@@ -170,13 +169,13 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
             helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
             helper.setTo(userEmail);
-            helper.setSubject("Votre inscription a été approuvée !");
+            helper.setSubject("Votre inscription a ete approuvee !");
 
             String htmlContent = "<html>" +
                     "<body style=\"font-family: Arial, sans-serif;\">" +
-                    "<h2 style=\"color: #2e6c80;\">Félicitations !</h2>" +
-                    "<p>Votre inscription en tant qu'investigateur a été approuvée.</p>" +
-                    "<p>Vous pouvez maintenant vous connecter à votre compte :</p>" +
+                    "<h2 style=\"color: #2e6c80;\">Felicitations !</h2>" +
+                    "<p>Votre inscription en tant qu'investigateur a ete approuvee.</p>" +
+                    "<p>Vous pouvez maintenant vous connecter a votre compte :</p>" +
                     "<a href=\"http://localhost:3000/investigateur/dashboard\" " +
                     "style=\"background-color: #4CAF50; color: white; " +
                     "padding: 10px 20px; text-decoration: none; " +
@@ -188,10 +187,10 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
             helper.setText(htmlContent, true);
             mailSender.send(message);
-            logger.info("Email de confirmation envoyé à: {}", userEmail);
+            logger.info("Email de confirmation envoye a: {}", userEmail);
         } catch (Exception e) {
-            logger.error("Échec d'envoi de l'email de confirmation", e);
-            throw new RuntimeException("Échec d'envoi de la confirmation");
+            logger.error("Echec d'envoi de l'email de confirmation", e);
+            throw new RuntimeException("Echec d'envoi de la confirmation");
         }
     }
 
@@ -225,20 +224,20 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
             helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
             helper.setTo(email);
-            helper.setSubject("Réinitialisation de votre mot de passe CERBO");
+            helper.setSubject("Reinitialisation de votre mot de passe CERBO");
 
             String resetLink = "http://localhost:3000/reset-password?token=" + token;
 
             String htmlContent = "<html>" +
                     "<body style=\"font-family: Arial, sans-serif;\">" +
-                    "<h2 style=\"color: #2e6c80;\">Réinitialisation de mot de passe</h2>" +
-                    "<p>Vous avez demandé à réinitialiser votre mot de passe.</p>" +
+                    "<h2 style=\"color: #2e6c80;\">Reinitialisation de mot de passe</h2>" +
+                    "<p>Vous avez demande a reinitialiser votre mot de passe.</p>" +
                     "<p>Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :</p>" +
                     "<a href=\"" + resetLink + "\" " +
                     "style=\"background-color: #4CAF50; color: white; " +
                     "padding: 10px 20px; text-decoration: none; " +
                     "border-radius: 5px; display: inline-block;\">" +
-                    "Réinitialiser mon mot de passe" +
+                    "Reinitialiser mon mot de passe" +
                     "</a>" +
                     "<p style=\"color: #666; font-size: 0.9em;\">" +
                     "Ce lien expirera dans 24 heures." +
@@ -249,8 +248,8 @@ public class UserDetailsServiceImp implements UserDetailsService {
             helper.setText(htmlContent, true);
             mailSender.send(message);
         } catch (Exception e) {
-            logger.error("Échec d'envoi d'email de réinitialisation", e);
-            throw new RuntimeException("Échec d'envoi de l'email de réinitialisation");
+            logger.error("Echec d'envoi d'email de reinitialisation", e);
+            throw new RuntimeException("Echec d'envoi de l'email de reinitialisation");
         }
     }
 
