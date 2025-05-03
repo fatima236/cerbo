@@ -160,25 +160,5 @@ public class AuthController {
         ));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) {
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
 
-        User userp = userDetailsServiceImp.findByEmail(user.getEmail());
-        if (userp == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        Map<String, Object> response = Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "firstName", user.getPrenom(),
-                "lastName", user.getNom(),
-                "roles", user.getRoles()
-        );
-
-        return ResponseEntity.ok(response);
-    }
 }

@@ -81,8 +81,17 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
         return userRepository.save(user);
     }
-
+    @Autowired
+    private GmailVerificationService gmailVerificationService;
     public void requestInvestigateurSignup(User userRequest) {
+        // 1. Vérification du format
+        if (!userRequest.getEmail().endsWith("@gmail.com") &&
+                !userRequest.getEmail().endsWith("@gmail.ma")) {
+            throw new IllegalArgumentException("Seuls les emails Gmail sont acceptés");
+        }
+
+        // 2. Vérification de l'existence du compte
+
         if (pendingUserRepository.existsByEmail(userRequest.getEmail()) ||
                 userRepository.existsByEmail(userRequest.getEmail())) {
             throw new IllegalArgumentException("Un compte ou une demande existe déjà pour cet email");
@@ -124,8 +133,8 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setFrom("no-reply@cerbo.com");
-            helper.setTo("admin@gmail.com");
+            helper.setFrom("salma.azouzout23@ump.ac.ma");
+            helper.setTo("salma.azouzout03@gmail.com");
             helper.setSubject("Demande d'inscription à approuver (#" + pendingUser.getId() + ")");
             helper.setText(emailContent, true);
             mailSender.send(message);
@@ -159,7 +168,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom("no-reply@cerbo.com");
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
             helper.setTo(userEmail);
             helper.setSubject("Votre inscription a été approuvée !");
 
@@ -214,7 +223,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom("no-reply@cerbo.com");
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
             helper.setTo(email);
             helper.setSubject("Réinitialisation de votre mot de passe CERBO");
 
