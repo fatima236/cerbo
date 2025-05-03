@@ -74,8 +74,8 @@ public class Project {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "project_reviewers",
-            joinColumns = @JoinColumn(name = "project_id"),
-            inverseJoinColumns = @JoinColumn(name = "reviewer_id")
+            joinColumns = @JoinColumn(name = "project_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "reviewer_id", referencedColumnName = "id")
     )
     private Set<User> reviewers = new HashSet<>();
 

@@ -4,6 +4,7 @@ import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.service.NotificationService;
 import com.nimbusds.jose.util.Resource;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.Project;
@@ -172,9 +173,12 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
-            Project projet = projectRepository.findByIdWithReviewers(id)
+           // Project projet = projectRepository.findByIdWithReviewers(id)
+                  //  .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+            //Project project = projectService.getProjectById(id);
+
+            Project project = projectRepository.findByIdWithDetails(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-            Project project = projectService.getProjectById(id);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", project.getId());
@@ -282,53 +286,72 @@ public class ProjectController {
     // Assigner plusieurs évaluateurs à un projet
     @PostMapping("/{projectId}/assign-evaluators")
     @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     public ResponseEntity<?> assignEvaluatorsToProject(
             @PathVariable Long projectId,
             @RequestBody List<Long> evaluatorIds) {
 
         try {
+            // Charge le projet avec ses reviewers
+            Project project = projectRepository.findByIdWithReviewers(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-            Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-            // Vérifier que tous les IDs correspondent à des évaluateurs
+            // Vérifie les évaluateurs existants
             List<User> evaluators = userRepository.findAllById(evaluatorIds);
-            if (evaluators.size() != evaluatorIds.size()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Certains évaluateurs n'existent pas");
+            if (evaluators.isEmpty()) {
+                return ResponseEntity.badRequest().body("Aucun évaluateur valide fourni");
             }
 
+            // Vérifie les rôles
             evaluators.forEach(evaluator -> {
                 if (!evaluator.getRoles().contains("EVALUATEUR")) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "User with id " + evaluator.getId() + " is not an evaluator");
+                            "L'utilisateur " + evaluator.getEmail() + " n'est pas un évaluateur");
                 }
             });
 
-            // Mettre à jour les évaluateurs du projet
-            project.setReviewers(new HashSet<>(evaluators));
+            // Filtre les nouveaux évaluateurs
+            Set<Long> existingIds = project.getReviewers().stream()
+                    .map(User::getId)
+                    .collect(Collectors.toSet());
+
+            List<User> newEvaluators = evaluators.stream()
+                    .filter(e -> !existingIds.contains(e.getId()))
+                    .collect(Collectors.toList());
+
+            if (newEvaluators.isEmpty()) {
+                return ResponseEntity.ok().body("Aucun nouvel évaluateur à ajouter");
+            }
+
+            // Ajout des évaluateurs
+            project.getReviewers().addAll(newEvaluators);
             project.setStatus(ProjectStatus.EN_COURS);
             project.setReviewDate(LocalDateTime.now());
 
-            Project updatedProject = projectRepository.save(project);
+            projectRepository.saveAndFlush(project); // Force l'écriture en base
 
-            // Envoyer des notifications
-            evaluators.forEach(evaluator -> {
+            // Notifications
+            newEvaluators.forEach(evaluator -> {
                 notificationService.createNotification(
                         evaluator.getEmail(),
-                        "Vous avez été assigné au projet: " + project.getTitle()
+                        "Assignation au projet: " + project.getTitle()
                 );
             });
+
             return ResponseEntity.ok(Map.of(
-                    "message", "Evaluators assigned successfully",
-                    "projectId", project.getId(),
-                    "assignedEvaluators", evaluators.stream()
-                            .map(e -> e.getPrenom() + " " + e.getNom())
+                    "message", "Évaluateurs assignés avec succès",
+                    "added", newEvaluators.stream()
+                            .map(e -> Map.of(
+                                    "id", e.getId(),
+                                    "name", e.getPrenom() + " " + e.getNom()
+                            ))
                             .collect(Collectors.toList())
             ));
+
         } catch (Exception e) {
-            log.error("Error assigning evaluators", e);
+            log.error("Erreur d'assignation", e);
             return ResponseEntity.internalServerError()
-                    .body("Error assigning evaluators: " + e.getMessage());
+                    .body("Erreur technique: " + e.getMessage());
         }
     }
 
@@ -339,19 +362,19 @@ public class ProjectController {
             @PathVariable Long evaluatorId) {
 
         try {
-            Project project = projectRepository.findById(projectId)
+            Project project = projectRepository.findByIdWithReviewers(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
             User evaluator = userRepository.findById(evaluatorId)
                     .orElseThrow(() -> new ResourceNotFoundException("Evaluator not found"));
 
-            Set<User> reviewers = project.getReviewers();
-            if (reviewers == null || !reviewers.contains(evaluator)) {
+            // Vérifier si l'évaluateur est bien dans la liste
+            boolean removed = project.getReviewers().removeIf(u -> u.getId().equals(evaluatorId));
+
+            if (!removed) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Cet évaluateur n'est pas assigné à ce projet");
             }
-
-            reviewers.remove(evaluator);
             projectRepository.save(project);
 
             // Envoyer une notification
