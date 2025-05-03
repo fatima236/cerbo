@@ -86,7 +86,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/projects/**/assign-evaluators").hasRole("ADMIN")
-
+                        .requestMatchers(HttpMethod.DELETE, "/api/projects/**/evaluators/**").hasRole("ADMIN")
 
 
                         .requestMatchers("/api/events/**").hasRole("ADMIN")
