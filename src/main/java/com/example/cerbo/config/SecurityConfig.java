@@ -73,6 +73,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // Autoriser l'accès aux routes d'authentification
                         .requestMatchers("/api/profile").authenticated()
+                        .requestMatchers("/api/profile/**").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
 
@@ -96,6 +97,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/projects/**/assign-evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/**/evaluators/**").hasRole("ADMIN")
+
+                        .requestMatchers("/api/projects/investigator/**").hasRole("INVESTIGATEUR")
 
 
                         .requestMatchers("/api/events/**").hasRole("ADMIN")

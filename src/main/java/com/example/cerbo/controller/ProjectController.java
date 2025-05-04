@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.cerbo.repository.ProjectRepository;
-import com.example.cerbo.entity.User;
+
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -418,7 +418,6 @@ public class ProjectController {
 
         return fileStorageService.storeFile(file);
     }
-// Dans ProjectController.java
 
     @GetMapping("/{projectId}/documents/{documentName}/content")
     public ResponseEntity<byte[]> viewDocument(
@@ -504,6 +503,68 @@ public class ProjectController {
             return Files.probeContentType(resource.getFile().toPath());
         } catch (IOException e) {
             return "application/octet-stream";
+        }
+    }
+
+    @GetMapping("/investigator/{userId}")
+    @PreAuthorize("hasRole('INVESTIGATEUR')")
+    public ResponseEntity<?> getProjectsByInvestigator(@PathVariable Long userId) {
+        try {
+            log.info("Fetching projects for investigator ID: {}", userId);
+
+            // Vérification d'authentification
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            User currentUser = userRepository.findByEmail(auth.getName());
+            if (currentUser == null || !currentUser.getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            // Récupération des projets avec le bon paramètre
+            List<Project> projects = projectRepository.findByPrincipalInvestigatorIdWithDocuments(userId);
+            // Créez une réponse simplifiée sans créer de nouveaux objets Project
+            List<Map<String, Object>> response = projects.stream()
+                    .map(p -> {
+                        Map<String, Object> projectMap = new HashMap<>();
+                        projectMap.put("id", p.getId());
+                        projectMap.put("title", p.getTitle());
+                        projectMap.put("status", p.getStatus());
+                        projectMap.put("submissionDate", p.getSubmissionDate());
+                        projectMap.put("createdAt", p.getSubmissionDate());
+                        projectMap.put("reference", p.getReference());
+                        // Documents
+                        projectMap.put("documents", p.getDocuments().stream()
+                                .map(d -> Map.of(
+                                        "name", d.getName(),
+                                        "path", d.getPath(),
+                                        "type", d.getType()
+                                ))
+                                .collect(Collectors.toList()));
+                        projectMap.put("reviews", Collections.emptyList());
+
+                        if (p.getPrincipalInvestigator() != null) {
+                            projectMap.put("principalInvestigator", Map.of(
+                                    "id", p.getPrincipalInvestigator().getId(),
+                                    "name", p.getPrincipalInvestigator().getNom() + " " + p.getPrincipalInvestigator().getPrenom()
+                            ));
+                        }
+
+                        return projectMap;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting investigator projects: ", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of(
+                            "error", "Internal server error",
+                            "message", e.getMessage(),
+                            "timestamp", LocalDateTime.now()
+                    ));
         }
     }
 

@@ -41,6 +41,7 @@ public class ProfileController {
             }
 
             Map<String, Object> response = new HashMap<>();
+            response.put("id", user.getId());
             response.put("civilite", user.getCivilite() != null ? user.getCivilite() : "");
             response.put("nom", user.getNom() != null ? user.getNom() : "");
             response.put("prenom", user.getPrenom() != null ? user.getPrenom() : "");
