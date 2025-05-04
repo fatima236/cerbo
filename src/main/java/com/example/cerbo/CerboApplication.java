@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 @SpringBootApplication
 public class CerboApplication {
@@ -38,14 +39,14 @@ public class CerboApplication {
     }
 
 
-    //@Bean
+    @Bean
     public CommandLineRunner init() {
         return args -> {
-            User user = new User();
-            user.setEmail("aouday@example.com");
-            user.setPassword(passwordEncoder.encode("xxx"));
+            User evaluator = new User();
+            evaluator.setRoles(Set.of("EVALUATEUR"));  // Important : définir le rôle
+            evaluator.setValidated(true);              // Important : activer l'utilisateur
 
-            userRepository.save(user);
+            userRepository.save(evaluator);
 
         };
     }
