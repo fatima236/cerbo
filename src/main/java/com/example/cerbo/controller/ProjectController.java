@@ -3,7 +3,7 @@ package com.example.cerbo.controller;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.service.NotificationService;
-import com.nimbusds.jose.util.Resource;
+import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
@@ -21,10 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -424,11 +421,11 @@ public class ProjectController {
 // Dans ProjectController.java
 
     @GetMapping("/{projectId}/documents/{documentName}/content")
-    public ResponseEntity<byte[]> getDocumentContent(
+    public ResponseEntity<byte[]> viewDocument(
             @PathVariable Long projectId,
-            @PathVariable String documentName) throws IOException {
+            @PathVariable String documentName,
+            HttpServletRequest request) throws IOException {
 
-        // Vérifiez que le document appartient bien au projet
         Project project = projectService.getProjectById(projectId);
         boolean documentExists = project.getDocuments().stream()
                 .anyMatch(doc -> doc.getName().equals(documentName));
@@ -437,18 +434,77 @@ public class ProjectController {
             throw new ResourceNotFoundException("Document not found");
         }
 
-        // Récupérez le contenu du fichier
-        byte[] content = fileStorageService.loadFileAsBytes(documentName);
+        byte[] fileContent = fileStorageService.loadFileAsBytes(documentName);
+        // Chargement du fichier
+        Resource resource = fileStorageService.loadFileAsResource(documentName);
+        String contentType = determineContentType(documentName);
 
-        // Déterminez le type MIME
-        String contentType = Files.probeContentType(Paths.get(documentName));
-        if (contentType == null) {
+        // Détermination du type de contenu
+        if (contentType == null || contentType.isEmpty()) {
             contentType = "application/octet-stream";
         }
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + documentName + "\"")
-                .body(content);
+        String headerValue = "inline; filename=\"" + resource.getFilename() + "\"";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(contentType));
+        headers.setContentDisposition(ContentDisposition.inline().filename(documentName).build());
+
+        return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
     }
+
+    private String determineContentType(String filename) {
+        String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+        switch (extension) {
+            case "pdf":
+                return "application/pdf";
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            case "png":
+                return "image/png";
+            case "gif": return "image/gif";
+            case "txt": return "text/plain";
+            case "doc": return "application/msword";
+            case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls": return "application/vnd.ms-excel";
+            case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "ppt": return "application/vnd.ms-powerpoint";
+            case "pptx": return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            default:
+                return "application/octet-stream";
+        }
+    }
+
+    @GetMapping("/{projectId}/documents/{documentName}/download")
+    public ResponseEntity<byte[]> downloadDocument(
+            @PathVariable Long projectId,
+            @PathVariable String documentName) throws IOException {
+
+        Project project = projectService.getProjectById(projectId);
+        boolean documentExists = project.getDocuments().stream()
+                .anyMatch(doc -> doc.getName().equals(documentName));
+
+        if (!documentExists) {
+            throw new ResourceNotFoundException("Document not found");
+        }
+
+        byte[] fileContent = fileStorageService.loadFileAsBytes(documentName);
+        String contentType = determineContentType(documentName);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(contentType));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(documentName).build());
+
+        return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
+    }
+
+    private String determineContentType(Resource resource) {
+        try {
+            return Files.probeContentType(resource.getFile().toPath());
+        } catch (IOException e) {
+            return "application/octet-stream";
+        }
+    }
+
 }
