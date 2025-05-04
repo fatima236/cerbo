@@ -56,7 +56,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Autoriser le frontend
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -76,6 +76,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
 
+                        .requestMatchers("/api/admin/users").authenticated()
+                        .requestMatchers("/api/admin/users/**").authenticated()
                         .requestMatchers("/api/admin/users/pending").authenticated()
                         .requestMatchers("/api/admin/users/pending/**").authenticated()
 
@@ -86,6 +88,10 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/projects").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
                         .requestMatchers("/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
+                        .requestMatchers("/api/projects/**/documents/**").authenticated()
+                        .requestMatchers("/api/projects/**/documents/**/download").authenticated()
+                        .requestMatchers("/api/projects/**/documents/**/content").authenticated()
+
 
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/projects/assign-evaluators").hasRole("ADMIN")

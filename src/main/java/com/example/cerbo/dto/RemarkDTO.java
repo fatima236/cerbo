@@ -10,4 +10,7 @@ public class RemarkDTO {
     private LocalDateTime creationDate;
     private Long reviewerId;
     private String reviewerName;
+
+    private String adminStatus;
+    private LocalDateTime validationDate;
 }

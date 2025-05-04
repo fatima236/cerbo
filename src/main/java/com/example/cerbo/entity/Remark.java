@@ -1,19 +1,18 @@
 package com.example.cerbo.entity;
 
+import com.example.cerbo.entity.enums.RemarkStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "remarks")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Remark {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,4 +29,15 @@ public class Remark {
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
+
+    // Nouveaux champs
+    @Enumerated(EnumType.STRING)
+    private RemarkStatus adminStatus = RemarkStatus.PENDING;
+
+    private LocalDateTime validationDate;
+
+    @ManyToOne
+    @JoinColumn(name = "validated_by")
+    private User validatedBy;
 }
+
