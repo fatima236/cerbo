@@ -88,8 +88,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
 
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/projects/**/assign-evaluators").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/projects/**/evaluators/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/projects/assign-evaluators").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/projects/evaluators/**").hasRole("ADMIN")
 
 
                         .requestMatchers("/api/events/**").hasRole("ADMIN")
@@ -97,7 +97,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/trainings/**").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/evaluateur/**").hasAuthority("ROLE_EVALUATEUR")
-                        .requestMatchers("/investigateur/**").hasAuthority("ROLE_INVESTIGATEUR")
+                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
