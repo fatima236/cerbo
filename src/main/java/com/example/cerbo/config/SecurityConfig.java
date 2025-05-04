@@ -1,7 +1,6 @@
 package com.example.cerbo.config;
 
 import com.example.cerbo.dto.JwtTokenFilter;
-import com.example.cerbo.dto.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,10 +13,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Arrays;
 
@@ -49,11 +48,10 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    // Configuration CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Autoriser le frontend
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
@@ -64,46 +62,54 @@ public class SecurityConfig {
         return source;
     }
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Autoriser l'accès aux routes d'authentification
+
+                        // Auth public
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // Public GET
+                        .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/trainings").permitAll()
+
+                        // JWT Protected Routes
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
 
-                        .requestMatchers("/api/admin/users").authenticated()
-                        .requestMatchers("/api/admin/users/**").authenticated()
-                        .requestMatchers("/api/admin/users/pending").authenticated()
-                        .requestMatchers("/api/admin/users/pending/**").authenticated()
+                        .requestMatchers("/api/admin/users", "/api/admin/users/**", "/api/admin/users/pending", "/api/admin/users/pending/**").authenticated()
 
-                        .requestMatchers("/api/events").permitAll()
-                        .requestMatchers("/api/articles").permitAll()
-                        .requestMatchers("/api/trainings").permitAll()
-                        // Routes protégées
-
-                        .requestMatchers("/api/projects").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
-                        .requestMatchers("/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
-                        .requestMatchers("/api/projects/**/documents/**").authenticated()
-                        .requestMatchers("/api/projects/**/documents/**/download").authenticated()
-                        .requestMatchers("/api/projects/**/documents/**/content").authenticated()
-
-
+                        // Projects
+                        .requestMatchers("/api/projects", "/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
+                        .requestMatchers("/api/projects/documents/**", "/api/projects/documents/download", "/api/projects/documents/content").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/projects/assign-evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/evaluators/**").hasRole("ADMIN")
 
+                        // Admin-only for modifying content
+                        .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")
 
-                        .requestMatchers("/api/events/**").hasRole("ADMIN")
-                        .requestMatchers("/api/articles/**").hasRole("ADMIN")
-                        .requestMatchers("/api/trainings/**").hasRole("ADMIN")
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/evaluateur/**").hasAuthority("ROLE_EVALUATEUR")
+                        .requestMatchers(HttpMethod.POST, "/api/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/events/**").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/trainings/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/trainings/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/trainings/**").hasRole("ADMIN")
+
+                        // Role-specific dashboards
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
                         .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+
+                        // All others
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
