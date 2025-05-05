@@ -67,17 +67,9 @@ public class ProfileController {
         try {
             UpdateProfileRequest request = objectMapper.readValue(formDataStr, UpdateProfileRequest.class);
 
-            // Validation
-            if (StringUtils.isEmpty(request.getCivilite()) ||
-                    StringUtils.isEmpty(request.getNom()) ||
-                    StringUtils.isEmpty(request.getPrenom())) {
-                return ResponseEntity.badRequest()
-                        .body("Civilité, nom et prénom sont obligatoires");
-            }
-
+            // Supprimez la validation stricte pour permettre des mises à jour partielles
             User updatedUser = profileService.updateUserProfile(authentication.getName(), request, photoFile);
 
-            // Retourner l'URL complète de la photo
             String fullPhotoUrl = updatedUser.getPhotoUrl() != null ?
                     "/uploads/" + updatedUser.getPhotoUrl() : null;
 
@@ -117,6 +109,29 @@ public class ProfileController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body("Erreur lors de la récupération des profils: " + e.getMessage());
+        }
+    }
+    // Dans ProfileController.java
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        String currentPassword = request.get("currentPassword");
+        String newPassword = request.get("newPassword");
+
+        try {
+            profileService.changePassword(email, currentPassword, newPassword);
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Mot de passe changé avec succès"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
         }
     }
 }

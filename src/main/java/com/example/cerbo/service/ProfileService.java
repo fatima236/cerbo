@@ -4,6 +4,7 @@ import com.example.cerbo.dto.UpdateProfileRequest;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,5 +49,29 @@ public class ProfileService {
         }
 
         return userRepository.save(user);
+    }
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    // Dans ProfileService.java
+    @Transactional
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("Utilisateur non trouvé");
+        }
+
+        // Vérifiez que le mot de passe actuel est correct
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Mot de passe actuel incorrect");
+        }
+
+        // Validez le nouveau mot de passe
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new RuntimeException("Le nouveau mot de passe doit contenir au moins 6 caractères");
+        }
+
+        // Encodez et enregistrez le nouveau mot de passe
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 }

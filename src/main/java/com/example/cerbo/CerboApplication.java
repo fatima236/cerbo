@@ -39,17 +39,7 @@ public class CerboApplication {
     }
 
 
-    @Bean
-    public CommandLineRunner init() {
-        return args -> {
-            User evaluator = new User();
-            evaluator.setRoles(Set.of("EVALUATEUR"));  // Important : définir le rôle
-            evaluator.setValidated(true);              // Important : activer l'utilisateur
 
-            userRepository.save(evaluator);
-
-        };
-    }
 
 
 
