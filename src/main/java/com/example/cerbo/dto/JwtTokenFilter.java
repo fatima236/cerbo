@@ -28,7 +28,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     public static final Logger logger = LoggerFactory.getLogger(JwtTokenFilter.class);
     private final UserDetailsServiceImp userDetailsServiceImp;
     private final JwtTokenUtil jwtTokenUtil;
-    private final BlacklistService blacklistService; // 🔥 Ajouté ici
+    private final BlacklistService blacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -40,35 +40,43 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         if (token != null) {
 
-            // 🔥 Vérifier si le token est blacklisté
+            // Vérifie si le token est blacklisté
             if (blacklistService.isBlacklisted(token)) {
                 logger.warn("Token is blacklisted!");
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token invalidé (déconnecté)");
                 return;
             }
 
-            if (jwtTokenUtil.validateToken(token)) {
-                String email = jwtTokenUtil.getUsernameFromToken(token);
-                Claims claims = jwtTokenUtil.getClaimsFromToken(token, jwtTokenUtil.getAccessTokenSecretKey());
-                List<String> roles = claims.get("roles", List.class);
+            // Vérifie si le token est invalide ou expiré
+            if (!jwtTokenUtil.validateToken(token)) {
+                logger.warn("Token expiré ou invalide !");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expiré ou invalide");
+                return;
+            }
 
-                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UserDetails userDetails = userDetailsServiceImp.loadUserByUsername(email);
-                    List<SimpleGrantedAuthority> authorities = roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
+            // Token est valide : on extrait les infos
+            String email = jwtTokenUtil.getUsernameFromToken(token);
+            Claims claims = jwtTokenUtil.getClaimsFromToken(token, jwtTokenUtil.getAccessTokenSecretKey());
+            List<String> roles = claims.get("roles", List.class);
 
-                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            authorities
-                    );
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                }
+            // Si l'utilisateur n'est pas encore authentifié, on l'authentifie
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsServiceImp.loadUserByUsername(email);
+                List<SimpleGrantedAuthority> authorities = roles.stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList());
+
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        authorities
+                );
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             }
         }
 
+        // Continuer la chaîne de filtres
         filterChain.doFilter(request, response);
     }
 }

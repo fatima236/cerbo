@@ -34,4 +34,4 @@ build/
 ### VS Code ###
 .vscode/
 # Exemple : si le fichier est dans src/main/resources/
-#src/main/resources/application.properties
+src/main/resources/application.properties

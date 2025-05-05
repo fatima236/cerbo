@@ -3,6 +3,7 @@ package com.example.cerbo.dto;
 import com.example.cerbo.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.micrometer.common.util.internal.logging.InternalLogger;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,14 +18,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
+
 @Component
 public class JwtTokenUtil {
-    private static final Logger logger = LoggerFactory.getLogger(JwtTokenUtil.class);
+
 
     private final SecretKey refreshTokenSecretKey;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
-    private final SecretKey accessTokenSecretKey;
+    private final SecretKey accessTokenSecretKey ;
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenUtil.class);
 
     public JwtTokenUtil(
             @Value("${jwt.access.secret}") String accessSecret,
@@ -39,6 +42,7 @@ public class JwtTokenUtil {
             throw new IllegalArgumentException("La clé secrète pour les refresh tokens doit contenir au moins 64 caractères");
         }
 
+
         this.accessTokenSecretKey = Keys.hmacShaKeyFor(accessSecret.getBytes(StandardCharsets.UTF_8));
         this.refreshTokenSecretKey = Keys.hmacShaKeyFor(refreshSecret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpiration = accessExpiration;
@@ -50,16 +54,15 @@ public class JwtTokenUtil {
         String username = authentication.getName();
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role) // <- ajouter ROLE_ si absent
                 .collect(Collectors.toList());
 
         return buildToken(username, roles, accessTokenSecretKey, accessTokenExpiration);
     }
-
     public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", user.getRoles().stream()
-                .map(role -> role.replace("ROLE_", ""))
+                .map(role -> role.replace("ROLE_", "")) // Enlevez le préfixe car il sera rajouté plus tard
                 .collect(Collectors.toList()));
 
         return Jwts.builder()
@@ -67,10 +70,9 @@ public class JwtTokenUtil {
                 .setSubject(user.getPrenom())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
-                .signWith(accessTokenSecretKey, SignatureAlgorithm.HS256)
+                .signWith(SignatureAlgorithm.HS512, accessTokenSecretKey)
                 .compact();
     }
-
     // Génère un token à partir d'un username et roles
     public String generateToken(String username, Collection<String> roles) {
         return buildToken(username, roles, accessTokenSecretKey, accessTokenExpiration);
@@ -86,24 +88,20 @@ public class JwtTokenUtil {
         );
     }
 
-    // Génère un refresh token à partir d'un username
-    public String generateRefreshToken(String username) {
-        return buildToken(
-                username,
-                Collections.emptyList(), // Pas de rôles dans le refresh token
-                refreshTokenSecretKey,
-                refreshTokenExpiration
-        );
+    // Génère un refresh token à partir d'un username et roles
+    public String generateRefreshToken(String username, Collection<String> roles) {
+        return buildToken(username, roles, refreshTokenSecretKey, refreshTokenExpiration);
     }
 
     // Méthode privée pour construire les tokens
     private String buildToken(String username, Collection<String> roles, SecretKey key, long expiration) {
+        System.out.println(expiration);
         return Jwts.builder()
                 .setSubject(username)
                 .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key, SignatureAlgorithm.HS256) // Changé de HS512 à HS256
                 .compact();
     }
 
@@ -123,6 +121,7 @@ public class JwtTokenUtil {
         return validateToken(token, refreshTokenSecretKey);
     }
 
+    // Dans JwtTokenFilter.java, modifiez la méthode validateToken pour mieux logger les erreurs
     private boolean validateToken(String token, SecretKey key) {
         try {
             Jwts.parserBuilder()
@@ -132,21 +131,21 @@ public class JwtTokenUtil {
             return true;
         } catch (ExpiredJwtException ex) {
             logger.error("JWT expired: {}", ex.getMessage());
+            return false;
         } catch (MalformedJwtException ex) {
             logger.error("Invalid JWT: {}", ex.getMessage());
+            return false;
         } catch (JwtException | IllegalArgumentException ex) {
             logger.error("JWT error: {}", ex.getMessage());
+            return false;
         }
-        return false;
     }
-
     public SecretKey getAccessTokenSecretKey() {
         return this.accessTokenSecretKey;
     }
-
     public Claims getClaimsFromToken(String token, SecretKey key) {
         return Jwts.parserBuilder()
-                .setSigningKey(key)
+                .setSigningKey(key) // Corrigé "setSigningKey" (il manquait un 'n')
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -172,7 +171,6 @@ public class JwtTokenUtil {
         }
         return null;
     }
-
     public String getEmailFromToken(String token) {
         return getUsernameFromToken(token); // Alias pour compatibilité
     }

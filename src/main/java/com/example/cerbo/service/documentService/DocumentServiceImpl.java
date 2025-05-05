@@ -48,9 +48,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public String uploadFile(MultipartFile file,
+                             Long projectId,
                              Long eventId,
                              Long articleId,
-                             Long projectId,
                              Long trainingId) {
 
         if (file == null || file.isEmpty()) {
@@ -81,18 +81,24 @@ public class DocumentServiceImpl implements DocumentService {
         document.setCreationDate(LocalDateTime.now());
         document.setModificationDate(LocalDateTime.now());
 
-        if(eventId != null) {
+        document.setEvent(null);
+        document.setArticle(null);
+        document.setProject(null);
+        document.setTraining(null);
+
+        if (eventId != null) {
             document.setEvent(eventRepository.getById(eventId));
         }
-        else if(articleId != null) {
+        if (articleId != null) {
             document.setArticle(articleRepository.getById(articleId));
         }
-        else if(projectId != null) {
+        if (projectId != null) {
             document.setProject(projectRepository.getById(projectId));
         }
-        else if(trainingId != null) {
+        if (trainingId != null) {
             document.setTraining(trainingRepository.getById(trainingId));
         }
+
 
 
 

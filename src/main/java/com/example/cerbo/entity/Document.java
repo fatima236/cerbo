@@ -22,10 +22,13 @@ public class Document {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 70) // ou la longueur appropriée pour votre cas
+    @Column(length = 70, nullable = false)
     private DocumentType type;
 
+    @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
     private String path;
     private String contentType;
     private Long size;
@@ -41,7 +44,7 @@ public class Document {
     private LocalDateTime validationDate;
 
     @ManyToOne
-    @JoinColumn(name = "project_id", nullable = false) // Changé de nullable=true à false
+    @JoinColumn(name = "project_id", nullable = true) // Changé de nullable=true à false
     private Project project;
 
     @ManyToOne

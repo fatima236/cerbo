@@ -18,7 +18,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @RestController
@@ -44,47 +46,6 @@ public class AuthController {
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
 
-    @PostMapping("/loginadmin")
-    public ResponseEntity<?> loginAdmin(@RequestBody LoginRequest loginRequest) {
-        try {
-            System.out.println(loginRequest);
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
-                    )
-            );
-
-
-            // Version sans Optional
-            User user = userRepository.findByEmail(loginRequest.getEmail());
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Utilisateur non trouvé"));
-            }
-
-            if (!user.getRoles().contains("ADMIN")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Accès réservé aux administrateurs"));
-            }
-
-            String token = jwtTokenUtil.generateToken(authentication);
-
-            return ResponseEntity.ok(Map.of(
-                    "token", token,
-                    "role", "ADMIN",
-                    "email", user.getEmail(),
-                    "expiresIn", jwtTokenUtil.getExpiration()
-            ));
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Email ou mot de passe incorrect"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur serveur: " + e.getMessage()));
-        }
-    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
@@ -129,6 +90,30 @@ public class AuthController {
                     .body(Map.of("error", "Erreur serveur: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> payload) {
+        String refreshToken = payload.get("refreshToken");
+
+        if (refreshToken == null || !jwtTokenUtil.validateRefreshToken(refreshToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token invalide ou expiré");
+        }
+
+        String username = jwtTokenUtil.getUsernameFromRefreshToken(refreshToken);
+        User optionalUser = userRepository.findByEmail(username);
+
+        if (optionalUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Utilisateur non trouvé");
+        }
+
+        String newAccessToken = jwtTokenUtil.generateAccessToken(optionalUser);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("accessToken", newAccessToken);
+
+        return ResponseEntity.ok(response);
+    }
+
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout(@RequestHeader("Authorization") String authHeader) {
