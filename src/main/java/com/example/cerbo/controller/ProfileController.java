@@ -111,4 +111,27 @@ public class ProfileController {
                     .body("Erreur lors de la récupération des profils: " + e.getMessage());
         }
     }
+    // Dans ProfileController.java
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        String currentPassword = request.get("currentPassword");
+        String newPassword = request.get("newPassword");
+
+        try {
+            profileService.changePassword(email, currentPassword, newPassword);
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Mot de passe changé avec succès"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }
