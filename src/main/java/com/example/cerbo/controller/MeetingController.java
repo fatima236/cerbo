@@ -2,6 +2,7 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.Meeting;
 import com.example.cerbo.service.MeetingService;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,5 +40,10 @@ public class MeetingController {
     @PostMapping("/generate")
     public ResponseEntity<List<Meeting>> generateMeetings(@RequestParam int year) {
         return ResponseEntity.ok(meetingService.generateMeetings(year));
+    }
+    // Dans MeetingController.java
+    @GetMapping("/download-pdf")
+    public ResponseEntity<Resource> downloadPdfPlanning(@RequestParam int year) {
+        return meetingService.generatePdfPlanning(year);
     }
 }
