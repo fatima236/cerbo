@@ -523,34 +523,35 @@ public class ProjectController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            // Récupération des projets avec le bon paramètre
-            List<Project> projects = projectRepository.findByPrincipalInvestigatorIdWithDocuments(userId);
-            // Créez une réponse simplifiée sans créer de nouveaux objets Project
+            // Utilisez la méthode existante du repository
+            List<Project> projects = projectRepository.findByPrincipalInvestigatorId(userId);
+
+            // Simplifiez la réponse
             List<Map<String, Object>> response = projects.stream()
                     .map(p -> {
                         Map<String, Object> projectMap = new HashMap<>();
                         projectMap.put("id", p.getId());
                         projectMap.put("title", p.getTitle());
-                        projectMap.put("status", p.getStatus());
+                        projectMap.put("status", p.getStatus().toString());
                         projectMap.put("submissionDate", p.getSubmissionDate());
-                        projectMap.put("createdAt", p.getSubmissionDate());
                         projectMap.put("reference", p.getReference());
-                        // Documents
+
+                        projectMap.put("studyDuration", p.getStudyDuration());
+                        projectMap.put("targetPopulation", p.getTargetPopulation());
+                        projectMap.put("consentType", p.getConsentType());
+                        projectMap.put("fundingSource", p.getFundingSource());
+                        projectMap.put("fundingProgram", p.getFundingProgram());
+                        projectMap.put("sampling", p.getSampling());
+                        projectMap.put("sampleType", p.getSampleType());
+                        projectMap.put("sampleQuantity", p.getSampleQuantity());
+
+                        // Documents de base
                         projectMap.put("documents", p.getDocuments().stream()
                                 .map(d -> Map.of(
                                         "name", d.getName(),
-                                        "path", d.getPath(),
-                                        "type", d.getType()
+                                        "path", d.getPath()
                                 ))
                                 .collect(Collectors.toList()));
-                        projectMap.put("reviews", Collections.emptyList());
-
-                        if (p.getPrincipalInvestigator() != null) {
-                            projectMap.put("principalInvestigator", Map.of(
-                                    "id", p.getPrincipalInvestigator().getId(),
-                                    "name", p.getPrincipalInvestigator().getNom() + " " + p.getPrincipalInvestigator().getPrenom()
-                            ));
-                        }
 
                         return projectMap;
                     })
@@ -562,7 +563,7 @@ public class ProjectController {
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "error", "Internal server error",
-                            "message", e.getMessage(),
+                            "message", e.toString(), // Utilisez toString() pour plus de détails
                             "timestamp", LocalDateTime.now()
                     ));
         }

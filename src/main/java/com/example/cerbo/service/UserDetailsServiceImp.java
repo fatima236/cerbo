@@ -168,7 +168,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+            helper.setFrom("salma.azouzout23@ump.ac.ma");
             helper.setTo(userEmail);
             helper.setSubject("Votre inscription a été approuvée !");
 
@@ -223,7 +223,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+            helper.setFrom("salma.azouzout23@ump.ac.ma");
             helper.setTo(email);
             helper.setSubject("Réinitialisation de votre mot de passe CERBO");
 

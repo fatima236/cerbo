@@ -36,6 +36,9 @@ public class SecurityConfig {
     @Value("${jwt.refresh.expiration}")
     private long refreshTokenExpiration;
 
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+
     @Lazy
     private final JwtTokenFilter jwtTokenFilter;
 
@@ -88,11 +91,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/projects", "/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
                         .requestMatchers("/api/projects/documents/**", "/api/projects/documents/download", "/api/projects/documents/content").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/projects/**/assign-evaluators").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/projects/assign-evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/evaluators/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasRole("ADMIN")
-
+                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasRole("INVESTIGATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasRole("INVESTIGATEUR")
 
                         // Admin-only for modifying content
                         .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
