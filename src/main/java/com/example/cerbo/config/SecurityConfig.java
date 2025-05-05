@@ -72,19 +72,19 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
 
-                        // Auth public
+                        // Auth endpoints accessibles publiquement
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/refresh").permitAll()
 
                         // Public GET
                         .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/trainings").permitAll()
 
-                        // JWT Protected Routes
+                        // JWT protected
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
-
                         .requestMatchers("/api/admin/users", "/api/admin/users/**", "/api/admin/users/pending", "/api/admin/users/pending/**").authenticated()
 
                         // Projects
@@ -96,15 +96,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasRole("INVESTIGATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasRole("INVESTIGATEUR")
 
-                        // Admin-only for modifying content
+                        // Articles
                         .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")
 
+                        // Events
                         .requestMatchers(HttpMethod.POST, "/api/events/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/events/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/events/**").hasRole("ADMIN")
 
+                        // Trainings
                         .requestMatchers(HttpMethod.POST, "/api/trainings/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/trainings/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/trainings/**").hasRole("ADMIN")
@@ -114,7 +116,7 @@ public class SecurityConfig {
                         .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
                         .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
 
-                        // All others
+                        // Tout le reste
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
