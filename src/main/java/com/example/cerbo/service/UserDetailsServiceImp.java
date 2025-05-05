@@ -85,10 +85,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
     private GmailVerificationService gmailVerificationService;
     public void requestInvestigateurSignup(User userRequest) {
         // 1. Vérification du format
-        if (!userRequest.getEmail().endsWith("@gmail.com") &&
-                !userRequest.getEmail().endsWith("@gmail.ma")) {
-            throw new IllegalArgumentException("Seuls les emails Gmail sont acceptés");
-        }
+
 
         // 2. Vérification de l'existence du compte
 
