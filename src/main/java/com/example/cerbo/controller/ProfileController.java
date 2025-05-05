@@ -66,17 +66,9 @@ public class ProfileController {
         try {
             UpdateProfileRequest request = objectMapper.readValue(formDataStr, UpdateProfileRequest.class);
 
-            // Validation
-            if (StringUtils.isEmpty(request.getCivilite()) ||
-                    StringUtils.isEmpty(request.getNom()) ||
-                    StringUtils.isEmpty(request.getPrenom())) {
-                return ResponseEntity.badRequest()
-                        .body("Civilité, nom et prénom sont obligatoires");
-            }
-
+            // Supprimez la validation stricte pour permettre des mises à jour partielles
             User updatedUser = profileService.updateUserProfile(authentication.getName(), request, photoFile);
 
-            // Retourner l'URL complète de la photo
             String fullPhotoUrl = updatedUser.getPhotoUrl() != null ?
                     "/uploads/" + updatedUser.getPhotoUrl() : null;
 
