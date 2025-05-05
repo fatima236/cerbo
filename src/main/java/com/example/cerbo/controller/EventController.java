@@ -97,8 +97,13 @@ public class EventController {
             existingEvent.setOrganizer(organizer);
 
             if (image != null && !image.isEmpty()) {
-                Document doc = documentRepository.getFirstByEvent(existingEvent);
-                documentService.updateDocument(doc.getId(), image);
+                if(documentRepository.getFirstByEvent(existingEvent)==null){
+                    documentService.uploadFile(image,null,existingEvent.getId(),null,null);
+                }
+                else {
+                    Document doc = documentRepository.getFirstByEvent(existingEvent);
+                    documentService.updateDocument(doc.getId(), image);
+                }
             }
 
             Event updatedEvent = eventRepository.save(existingEvent);
