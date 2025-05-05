@@ -5,6 +5,8 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.micrometer.common.util.internal.logging.InternalLogger;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -16,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.example.cerbo.dto.JwtTokenFilter.logger;
 
 @Component
 public class JwtTokenUtil {
@@ -26,6 +27,7 @@ public class JwtTokenUtil {
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
     private final SecretKey accessTokenSecretKey ;
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenUtil.class);
 
     public JwtTokenUtil(
             @Value("${jwt.access.secret}") String accessSecret,
@@ -121,7 +123,6 @@ public class JwtTokenUtil {
 
     // Dans JwtTokenFilter.java, modifiez la méthode validateToken pour mieux logger les erreurs
     private boolean validateToken(String token, SecretKey key) {
-        InternalLogger logger = null;
         try {
             Jwts.parserBuilder()
                     .setSigningKey(key)

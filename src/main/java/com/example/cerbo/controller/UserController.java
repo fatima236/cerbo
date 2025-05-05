@@ -109,49 +109,7 @@ public class UserController {
     }
     @Autowired
     private UserRepository userRepository;
-    @PostMapping("/logininv")
-    public ResponseEntity<?> loginInvestigateur(@RequestBody LoginRequest loginRequest) {
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
-                    )
-            );
 
-            User user = userRepository.findByEmail(loginRequest.getEmail());
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("{\"error\":\"Utilisateur non trouvé\"}");
-            }
-
-            if (!user.getRoles().contains("INVESTIGATEUR")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("{\"error\":\"Accès réservé aux investigateurs\"}");
-            }
-
-            // Générer l'access token
-            String accessToken = jwtTokenUtil.generateToken(authentication);
-
-            // Générer un refresh token
-            String refreshToken = jwtTokenUtil.generateRefreshToken(authentication);
-
-            return ResponseEntity.ok(Map.of(
-                    "token", accessToken,
-                    "refreshToken", refreshToken, // Retourner aussi le refresh token
-                    "role", "INVESTIGATEUR",
-                    "email", user.getEmail(),
-                    "expiresIn", jwtTokenUtil.getExpiration()
-            ));
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("{\"error\":\"Email ou mot de passe incorrect\"}");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("{\"error\":\"Erreur serveur: " + e.getMessage() + "\"}");
-        }
-    }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
@@ -168,21 +126,7 @@ public class UserController {
             ));
         }
     }
-    // Ajoutez cette méthode dans UserController.java
-    @PostMapping("/logoutinv")
-    @PreAuthorize("hasRole('INVESTIGATEUR')") // Add this annotation
-    public ResponseEntity<?> logoutInvestigateur(HttpServletRequest request) {
-        // Get the token from the request
-        String token = jwtTokenUtil.getTokenFromRequest(request);
 
-        // In a real implementation, you might want to blacklist the token
-        // For this demo, we'll just return a success response
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Déconnexion réussie",
-                "status", "LOGOUT_SUCCESS"
-        ));
-    }
 
 
     @PostMapping("/reset-password")
@@ -202,49 +146,7 @@ public class UserController {
             ));
         }
     }
-    @PostMapping("/loginevaluateur")
-    public ResponseEntity<?> loginEvaluateur(@RequestBody LoginRequest loginRequest) {
-        try {
-            // Authentifier l'utilisateur
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
-                    )
-            );
 
-            // Récupérer l'utilisateur depuis la base
-            User user = userRepository.findByEmail(loginRequest.getEmail());
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Utilisateur non trouvé"));
-            }
-
-            // Vérifier que l'utilisateur a le rôle EVALUATEUR
-            if (!user.getRoles().contains("EVALUATEUR")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Accès réservé aux évaluateurs"));
-            }
-
-            // Générer un token JWT
-            String token = jwtTokenUtil.generateToken(authentication);
-
-            // Retourner une réponse JSON compatible avec le frontend
-            return ResponseEntity.ok(Map.of(
-                    "token", token,
-                    "role", "EVALUATEUR",
-                    "email", user.getEmail(),
-                    "expiresIn", jwtTokenUtil.getExpiration()
-            ));
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Email ou mot de passe incorrect"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur serveur: " + e.getMessage()));
-        }
-    }
 
 
 
@@ -255,51 +157,5 @@ public class UserController {
 
     // Injection par constructeur
 
-    @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
-        String refreshToken = request.get("refreshToken");
-
-        try {
-            // 1. Validation du refresh token
-            if (!jwtTokenUtil.validateRefreshToken(refreshToken)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token invalide");
-            }
-
-            // 2. Récupération de l'utilisateur
-            String username = jwtTokenUtil.getUsernameFromRefreshToken(refreshToken);
-            User user = userRepository.findByEmail(username);
-
-            if (user == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouvé");
-            }
-
-            // 3. Création de l'authentication
-            List<GrantedAuthority> authorities = user.getRoles().stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                    .collect(Collectors.toList());
-
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    user.getEmail(),
-                    null,
-                    authorities);
-
-            // 4. Génération des nouveaux tokens
-            String newAccessToken = jwtTokenUtil.generateToken(auth);
-            String newRefreshToken = jwtTokenUtil.generateRefreshToken(auth);
-
-            // 5. Retour de la réponse
-            return ResponseEntity.ok(Map.of(
-                    "token", newAccessToken,
-                    "refreshToken", newRefreshToken,
-                    "expiresIn", jwtTokenUtil.getAccessTokenExpiration()
-            ));
-
-        } catch (Exception e) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Échec du rafraîchissement: " + e.getMessage()
-            );
-        }
-    }
 
 }

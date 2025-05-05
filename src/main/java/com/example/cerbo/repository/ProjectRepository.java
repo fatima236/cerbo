@@ -24,7 +24,12 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     List<Project> findByPrincipalInvestigatorIdOrInvestigatorsId(Long principalId, Long investigatorId);
 
     @EntityGraph(attributePaths = {"principalInvestigator"})
-    List<Project> findByPrincipalInvestigatorId(Long investigatorId);
+    @Query("SELECT p FROM Project p WHERE p.principalInvestigator.id = :investigatorId ORDER BY p.submissionDate DESC")
+    List<Project> findByPrincipalInvestigatorId(@Param("investigatorId") Long investigatorId);
+
+    @EntityGraph(attributePaths = {"principalInvestigator", "documents"})
+    @Query("SELECT p FROM Project p LEFT JOIN FETCH p.documents WHERE p.principalInvestigator.id = :userId")
+    List<Project> findByPrincipalInvestigatorIdWithDocuments(@Param("userId") Long userId);
 
     @EntityGraph(attributePaths = {"principalInvestigator"})
     List<Project> findByStatus(ProjectStatus status);
