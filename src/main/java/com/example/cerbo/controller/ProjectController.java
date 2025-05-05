@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.service.NotificationService;
@@ -30,7 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.cerbo.repository.ProjectRepository;
-
+import com.example.cerbo.entity.User;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -418,6 +419,7 @@ public class ProjectController {
 
         return fileStorageService.storeFile(file);
     }
+// Dans ProjectController.java
 
     @GetMapping("/{projectId}/documents/{documentName}/content")
     public ResponseEntity<byte[]> viewDocument(
@@ -505,7 +507,6 @@ public class ProjectController {
             return "application/octet-stream";
         }
     }
-
     @GetMapping("/investigator/{userId}")
     @PreAuthorize("hasRole('INVESTIGATEUR')")
     public ResponseEntity<?> getProjectsByInvestigator(@PathVariable Long userId) {
@@ -557,17 +558,210 @@ public class ProjectController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response); // Retour normal
+
         } catch (Exception e) {
-            log.error("Error getting investigator projects: ", e);
+            log.error("Error getting investigator projects", e);
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "error", "Internal server error",
-                            "message", e.toString(), // Utilisez toString() pour plus de détails
+                            "message", e.getMessage(),
                             "timestamp", LocalDateTime.now()
                     ));
         }
     }
+    private String formatFileSize(long size) {
+        if (size < 1024) return size + " bytes";
+        else if (size < 1024 * 1024) return (size / 1024) + " KB";
+        else return (size / (1024 * 1024)) + " MB";
+    }
 
+    // Récupérer les documents d'un projet spécifique pour l'évaluateur
+    @GetMapping("/{projectId}/documents")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<?> getProjectDocuments(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+
+        try {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            User evaluator = userRepository.findByEmail(userDetails.getUsername());
+
+            Project project = projectRepository.findByIdAndReviewerIdWithDocuments(projectId, evaluator.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
+
+            List<Map<String, Object>> documents = project.getDocuments().stream()
+                    .map(doc -> {
+                        Map<String, Object> docMap = new HashMap<>();
+                        docMap.put("id", doc.getId());
+                        docMap.put("name", doc.getName());
+                        docMap.put("type", doc.getType().name());
+                        docMap.put("path", doc.getPath());
+                        docMap.put("size", doc.getSize());
+                        docMap.put("remark", doc.getRemark());
+                        docMap.put("submitted", doc.isSubmitted());
+                        docMap.put("validated", doc.isValidated());
+                        docMap.put("validationDate", doc.getValidationDate());
+                        return docMap;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            log.error("Error getting project documents", e);
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors de la récupération des documents: " + e.getMessage());
+        }
+    }
+    @GetMapping("/assigned-to-me")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<?> getAssignedProjectsWithDocuments(Authentication authentication) {
+        try {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            User currentUser = userRepository.findByEmail(userDetails.getUsername());
+
+            // Récupération des projets avec leurs documents en une seule requête
+            List<Project> projects = projectRepository.findByReviewerIdWithDocuments(currentUser.getId());
+
+            // Formatage de la réponse
+            List<Map<String, Object>> response = projects.stream().map(project -> {
+                Map<String, Object> projectMap = new HashMap<>();
+                projectMap.put("id", project.getId());
+                projectMap.put("title", project.getTitle());
+                projectMap.put("reference", project.getReference());
+                projectMap.put("description", project.getProjectDescription());
+                projectMap.put("dateAttribution", project.getReviewDate());
+
+                // Documents
+                List<Map<String, Object>> documents = project.getDocuments().stream()
+                        .map(doc -> {
+                            Map<String, Object> docMap = new HashMap<>();
+                            docMap.put("id", doc.getId());
+                            docMap.put("name", doc.getName());
+                            docMap.put("size", doc.getSize());
+                            docMap.put("remark", doc.getRemark());
+                            docMap.put("submitted", doc.isSubmitted());
+                            docMap.put("validated", doc.isValidated());
+                            return docMap;
+                        })
+                        .collect(Collectors.toList());
+
+                projectMap.put("fichiers", documents);
+                return projectMap;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error in getAssignedProjectsWithDocuments", e);
+            return ResponseEntity.internalServerError().body("Error retrieving projects");
+        }
+    }
+    // Mettre à jour les remarques sur un document
+    @PutMapping("/{projectId}/documents/{documentId}")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<?> updateDocumentEvaluation(
+            @PathVariable Long projectId,
+            @PathVariable Long documentId,
+            @RequestBody Map<String, Object> updates,
+            Authentication authentication) {
+
+        try {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            User evaluator = userRepository.findByEmail(userDetails.getUsername());
+
+            // Vérifier que le projet est bien assigné à l'évaluateur
+            Project project = projectRepository.findByIdAndReviewerIdWithDocuments(projectId, evaluator.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
+
+            // Vérifier si le délai d'évaluation est dépassé
+            if (project.getReviewDate() != null &&
+                    LocalDateTime.now().isAfter(project.getReviewDate().plusDays(60))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Le délai d'évaluation de ce projet est dépassé");
+            }
+
+            // Trouver le document
+            Document document = project.getDocuments().stream()
+                    .filter(d -> d.getId().equals(documentId))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
+
+            // Mettre à jour les champs
+            if (updates.containsKey("remark")) {
+                document.setRemark((String) updates.get("remark"));
+            }
+            if (updates.containsKey("submitted")) {
+                document.setSubmitted((Boolean) updates.get("submitted"));
+            }
+            if (updates.containsKey("validated")) {
+                boolean validated = (Boolean) updates.get("validated");
+                document.setValidated(validated);
+                if (validated) {
+                    document.setValidationDate(LocalDateTime.now());
+                }
+            }
+            document.setModificationDate(LocalDateTime.now());
+
+            projectRepository.save(project);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Évaluation du document mise à jour avec succès",
+                    "documentId", documentId
+            ));
+        } catch (Exception e) {
+            log.error("Error updating document evaluation", e);
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors de la mise à jour de l'évaluation: " + e.getMessage());
+        }
+    }
+
+    // Marquer l'évaluation comme complète
+    @PostMapping("/{projectId}/complete-evaluation")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<?> completeEvaluation(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+
+        try {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            User evaluator = userRepository.findByEmail(userDetails.getUsername());
+
+            Project project = projectRepository.findByIdAndReviewerIdWithDocuments(projectId, evaluator.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
+
+            // Vérifier que tous les documents ont été traités
+            boolean allDocumentsProcessed = project.getDocuments().stream()
+                    .allMatch(doc -> doc.isValidated() || doc.isSubmitted());
+
+            if (!allDocumentsProcessed) {
+                return ResponseEntity.badRequest()
+                        .body("Tous les documents doivent être validés ou avoir des remarques avant de compléter l'évaluation");
+            }
+
+            // Envoyer une notification
+            notificationService.createNotification(
+                    "admin@example.com", // À remplacer par l'email de l'admin
+                    "Évaluation complétée pour le projet: " + project.getTitle() + " par " + evaluator.getNom()
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Évaluation complétée avec succès",
+                    "projectId", projectId,
+                    "evaluatorId", evaluator.getId()
+            ));
+        } catch (Exception e) {
+            log.error("Error completing evaluation", e);
+            return ResponseEntity.internalServerError()
+                    .body("Erreur lors de la complétion de l'évaluation: " + e.getMessage());
+        }
+    }
 
 }
+
+
+
+
+
+
+
+

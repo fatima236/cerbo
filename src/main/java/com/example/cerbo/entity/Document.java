@@ -32,9 +32,16 @@ public class Document {
     private String path;
     private String contentType;
     private Long size;
+    @Column(columnDefinition = "TEXT")
+    private String remark;
+
+    private boolean submitted;
+    private boolean validated;
+
 
     private LocalDateTime creationDate = LocalDateTime.now();
     private LocalDateTime modificationDate;
+    private LocalDateTime validationDate;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = true) // Changé de nullable=true à false
