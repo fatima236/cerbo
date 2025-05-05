@@ -22,10 +22,13 @@ public class Document {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 70) // ou la longueur appropriée pour votre cas
+    @Column(length = 70, nullable = false)
     private DocumentType type;
 
+    @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
     private String path;
     private String contentType;
     private Long size;
