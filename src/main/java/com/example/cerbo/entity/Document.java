@@ -34,7 +34,7 @@ public class Document {
     private LocalDateTime modificationDate;
 
     @ManyToOne
-    @JoinColumn(name = "project_id", nullable = false) // Changé de nullable=true à false
+    @JoinColumn(name = "project_id", nullable = true) // Changé de nullable=true à false
     private Project project;
 
     @ManyToOne
