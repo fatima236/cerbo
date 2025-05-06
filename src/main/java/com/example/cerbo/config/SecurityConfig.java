@@ -88,6 +88,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/meetings/evaluators").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/meetings/{meetingId}/attendance").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/meetings/{meetingId}/attendance").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/meetings/evaluators/stats").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/meetings/evaluators/{evaluatorId}").hasRole("ADMIN")
                         .requestMatchers("/api/admin/users", "/api/admin/users/**", "/api/admin/users/pending", "/api/admin/users/pending/**").authenticated()
 

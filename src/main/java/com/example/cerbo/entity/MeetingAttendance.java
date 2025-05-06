@@ -19,6 +19,7 @@ public class MeetingAttendance {
     private User evaluator;
 
     private boolean present;
-
     private String justification;
+    private boolean justified = false; // Nouveau champ
+
 }
