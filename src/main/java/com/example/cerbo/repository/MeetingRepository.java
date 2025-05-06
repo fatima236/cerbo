@@ -18,4 +18,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     @Modifying
     @Query("DELETE FROM Meeting m WHERE m.year = :year")
     void deleteByYear(@Param("year") int year);
+    @Query("SELECT COUNT(m) FROM Meeting m WHERE YEAR(m.date) = :year")
+    int countByYear(@Param("year") int year);
 }
