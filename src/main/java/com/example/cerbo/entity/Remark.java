@@ -22,9 +22,19 @@ public class Remark {
 
     private LocalDateTime creationDate;
 
+    @Column(nullable = false)
+    private boolean includedInReport = false;
+
     @ManyToOne
     @JoinColumn(name = "reviewer_id", nullable = false)
     private User reviewer;
+
+    private String comment;
+    private LocalDateTime createdAt;
+
+    private String response;
+    private String responseFilePath;
+    private LocalDateTime responseDate;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)

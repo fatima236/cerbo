@@ -62,12 +62,12 @@ public class JwtTokenUtil {
     public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", user.getRoles().stream()
-                .map(role -> role.replace("ROLE_", "")) // Enlevez le préfixe car il sera rajouté plus tard
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)// Enlevez le préfixe car il sera rajouté plus tard
                 .collect(Collectors.toList()));
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(user.getPrenom())
+                .setSubject(user.getEmail())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(SignatureAlgorithm.HS512, accessTokenSecretKey)
