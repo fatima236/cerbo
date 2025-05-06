@@ -1,7 +1,9 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.entity.Remark;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.RemarkRepository;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
@@ -51,6 +53,7 @@ public class ProjectController {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
+    private final RemarkRepository remarkRepository;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -523,8 +526,10 @@ public class ProjectController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
+            List<Project> projects = projectRepository.findByPrincipalInvestigatorIdWithRemarks(userId);
+
             // Utilisez la méthode existante du repository
-            List<Project> projects = projectRepository.findByPrincipalInvestigatorId(userId);
+            List<Project> projets = projectRepository.findByPrincipalInvestigatorId(userId);
 
             // Simplifiez la réponse
             List<Map<String, Object>> response = projects.stream()
@@ -568,5 +573,6 @@ public class ProjectController {
                     ));
         }
     }
+
 
 }

@@ -96,6 +96,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasRole("INVESTIGATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasRole("INVESTIGATEUR")
 
+                        .requestMatchers(HttpMethod.POST, "/api/projects/remarks").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/projects/remarks/response").authenticated()
+
+
                         // Articles
                         .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")

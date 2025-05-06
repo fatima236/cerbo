@@ -13,4 +13,8 @@ public class RemarkDTO {
 
     private String adminStatus;
     private LocalDateTime validationDate;
+
+    private String response;
+    private LocalDateTime responseDate;
+    private Boolean hasResponseFile;
 }

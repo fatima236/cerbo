@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,6 +36,9 @@ public class Project {
 
     @Column(nullable = false)
     private LocalDateTime submissionDate;
+
+    @Column(name = "response_deadline")
+    private LocalDateTime responseDeadline;
 
     private LocalDateTime reviewDate;
     private LocalDateTime decisionDate;
