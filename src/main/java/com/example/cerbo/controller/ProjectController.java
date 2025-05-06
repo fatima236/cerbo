@@ -254,17 +254,24 @@ public class ProjectController {
 
     // Récupérer tous les évaluateurs
     @GetMapping("/evaluators")
-    public ResponseEntity<List<Map<String, Object>>> getAllEvaluators() {
+    public ResponseEntity<?> getAllEvaluators() {
         try {
+            log.info("Fetching all evaluators");
+
+            // 1. Récupération des évaluateurs avec le rôle EVALUATEUR
             List<User> evaluators = userRepository.findByRolesContaining("EVALUATEUR");
 
-            // Assurez-vous que les relations nécessaires sont chargées
-            evaluators.forEach(evaluator -> {
-                evaluator.setPassword(null); // Pour des raisons de sécurité
-            });
+            if (evaluators == null || evaluators.isEmpty()) {
+                log.warn("No evaluators found in database");
+                return ResponseEntity.ok(Collections.emptyList());
+            }
 
+            // 2. Construction de la réponse
             List<Map<String, Object>> response = evaluators.stream()
                     .map(evaluator -> {
+                        // Sécurité: effacer les données sensibles
+                        evaluator.setPassword(null);
+
                         Map<String, Object> evaluatorMap = new HashMap<>();
                         evaluatorMap.put("id", evaluator.getId());
                         evaluatorMap.put("email", evaluator.getEmail());
@@ -274,10 +281,17 @@ public class ProjectController {
                     })
                     .collect(Collectors.toList());
 
+            log.info("Successfully fetched {} evaluators", evaluators.size());
             return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            log.error("Error getting evaluators", e);
-            return ResponseEntity.internalServerError().build();
+            log.error("Error fetching evaluators: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Internal Server Error",
+                            "message", "Could not fetch evaluators",
+                            "timestamp", LocalDateTime.now()
+                    ));
         }
     }
 

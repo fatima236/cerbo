@@ -17,4 +17,10 @@ public class RemarkDTO {
     private String response;
     private LocalDateTime responseDate;
     private Boolean hasResponseFile;
+
+    private String validatorName;
+    private Long validatorId;
+
+    private String comment;
+
 }

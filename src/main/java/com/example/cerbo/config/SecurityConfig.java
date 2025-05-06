@@ -99,6 +99,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/projects/remarks").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/projects/remarks/response").authenticated()
 
+                        // Endpoints admin pour les remarques
+                        .requestMatchers(HttpMethod.GET, "/api/admin/remarks/pending").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}/validated").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/remarks/projects/{projectId}/generate-report").hasRole("ADMIN")
+
+                        // Endpoints pour les rapports
+                        .requestMatchers(HttpMethod.GET, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/send").hasRole("ADMIN")
+
 
                         // Articles
                         .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
