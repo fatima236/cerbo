@@ -5,7 +5,8 @@ import com.example.cerbo.repository.MeetingRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.io.IOException;
+import com.itextpdf.text.Phrase;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -13,7 +14,30 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.FontFactory;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import java.io.IOException;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.text.BaseColor;
+import java.io.ByteArrayOutputStream;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 @Service
 public class MeetingService {
 
@@ -154,5 +178,80 @@ public class MeetingService {
     private List<String> getParticipantEmailsForMeeting(Long meetingId) {
         // Implémentez cette méthode pour retourner la liste des emails des participants
         return Arrays.asList("participant1@example.com", "participant2@example.com");
+    }
+    public ResponseEntity<Resource> generatePdfPlanning(int year) {
+        try {
+            List<Meeting> meetings = getMeetingsByYear(year);
+
+            Document document = new Document();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            PdfWriter.getInstance(document, out);
+
+            document.open();
+
+            // Titre
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
+            Paragraph title = new Paragraph("Comité d'Ethique pour la Recherche Biomédicale d'Oujda", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(10);
+            document.add(title);
+
+            // Sous-titre
+            Font subtitleFont = FontFactory.getFont(FontFactory.HELVETICA, 14);
+            Paragraph subtitle = new Paragraph("Faculté de Médecine et de Pharmacie\nUniversité Mohammed Premier\nOujda", subtitleFont);
+            subtitle.setAlignment(Element.ALIGN_CENTER);
+            subtitle.setSpacingAfter(20);
+            document.add(subtitle);
+
+            // Titre du tableau
+            Paragraph tableTitle = new Paragraph("Planning des Réunions Ordinaires du CERBO de l'exercice " + year, titleFont);
+            tableTitle.setAlignment(Element.ALIGN_CENTER);
+            tableTitle.setSpacingAfter(20);
+            document.add(tableTitle);
+
+            // Tableau
+            PdfPTable table = new PdfPTable(4);
+            table.setWidthPercentage(100);
+
+            // En-têtes du tableau
+            String[] headers = {"Mois", "Jour", "Date", "Heure"};
+            for (String header : headers) {
+                PdfPCell cell = new PdfPCell(new Phrase(header));
+                cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
+                table.addCell(cell);
+            }
+
+            // Remplissage du tableau
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMMM yyyy");
+            DateTimeFormatter dayFormatter = DateTimeFormatter.ofPattern("EEEE");
+            DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM");
+
+            for (Meeting meeting : meetings) {
+                // Mois
+                table.addCell(meeting.getDate().format(monthFormatter));
+
+                // Jour de la semaine
+                table.addCell(meeting.getDate().format(dayFormatter));
+
+                // Date complète
+                table.addCell(meeting.getDate().format(dateFormatter));
+
+                // Heure
+                table.addCell(meeting.getTime().toString());
+            }
+
+            document.add(table);
+            document.close();
+
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=planning_reunions_" + year + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(resource);
+        } catch (DocumentException e) {
+            throw new RuntimeException("Erreur lors de la génération du PDF", e);
+        }
     }
 }

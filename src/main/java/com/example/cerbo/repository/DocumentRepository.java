@@ -1,5 +1,6 @@
 package com.example.cerbo.repository;
 
+import com.example.cerbo.entity.Article;
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Event;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,6 @@ public interface DocumentRepository extends JpaRepository<Document,Long> {
     List<Document> findDocumentsByEventId(Long eventId);
 
     Document getFirstByEvent(Event event);
+
+    Document getFirsByArticle(Article article);
 }

@@ -5,7 +5,9 @@ import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Event;
 import com.example.cerbo.entity.Training;
 import com.example.cerbo.repository.ArticleRepository;
+import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.service.articleService.ArticleService;
+import com.example.cerbo.service.documentService.DocumentService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,6 +27,8 @@ public class ArticleController {
 
     ArticleRepository articleRepository;
     ArticleService articleService;
+    DocumentService documentService;
+    DocumentRepository documentRepository;
 
     @GetMapping
     public ResponseEntity<List<Article>> getAllArticles() {
@@ -88,10 +92,15 @@ public class ArticleController {
             existingArticle.setText(text);
             existingArticle.setAuthor(author);
 
-//            if (image != null && !image.isEmpty()) {
-//                Document doc = documentRepository.getFirstByEvent(existingEvent);
-//                documentService.updateDocument(doc.getId(), image);
-//            }
+            if (image != null && !image.isEmpty()) {
+                if(documentRepository.getFirsByArticle(existingArticle)==null){
+                    documentService.uploadFile(image,null,null,existingArticle.getId(),null);
+                }
+                else{
+                    Document doc = documentRepository.getFirsByArticle(existingArticle);
+                    documentService.updateDocument(doc.getId(), image);
+                }
+            }
 
             Article updatedArticle = articleRepository.save(existingArticle);
             return ResponseEntity.ok(updatedArticle);
