@@ -5,6 +5,7 @@ import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.core.io.Resource;
+import com.example.cerbo.repository.DocumentRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
@@ -419,7 +420,6 @@ public class ProjectController {
 
         return fileStorageService.storeFile(file);
     }
-// Dans ProjectController.java
 
     @GetMapping("/{projectId}/documents/{documentName}/content")
     public ResponseEntity<byte[]> viewDocument(
@@ -507,6 +507,7 @@ public class ProjectController {
             return "application/octet-stream";
         }
     }
+
     @GetMapping("/investigator/{userId}")
     @PreAuthorize("hasRole('INVESTIGATEUR')")
     public ResponseEntity<?> getProjectsByInvestigator(@PathVariable Long userId) {
@@ -558,14 +559,13 @@ public class ProjectController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(response); // Retour normal
-
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error getting investigator projects", e);
+            log.error("Error getting investigator projects: ", e);
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "error", "Internal server error",
-                            "message", e.getMessage(),
+                            "message", e.toString(), // Utilisez toString() pour plus de détails
                             "timestamp", LocalDateTime.now()
                     ));
         }
@@ -755,6 +755,8 @@ public class ProjectController {
                     .body("Erreur lors de la complétion de l'évaluation: " + e.getMessage());
         }
     }
+
+
 
 }
 

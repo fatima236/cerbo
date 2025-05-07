@@ -85,6 +85,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/meetings/evaluators").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/meetings/{meetingId}/attendance").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/meetings/{meetingId}/attendance").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/meetings/evaluators/{evaluatorId}").hasRole("ADMIN")
                         .requestMatchers("/api/admin/users", "/api/admin/users/**", "/api/admin/users/pending", "/api/admin/users/pending/**").authenticated()
 
                         // Projects
@@ -95,6 +99,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/evaluators/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasRole("INVESTIGATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasRole("INVESTIGATEUR")
+
+                        .requestMatchers(HttpMethod.POST, "/api/projects/remarks").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/projects/remarks/response").authenticated()
+
 
                         // Articles
                         .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")

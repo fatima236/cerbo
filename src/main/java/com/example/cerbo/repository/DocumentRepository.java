@@ -16,4 +16,5 @@ public interface DocumentRepository extends JpaRepository<Document,Long> {
     Document getFirstByEvent(Event event);
 
     Document getFirsByArticle(Article article);
+
 }
