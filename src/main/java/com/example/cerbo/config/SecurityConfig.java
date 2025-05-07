@@ -118,6 +118,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/projects/assigned-to-me").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents").hasRole("EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentName}/content").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/review").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/documents/submit-review").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/set-deadline").hasRole("ADMIN")
