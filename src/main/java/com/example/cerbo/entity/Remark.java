@@ -25,6 +25,9 @@ public class Remark {
     @Column(nullable = false)
     private boolean includedInReport = false;
 
+    @Column(columnDefinition = "TEXT")
+    private String adminComment; // Commentaire de l'admin
+
     @ManyToOne
     @JoinColumn(name = "reviewer_id", nullable = false)
     private User reviewer;
@@ -49,5 +52,9 @@ public class Remark {
     @ManyToOne
     @JoinColumn(name = "validated_by")
     private User validatedBy;
+
+    public boolean isIncludedInReport() {
+        return includedInReport && adminStatus == RemarkStatus.VALIDATED;
+    }
 }
 

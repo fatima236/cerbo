@@ -13,7 +13,9 @@ import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.RemarkService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/projects/{projectId}/remarks")
 @RequiredArgsConstructor
+@Slf4j
 public class RemarkController {
 
     private final RemarkRepository remarkRepository;
@@ -120,6 +123,7 @@ public class RemarkController {
 
     @PostMapping(value = "/{remarkId}/response", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('INVESTIGATEUR') and @projectSecurity.isProjectMember(#projectId, authentication)")
+    @Transactional // Ajout crucial
     public ResponseEntity<RemarkDTO> respondToRemark(
             @PathVariable Long projectId,
             @PathVariable Long remarkId,
@@ -127,48 +131,56 @@ public class RemarkController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             Authentication authentication) throws IOException {
 
-        // Validation: au moins une réponse (texte ou fichier) doit être fournie
-        if ((responseText == null || responseText.trim().isEmpty()) &&
-                (file == null || file.isEmpty())) {
-            throw new IllegalArgumentException("Vous devez fournir soit une réponse textuelle, soit un fichier, soit les deux");
+        // [1] Validation basique
+        if ((responseText == null || responseText.trim().isEmpty()) && (file == null || file.isEmpty())) {
+            throw new IllegalArgumentException("Réponse textuelle ou fichier requis");
         }
 
+        // [2] Vérification projet
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-        // Vérification délai
-        if (project.getResponseDeadline() != null &&
-                LocalDateTime.now().isAfter(project.getResponseDeadline())) {
+        // [3] Vérification délai
+        if (project.getResponseDeadline() != null && LocalDateTime.now().isAfter(project.getResponseDeadline())) {
             project.setStatus(ProjectStatus.REJETE);
             projectRepository.save(project);
-            throw new RuntimeException("Le délai de réponse est expiré. Le projet a été automatiquement rejeté.");
+            throw new RuntimeException("Délai de réponse expiré");
         }
 
-        Remark remark = remarkRepository.findById(remarkId)
-                .orElseThrow(() -> new ResourceNotFoundException("Remark not found"));
+        // [4] Récupération remarque avec verrou
+        Remark remark = remarkRepository.findByIdWithLock(remarkId)
+                .orElseThrow(() -> new ResourceNotFoundException("Remarque non trouvée"));
 
+        // [5] Vérification réponse existante
         if (remark.getResponse() != null) {
-            throw new RuntimeException("Cette remarque a déjà reçu une réponse");
+            throw new IllegalStateException("Réponse déjà existante");
         }
 
-        // Traitement du fichier
+        // [6] Traitement fichier
         String filePath = null;
         if (file != null && !file.isEmpty()) {
-            if (file.getSize() > 10_000_000) { // 10MB max
-                throw new IllegalArgumentException("La taille du fichier dépasse 10MB");
+            try {
+                if (file.getSize() > 10_000_000) throw new IllegalArgumentException("Fichier trop volumineux");
+                filePath = fileStorageService.storeFile(file);
+            } catch (Exception e) {
+                throw new RuntimeException("Échec du stockage du fichier", e);
             }
-            filePath = fileStorageService.storeFile(file);
         }
 
-        // Enregistrement
-        if (responseText != null && !responseText.trim().isEmpty()) {
-            remark.setResponse(responseText.trim());
-        }
+        // [7] Mise à jour
+        remark.setResponse(responseText != null ? responseText.trim() : null);
         remark.setResponseDate(LocalDateTime.now());
         remark.setResponseFilePath(filePath);
 
         Remark savedRemark = remarkRepository.save(remark);
-        notifyStakeholders(project, savedRemark, authentication.getName());
+
+        // [8] Notifications (version robuste)
+        try {
+            notifyStakeholders(project, savedRemark, authentication.getName());
+        } catch (Exception e) {
+            log.error("Échec de notification", e);
+            // Ne pas bloquer malgré l'échec
+        }
 
         return ResponseEntity.ok(convertToDto(savedRemark));
     }

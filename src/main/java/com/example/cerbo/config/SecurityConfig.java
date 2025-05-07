@@ -88,6 +88,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/meetings/evaluators").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/meetings/{meetingId}/attendance").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/meetings/{meetingId}/attendance").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/meetings/evaluators/stats").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/meetings/evaluators/{evaluatorId}").hasRole("ADMIN")
                         .requestMatchers("/api/admin/users", "/api/admin/users/**", "/api/admin/users/pending", "/api/admin/users/pending/**").authenticated()
 
@@ -102,6 +103,18 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST, "/api/projects/remarks").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/projects/remarks/response").authenticated()
+
+                        // Endpoints admin pour les remarques
+                        .requestMatchers(HttpMethod.GET, "/api/admin/remarks/pending").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}/validated").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/remarks/projects/{projectId}/generate-report").hasRole("ADMIN")
+
+                        // Endpoints pour les rapports
+                        .requestMatchers(HttpMethod.GET, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/send").hasRole("ADMIN")
 
 
                         // Articles

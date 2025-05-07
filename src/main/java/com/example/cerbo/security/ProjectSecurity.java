@@ -5,17 +5,21 @@ import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ProjectSecurity {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
     public boolean isProjectMember(Long projectId, Authentication authentication) {
+        log.debug("Vérification accès pour projet {} - utilisateur {}",
+                projectId, authentication.getName());
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }
