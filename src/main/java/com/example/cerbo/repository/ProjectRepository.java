@@ -1,6 +1,7 @@
 package com.example.cerbo.repository;
 
 import com.example.cerbo.entity.Project;
+import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
@@ -115,6 +116,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     Optional<Project> findByIdAndReviewerIdWithDocuments(
             @Param("projectId") Long projectId,
             @Param("reviewerId") Long reviewerId);
+    @Query("SELECT d FROM Document d WHERE d.id = :documentId AND d.project.id = :projectId")
+    Optional<Document> findByIdAndProjectId(@Param("documentId") Long documentId, @Param("projectId") Long projectId);
 
 
     List<Project> findByResponseDeadlineBeforeAndStatusNot(LocalDateTime date, ProjectStatus status);
