@@ -1,6 +1,7 @@
 package com.example.cerbo.entity;
 
 import com.example.cerbo.entity.enums.RemarkStatus;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -47,11 +48,14 @@ public class Remark {
     @Enumerated(EnumType.STRING)
     private RemarkStatus adminStatus = RemarkStatus.PENDING;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime validationDate;
 
     @ManyToOne
     @JoinColumn(name = "validated_by")
     private User validatedBy;
+
+
 
     public boolean isIncludedInReport() {
         return includedInReport && adminStatus == RemarkStatus.VALIDATED;

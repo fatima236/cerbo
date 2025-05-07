@@ -1,5 +1,6 @@
 package com.example.cerbo.entity;
 
+import com.example.cerbo.entity.enums.EvaluationStatus;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -7,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
@@ -43,9 +46,18 @@ public class Project {
     private LocalDateTime reviewDate;
     private LocalDateTime decisionDate;
 
+    @Column(nullable = false)
+    private LocalDate reviewDeadline = LocalDate.now().plusDays(60);
+
     @Enumerated(EnumType.STRING)
     @Column(length = 50) // Adjust length as needed
+    private EvaluationStatus evaluationStatus;
+
+    @Enumerated(EnumType.STRING)
     private ProjectStatus status = ProjectStatus.SOUMIS; // Changé de EN_COURS à SOUMIS
+
+
+    private LocalDateTime evaluationSubmitDate;
 
     private String studyDuration;
     private String targetPopulation;

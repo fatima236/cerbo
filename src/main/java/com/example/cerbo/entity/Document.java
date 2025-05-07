@@ -1,6 +1,7 @@
 package com.example.cerbo.entity;
 
 import com.example.cerbo.entity.enums.DocumentType;
+import com.example.cerbo.entity.enums.RemarkStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,6 +43,16 @@ public class Document {
     private LocalDateTime creationDate = LocalDateTime.now();
     private LocalDateTime modificationDate;
     private LocalDateTime validationDate;
+    private LocalDateTime reviewDate;
+
+    @Enumerated(EnumType.STRING)
+    private RemarkStatus reviewStatus;
+
+    @Column(columnDefinition = "TEXT")
+    private String reviewRemark;
+
+    @ManyToOne
+    private User reviewer;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = true) // Changé de nullable=true à false
@@ -58,4 +69,7 @@ public class Document {
     @ManyToOne
     @JoinColumn(name = "event_id",nullable = true)
     private Event event;
+
+
 }
+

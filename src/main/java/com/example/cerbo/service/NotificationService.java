@@ -9,6 +9,7 @@ import com.example.cerbo.entity.enums.NotificationStatus;
 import com.example.cerbo.repository.NotificationRepository;
 import com.example.cerbo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -24,11 +25,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
 
     private final ApplicationEventPublisher eventPublisher;
     private final EmailService emailService;
-
 
     @Autowired
     private NotificationRepository notificationRepository;
@@ -108,7 +109,6 @@ public class NotificationService {
     @EventListener
     public void handleProjectSubmitted(ApplicationEvent event) {
         if (event.getType() == EventType.PROJECT_SUBMITTED) {
-
             // 1. Notifier les admins
             List<User> admins = userRepository.findAll().stream()
                     .filter(user -> user.getRoles().contains("ADMIN"))
@@ -129,10 +129,13 @@ public class NotificationService {
         }
     }
 
-
-
     private void createInAppNotification(User user, String title, String message) {
-        // Implémentez la création de notification in-app
+        Notification notification = new Notification();
+        notification.setRecipient(user);
+        notification.setContent(message);
+        notification.setSentDate(LocalDateTime.now());
+        notification.setStatus(NotificationStatus.NON_LUE);
+        notificationRepository.save(notification);
     }
 
     @Async
@@ -140,12 +143,12 @@ public class NotificationService {
         String message = "Votre projet " + project.getTitle() + " a été " +
                 project.getStatus().getDisplayName();
 
+        // Notification in-app
         Notification notification = new Notification();
         notification.setRecipient(project.getPrincipalInvestigator());
         notification.setContent(message);
         notification.setSentDate(LocalDateTime.now());
         notification.setStatus(NotificationStatus.NON_LUE);
-
         notificationRepository.save(notification);
 
         // Envoyer un email
@@ -158,5 +161,16 @@ public class NotificationService {
                         "status", project.getStatus().getDisplayName()
                 )
         );
+    }
+
+    public void notifyAdmins(String message) {
+        List<User> admins = userRepository.findByRolesContaining("ADMIN");
+        admins.forEach(admin -> {
+            log.info(                admin.getEmail(),
+                    "Notification Admin",
+                    "admin-notification",
+                    Map.of("message", message));
+
+        });
     }
 }
