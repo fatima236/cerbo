@@ -212,20 +212,19 @@ public class ProjectService {
 
         try {
             ProjectStatus newStatus = ProjectStatus.valueOf(status);
+            ProjectStatus oldStatus = project.getStatus();
             project.setStatus(newStatus);
 
-
-
-            // You might want to add additional logic here based on status changes
-            // For example, send notifications when status changes
+            // Envoyer une notification seulement si le statut a vraiment changé
+            if (!newStatus.equals(oldStatus)) {
+                notificationService.notifyProjectStatusChange(project, comment);
+            }
 
             return projectRepository.save(project);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status value: " + status);
         }
     }
-
-
 
     @Transactional
     public Project assignEvaluator(Long projectId, Long evaluatorId) {
@@ -318,4 +317,5 @@ public class ProjectService {
                 "Vous avez été retiré du projet: " + project.getTitle()
         );
     }
+
 }
