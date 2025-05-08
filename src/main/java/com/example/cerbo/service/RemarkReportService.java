@@ -3,6 +3,7 @@ package com.example.cerbo.service;
 import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Project;
+import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
@@ -99,6 +100,7 @@ public class RemarkReportService {
             String recipientEmail = project.getPrincipalInvestigator().getEmail();
             String subject = "Rapport officiel des remarques - Projet: " + project.getTitle();
 
+
             emailService.sendEmail(
                     recipientEmail,
                     subject,
@@ -106,12 +108,10 @@ public class RemarkReportService {
                     templateData
             );
 
-            notificationService.createNotification(
-                    recipientEmail,
-                    "Rapport officiel reçu pour le projet: " + project.getTitle() +
-                            ". Délai de réponse: " +
-                            project.getResponseDeadline().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-            );
+            notificationService.sendNotification(project.getPrincipalInvestigator(),"Rapport officiel reçu pour le projet","Rapport officiel reçu pour le projet: " + project.getTitle() +
+                    ". Délai de réponse: " +
+                    project.getResponseDeadline().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+
         } catch (Exception e) {
             System.err.println("Erreur lors de l'envoi du rapport: " + e.getMessage());
             throw e;

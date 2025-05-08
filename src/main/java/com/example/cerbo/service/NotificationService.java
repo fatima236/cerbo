@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,17 +43,35 @@ public class NotificationService {
     @Autowired
     private final UserRepository userRepository;
 
-    public Notification sendNotification(User user,String title,String content) {
-        Notification notification = new Notification();
-        notification.setTitle(title);
-        notification.setContent(content);
-        notification.setRecipient(user);
-        notification.setStatus(NotificationStatus.NON_LUE);
+    public List<Notification> sendNotification(User recipient, String title, String content) {
+        return sendNotification(Collections.singletonList(recipient), title, content);
+    }
 
-        Notification saved = notificationRepository.save(notification);
-        messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), saved);
+    public List<Notification> sendNotification(List<User> recipients, String title, String content) {
+        List<Notification> notifications = recipients.stream()
+                .map(user -> createNotification(user, title, content))
+                .collect(Collectors.toList());
 
-        return saved;
+        List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
+
+        // Envoi des notifications via WebSocket
+        savedNotifications.forEach(notification -> {
+            messagingTemplate.convertAndSend(
+                    "/topic/notifications/" + notification.getRecipient().getId(),
+                    notification
+            );
+        });
+
+        return savedNotifications;
+    }
+
+    private Notification createNotification(User user, String title, String content) {
+        return Notification.builder()
+                .title(title)
+                .content(content)
+                .recipient(user)
+                .status(NotificationStatus.NON_LUE)
+                .build();
     }
 
 

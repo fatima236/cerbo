@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -93,6 +94,10 @@ public class ProjectService {
 
         // Set the documents and save again
         savedProject.setDocuments(documents);
+
+
+        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),"nouvel projet","nouvel projet de l'investigateur");
+
         return projectRepository.save(savedProject);
     }
 
