@@ -106,6 +106,7 @@ public class SecurityConfig {
 
                         // Endpoints admin pour les remarques
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/pending").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/stats").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}/status").hasRole("ADMIN")
