@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,11 +36,33 @@ public class NotificationService {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
     private final UserRepository userRepository;
+
+    public Notification sendNotification(User user,String title,String content) {
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setContent(content);
+        notification.setRecipient(user);
+        notification.setStatus(NotificationStatus.NON_LUE);
+
+        Notification saved = notificationRepository.save(notification);
+        messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), saved);
+
+        return saved;
+    }
+
+
 
     /**
      * Récupère toutes les notifications d'un utilisateur
      */
+    public List<Notification> getNotificationsForUser(Long userId) {
+        return notificationRepository.findByRecipientIdOrderBySentDateDesc(userId);
+    }
+
     public List<Notification> getNotificationsForUser(String email) {
         User user = userRepository.findByEmail(email);
         return notificationRepository.findByRecipientOrderBySentDateDesc(user);

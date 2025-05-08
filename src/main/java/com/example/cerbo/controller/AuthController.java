@@ -79,6 +79,7 @@ public class AuthController {
                     "role", role, // retourne ici INVESTIGATEUR, ADMIN, EVA, etc.
                     "refreshToken", refreshToken,
                     "email", user.getEmail(),
+                    "userId",user.getId(),
                     "expiresIn", jwtTokenUtil.getExpiration()
             ));
 

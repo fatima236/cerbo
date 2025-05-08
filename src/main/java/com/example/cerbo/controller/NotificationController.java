@@ -1,10 +1,13 @@
 package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.Notification;
+import com.example.cerbo.entity.User;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -18,6 +21,8 @@ public class NotificationController {
 
     @Autowired
     private NotificationService notificationService;
+
+
 
     @GetMapping
     public ResponseEntity<List<Notification>> getNotifications(Authentication authentication) {

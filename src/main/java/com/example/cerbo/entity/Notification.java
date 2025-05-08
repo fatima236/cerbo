@@ -19,6 +19,9 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+    private String title;
+
     @Column(nullable = false)
     private String content;
 
@@ -30,4 +33,9 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
+
+    @PrePersist
+    public void prePersist() {
+        this.sentDate = LocalDateTime.now();
+    }
 }

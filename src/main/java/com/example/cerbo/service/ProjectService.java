@@ -215,6 +215,18 @@ public class ProjectService {
             project.setStatus(newStatus);
 
 
+            User investigator = project.getPrincipalInvestigator();
+
+            if(investigator != null) {
+                String title = "Mise à jour du statut du projet";
+                String content = "Le projet \"" + project.getTitle() + "\" est maintenant : " + newStatus;
+
+                notificationService.sendNotification(
+                        investigator,
+                        title,
+                        content
+                );
+            }
 
             // You might want to add additional logic here based on status changes
             // For example, send notifications when status changes
