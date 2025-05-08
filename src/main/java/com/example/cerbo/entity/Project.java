@@ -67,6 +67,8 @@ public class Project {
     private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
+    private String Description;
+
 
 
     @Column(columnDefinition = "TEXT")
@@ -108,12 +110,20 @@ public class Project {
 
     // Méthode pour générer la référence automatiquement
     @PrePersist
-    public void generateReference() {
+    public void prePersist() {
         if (this.reference == null) {
             this.reference = "PROJ-" + LocalDateTime.now().getYear() + "-" +
                     String.format("%06d", (int)(Math.random() * 1000000));
+        }
+
+        if (this.submissionDate == null) {
             this.submissionDate = LocalDateTime.now();
         }
+
+        if (this.reviewDeadline == null) {
+            this.reviewDeadline = LocalDate.now().plusDays(60);
+        }
     }
+
 
 }

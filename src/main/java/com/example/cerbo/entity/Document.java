@@ -51,6 +51,26 @@ public class Document {
     @Column(columnDefinition = "TEXT")
     private String reviewRemark;
 
+
+    @Enumerated(EnumType.STRING)
+    private RemarkStatus adminStatus;
+
+    private LocalDateTime adminValidationDate;
+
+    private String adminEmail;
+
+    private LocalDateTime adminResponseDate;
+
+    private String responseFilePath;
+
+    @Column(columnDefinition = "TEXT")
+    private String adminComment;
+
+    @Column(columnDefinition = "TEXT")
+    private String adminResponse;
+
+
+
     @ManyToOne
     private User reviewer;
 

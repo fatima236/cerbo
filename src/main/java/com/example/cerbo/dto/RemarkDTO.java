@@ -9,6 +9,8 @@ public class RemarkDTO {
     private String content;
     private LocalDateTime creationDate;
     private Long reviewerId;
+    private String reviewerEmail;
+    private String reviewerFirstName;
     private String reviewerName;
 
     private String adminStatus;
@@ -22,5 +24,17 @@ public class RemarkDTO {
     private Long validatorId;
 
     private String comment;
+    private String adminEmail;
+
+    private LocalDateTime adminResponseDate;
+    private String adminResponse;
+
+    // Info projet
+    private Long projectId;
+    private String projectTitle;
+
+    // Info document
+    private Long documentId;
+    private String documentName;
 
 }

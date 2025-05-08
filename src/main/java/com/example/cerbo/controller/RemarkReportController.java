@@ -1,12 +1,12 @@
 package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.RemarkDTO;
+import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Project;
-import com.example.cerbo.entity.Remark;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.ProjectRepository;
-import com.example.cerbo.repository.RemarkRepository;
 import com.example.cerbo.service.RemarkReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,66 +27,74 @@ public class RemarkReportController {
 
     private final RemarkReportService remarkReportService;
     private final ProjectRepository projectRepository;
-    private final RemarkRepository remarkRepository;
+    private final DocumentRepository documentRepository;
 
-    private RemarkDTO convertToDto(Remark remark) {
+    private RemarkDTO convertToDto(Document document) {
         RemarkDTO dto = new RemarkDTO();
-        dto.setId(remark.getId());
-        dto.setContent(remark.getContent());
-        dto.setCreationDate(remark.getCreationDate());
-        dto.setAdminStatus(remark.getAdminStatus() != null ? remark.getAdminStatus().toString() : null);
-        dto.setValidationDate(remark.getValidationDate());
+        dto.setId(document.getId());
+        dto.setContent(document.getReviewRemark());
+        dto.setCreationDate(document.getReviewDate());
+        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().toString() : null);
+        dto.setValidationDate(document.getAdminValidationDate());
 
-        if (remark.getReviewer() != null) {
-            dto.setReviewerId(remark.getReviewer().getId());
-            dto.setReviewerName(remark.getReviewer().getPrenom() + " " + remark.getReviewer().getNom());
+        if (document.getReviewer() != null) {
+            dto.setReviewerId(document.getReviewer().getId());
+            dto.setReviewerName(document.getReviewer().getPrenom() + " " + document.getReviewer().getNom());
         }
 
-        dto.setResponse(remark.getResponse());
-        dto.setResponseDate(remark.getResponseDate());
-        dto.setHasResponseFile(remark.getResponseFilePath() != null);
+        dto.setResponse(document.getAdminResponse());
+        dto.setResponseDate(document.getAdminResponseDate());
+        dto.setHasResponseFile(document.getResponseFilePath() != null);
 
         return dto;
     }
 
     @GetMapping("/preview")
     public ResponseEntity<List<RemarkDTO>> getRemarksForReport(@PathVariable Long projectId) {
-        // Récupérer seulement les remarques validées par l'admin
-        List<Remark> remarks = remarkRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
-        return ResponseEntity.ok(remarks.stream()
+        List<Document> documents = documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
+        return ResponseEntity.ok(documents.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList()));
     }
 
+    @PostMapping("/preview")
+    public ResponseEntity<List<RemarkDTO>> generateReportPreview(
+            @PathVariable Long projectId,
+            @RequestBody List<Long> documentIds) {
+
+        List<Document> documents = documentRepository.findAllById(documentIds);
+        return ResponseEntity.ok(documents.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList()));
+    }
 
     @PostMapping("/send")
     public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId,
-                                                      @RequestBody List<Long> remarkIds) {
+                                                      @RequestBody List<Long> documentIds) {
         try {
-            // 1. Générer le rapport (l'email est géré en interne avec try-catch)
-            remarkReportService.generateAndSendReport(projectId, remarkIds);
+            remarkReportService.generateAndSendReport(projectId, documentIds);
 
-            // 2. Récupérer le projet pour le délai
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-            // 1. Générer et envoyer le rapport
-            remarkReportService.generateAndSendReport(projectId, remarkIds);
+            // Vérifiez que les documents existent et sont bien validés
+            List<Document> documents = documentRepository.findAllById(documentIds);
+            long validatedCount = documents.stream()
+                    .filter(d -> d.getAdminStatus() == RemarkStatus.VALIDATED)
+                    .count();
 
-            // 2. Rafraîchir l'objet projet depuis la base
-            project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé après mise à jour"));
-
-            // 3. Vérifier que les remarques sont bien marquées
-            List<Remark> includedRemarks = remarkRepository.findByProjectIdAndIncludedInReportTrue(projectId);
+            if (validatedCount != documentIds.size()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Certains documents ne sont pas validés"
+                ));
+            }
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Rapport généré avec succès. L'email a peut-être été envoyé.",
                     "deadline", project.getResponseDeadline().format(DateTimeFormatter.ISO_DATE_TIME),
-                    "remarksIncluded", remarkIds.size(),
-                    "remarkIds", includedRemarks.stream().map(Remark::getId).collect(Collectors.toList())
-
+                    "documentsIncluded", documentIds.size()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

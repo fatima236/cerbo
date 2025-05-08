@@ -107,13 +107,13 @@ public class SecurityConfig {
                         // Endpoints admin pour les remarques
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/pending").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{documentId}/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{documentId}/content").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}/validated").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/remarks/projects/{projectId}/generate-report").hasRole("ADMIN")
 
-                        // Endpoints pour les rapports
                         .requestMatchers(HttpMethod.GET, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/send").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/projects/assigned-to-me").hasRole("EVALUATEUR")
@@ -122,6 +122,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/review").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/documents/submit-review").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/set-deadline").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/submission-status").hasRole("EVALUATEUR")
+
 
 
 

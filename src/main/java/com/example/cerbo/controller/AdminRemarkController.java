@@ -1,6 +1,11 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.RemarkResponseDTO;
+import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Remark;
+import com.example.cerbo.entity.enums.RemarkStatus;
+import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.RemarkRepository;
 import com.example.cerbo.service.AdminRemarkService;
 import lombok.Data;
@@ -11,8 +16,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import com.example.cerbo.dto.ReportPreview;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/remarks")
@@ -21,60 +28,94 @@ import java.util.Map;
 public class AdminRemarkController {
 
     private final AdminRemarkService adminRemarkService;
-    private final RemarkRepository remarkRepository;
-
+    private final DocumentRepository documentRepository;
 
     @GetMapping("/pending")
-    public ResponseEntity<List<Remark>> getPendingRemarks() {
-        List<Remark> remarks = adminRemarkService.getPendingRemarks();
-        return ResponseEntity.ok(remarks);
+    public ResponseEntity<List<RemarkResponseDTO>> getPendingRemarks() {
+        List<Document> documents = documentRepository.findByReviewStatusAndReviewRemarkIsNotNull(RemarkStatus.REVIEWED);
+        return ResponseEntity.ok(documents.stream().map(this::convertToDto).collect(Collectors.toList()));
     }
 
     @GetMapping("/projects/{projectId}")
-    public ResponseEntity<List<Remark>> getProjectRemarks(@PathVariable Long projectId) {
-        List<Remark> remarks = remarkRepository.findByProjectIdOrderByCreationDateDesc(projectId);
-        return ResponseEntity.ok(remarks);
+    public ResponseEntity<List<RemarkResponseDTO>> getProjectRemarks(@PathVariable Long projectId) {
+        List<Document> documents = documentRepository.findByProjectIdAndReviewRemarkIsNotNull(projectId);
+        return ResponseEntity.ok(documents.stream().map(this::convertToDto).collect(Collectors.toList()));
     }
 
-    @PutMapping("/{remarkId}")
-    public ResponseEntity<Remark> updateRemark(
-            @PathVariable Long remarkId,
-            @RequestBody UpdateRemarkRequest request) {
-
-        Remark updatedRemark = adminRemarkService.updateRemarkContent(
-                remarkId,
-                request.getContent(),
-                request.getComment()
-        );
-        return ResponseEntity.ok(updatedRemark);
-    }
-
-    @PutMapping("/{remarkId}/status")
-    public ResponseEntity<Remark> updateRemarkStatus(
-            @PathVariable Long remarkId,
+    @PutMapping("/{documentId}/status")
+    public ResponseEntity<RemarkResponseDTO> updateRemarkStatus(
+            @PathVariable Long documentId,
             @RequestBody Map<String, String> request,
             Authentication authentication) {
 
         String status = request.get("status");
         String adminEmail = authentication.getName();
 
-        Remark updatedRemark = adminRemarkService.updateRemarkStatus(remarkId, status, adminEmail);
-        return ResponseEntity.ok(updatedRemark);
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+
+        document.setAdminStatus(RemarkStatus.valueOf(status));
+        document.setAdminValidationDate(LocalDateTime.now());
+        document.setAdminEmail(adminEmail);
+
+        Document updatedDoc = documentRepository.save(document);
+        return ResponseEntity.ok(convertToDto(updatedDoc));
     }
 
     @GetMapping("/projects/{projectId}/validated")
-    public ResponseEntity<List<Remark>> getValidatedRemarks(@PathVariable Long projectId) {
-        List<Remark> remarks = adminRemarkService.getValidatedRemarks(projectId);
-        return ResponseEntity.ok(remarks);
+    public ResponseEntity<List<RemarkResponseDTO>> getValidatedRemarks(@PathVariable Long projectId) {
+        List<Document> documents = documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
+        return ResponseEntity.ok(documents.stream().map(this::convertToDto).collect(Collectors.toList()));
     }
 
     @PostMapping("/projects/{projectId}/generate-report")
     public ResponseEntity<ReportPreview> generateReportPreview(
             @PathVariable Long projectId,
-            @RequestBody List<Long> remarkIds) {
+            @RequestBody List<Long> documentIds) {
 
-        ReportPreview preview = adminRemarkService.generateReportPreview(projectId, remarkIds);
+        ReportPreview preview = adminRemarkService.generateReportPreview(projectId, documentIds);
         return ResponseEntity.ok(preview);
+    }
+
+    @PutMapping("/{documentId}/content")
+    public ResponseEntity<RemarkResponseDTO> updateRemarkContent(
+            @PathVariable Long documentId,
+            @RequestBody UpdateRemarkRequest request,
+            Authentication authentication) {
+
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+
+        document.setReviewRemark(request.getContent());
+        document.setAdminComment(request.getComment());
+        document.setAdminResponse(request.getAdminResponse());
+        document.setAdminResponseDate(LocalDateTime.now());
+        document.setAdminEmail(authentication.getName());
+
+        Document updatedDoc = documentRepository.save(document);
+        return ResponseEntity.ok(convertToDto(updatedDoc));
+    }
+
+    private RemarkResponseDTO convertToDto(Document document) {
+        RemarkResponseDTO dto = new RemarkResponseDTO();
+        dto.setId(document.getId());
+        dto.setContent(document.getReviewRemark());
+        dto.setCreationDate(document.getReviewDate());
+        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().name() : null);
+        dto.setValidationDate(document.getAdminValidationDate());
+        dto.setComment(document.getAdminComment());
+        dto.setAdminResponse(document.getAdminResponse());
+        dto.setAdminResponseDate(document.getAdminResponseDate());
+
+        if (document.getReviewer() != null) {
+            RemarkResponseDTO.ReviewerDTO reviewerDto = new RemarkResponseDTO.ReviewerDTO();
+            reviewerDto.setEmail(document.getReviewer().getEmail());
+            reviewerDto.setPrenom(document.getReviewer().getPrenom());
+            reviewerDto.setNom(document.getReviewer().getNom());
+            dto.setReviewer(reviewerDto);
+        }
+
+        return dto;
     }
 }
 
@@ -82,5 +123,5 @@ public class AdminRemarkController {
 class UpdateRemarkRequest {
     private String content;
     private String comment;
+    private String adminResponse;
 }
-
