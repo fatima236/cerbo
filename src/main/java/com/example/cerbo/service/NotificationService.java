@@ -8,11 +8,14 @@ import com.example.cerbo.entity.enums.EventType;
 import com.example.cerbo.entity.enums.NotificationStatus;
 import com.example.cerbo.repository.NotificationRepository;
 import com.example.cerbo.repository.UserRepository;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +33,7 @@ public class NotificationService {
 
     private final ApplicationEventPublisher eventPublisher;
     private final EmailService emailService;
-
+    private final JavaMailSender mailSender;
     @Autowired
     private NotificationRepository notificationRepository;
 
@@ -139,9 +142,11 @@ public class NotificationService {
     }
 
     @Async
-    public void notifyProjectStatusChange(Project project) {
-        String message = "Votre projet " + project.getTitle() + " a été " +
-                project.getStatus().getDisplayName();
+    public void notifyProjectStatusChange(Project project, String comment) {
+        String message = "Le statut de votre projet \"" + project.getTitle() + "\" a été modifié de " +
+                project.getStatus().getDisplayName() + " à " +
+                project.getStatus().getDisplayName() +
+                (comment != null ? "\nCommentaire: " + comment : "");
 
         // Notification in-app
         Notification notification = new Notification();
@@ -152,15 +157,39 @@ public class NotificationService {
         notificationRepository.save(notification);
 
         // Envoyer un email
-        emailService.sendEmail(
-                project.getPrincipalInvestigator().getEmail(),
-                "Statut de votre projet mis à jour",
-                "project-status-updated",
-                Map.of(
-                        "projectName", project.getTitle(),
-                        "status", project.getStatus().getDisplayName()
-                )
-        );
+        try {
+            MimeMessage emailMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(emailMessage, true);
+
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+            helper.setTo(project.getPrincipalInvestigator().getEmail());
+            helper.setSubject("Mise à jour du statut de votre projet " + project.getTitle());
+
+            String htmlContent = "<html>" +
+                    "<body style=\"font-family: Arial, sans-serif;\">" +
+                    "<h2 style=\"color: #2e6c80;\">Statut du projet mis à jour</h2>" +
+                    "<p>Le statut de votre projet <strong>" + project.getTitle() + "</strong> a été modifié :</p>" +
+                    "<div style=\"background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;\">" +
+                    "<p><strong>Nouveau statut :</strong> " + project.getStatus().getDisplayName() + "</p>" +
+                    (comment != null ? "<p><strong>Commentaire :</strong> " + comment + "</p>" : "") +
+                    "</div>" +
+                    "<p>Vous pouvez consulter votre projet en vous connectant à votre espace investigateur.</p>" +
+                    "<a href=\"http://localhost:3000/investigateur/dashboard\" " +
+                    "style=\"background-color: #4CAF50; color: white; padding: 10px 20px; " +
+                    "text-decoration: none; border-radius: 5px; display: inline-block;\">" +
+                    "Accéder à mes projets" +
+                    "</a>" +
+                    "</body>" +
+                    "</html>";
+
+            helper.setText(htmlContent, true);
+            mailSender.send(emailMessage);
+
+            log.info("Email de notification de changement de statut envoyé à {}",
+                    project.getPrincipalInvestigator().getEmail());
+        } catch (Exception e) {
+            log.error("Échec d'envoi de l'email de notification de changement de statut", e);
+        }
     }
 
     public void notifyAdmins(String message) {
@@ -173,4 +202,7 @@ public class NotificationService {
 
         });
     }
+
+
+
 }

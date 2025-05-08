@@ -33,7 +33,13 @@ public class User {
     private boolean validated = false;
     private String photoUrl; // URL de la photo stockée
 
+    public String getFullName() {
+        return (prenom != null ? prenom + " " : "") + (nom != null ? nom : "");
+    }
 
+    public String getEmail() {
+        return email;
+    }
 
 
 
