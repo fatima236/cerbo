@@ -95,7 +95,8 @@ public class DocumentReviewController {
         // Vérifier que tous les documents sont traités
         List<Document> documents = documentRepository.findByProjectId(projectId);
         boolean allProcessed = documents.stream()
-                .allMatch(d -> d.getReviewStatus() != null);
+                .allMatch(d -> d.getReviewStatus() == RemarkStatus.VALIDATED
+                        || d.getReviewStatus() == RemarkStatus.REVIEWED);
 
         if (!allProcessed) {
             throw new BusinessException("All documents must be reviewed or validated before submission");

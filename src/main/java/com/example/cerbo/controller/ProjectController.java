@@ -584,11 +584,11 @@ public class ProjectController {
                     ));
         }
     }
-    private String formatFileSize(long size) {
+  /*  private String formatFileSize(long size) {
         if (size < 1024) return size + " bytes";
         else if (size < 1024 * 1024) return (size / 1024) + " KB";
         else return (size / (1024 * 1024)) + " MB";
-    }
+    }*/
 
     // Récupérer les documents d'un projet spécifique pour l'évaluateur
     @GetMapping("/{projectId}/documents")
