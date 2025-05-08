@@ -67,6 +67,8 @@ public class Project {
     private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
+    private String Description;
+
 
 
     @Column(columnDefinition = "TEXT")

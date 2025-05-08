@@ -3,9 +3,11 @@ package com.example.cerbo.service;
 import com.example.cerbo.entity.PasswordResetToken;
 import com.example.cerbo.entity.PendingUser;
 import com.example.cerbo.entity.User;
+import com.example.cerbo.entity.VerificationCode;
 import com.example.cerbo.repository.PasswordResetTokenRepository;
 import com.example.cerbo.repository.PendingUserRepository;
 import com.example.cerbo.repository.UserRepository;
+import com.example.cerbo.repository.VerificationCodeRepository;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,6 +50,9 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    private VerificationCodeRepository verificationCodeRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -130,8 +136,8 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setFrom("salma.azouzout23@ump.ac.ma");
-            helper.setTo("salma.azouzout03@gmail.com");
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+            helper.setTo("fatimazahrabouayadi93@gmail.com");
             helper.setSubject("Demande d'inscription à approuver (#" + pendingUser.getId() + ")");
             helper.setText(emailContent, true);
             mailSender.send(message);
@@ -165,7 +171,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom("salma.azouzout23@ump.ac.ma");
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
             helper.setTo(userEmail);
             helper.setSubject("Votre inscription a été approuvée !");
 
@@ -220,7 +226,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom("salma.azouzout23@ump.ac.ma");
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
             helper.setTo(email);
             helper.setSubject("Réinitialisation de votre mot de passe CERBO");
 
@@ -267,5 +273,66 @@ public class UserDetailsServiceImp implements UserDetailsService {
         return userRepository.findByEmail(email);
     }
 
+    public void sendVerificationCode(String email) {
+        // Supprimer d'abord les anciens codes pour cet email
+        verificationCodeRepository.deleteByEmail(email);
 
+        String verificationCode = generateRandomCode();
+
+        VerificationCode code = new VerificationCode();
+        code.setEmail(email);
+        code.setCode(verificationCode);
+        code.setExpiryDate(LocalDateTime.now().plusMinutes(10));
+        verificationCodeRepository.save(code);
+
+        sendVerificationEmail(email, verificationCode);
+    }
+
+    private String generateRandomCode() {
+        return String.format("%06d", new Random().nextInt(999999));
+    }
+
+    private void sendVerificationEmail(String email, String code) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+            helper.setTo(email);
+            helper.setSubject("Votre code de vérification CERBO");
+
+            String htmlContent = "<html>" +
+                    "<body style=\"font-family: Arial, sans-serif;\">" +
+                    "<h2 style=\"color: #2e6c80;\">Vérification de votre email</h2>" +
+                    "<p>Voici votre code de vérification :</p>" +
+                    "<div style=\"font-size: 24px; font-weight: bold; color: #4CAF50; margin: 20px 0;\">" +
+                    code +
+                    "</div>" +
+                    "<p style=\"color: #666; font-size: 0.9em;\">" +
+                    "Ce code expirera dans 10 minutes." +
+                    "</p>" +
+                    "</body>" +
+                    "</html>";
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            logger.error("Échec d'envoi d'email de vérification", e);
+            throw new RuntimeException("Échec d'envoi du code de vérification");
+        }
+    }
+
+    public boolean verifyCode(String email, String code) {
+        VerificationCode verificationCode = verificationCodeRepository.findByEmailAndCode(email, code);
+        if (verificationCode == null || verificationCode.getExpiryDate().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+        verificationCodeRepository.delete(verificationCode);
+        return true;
+    }
+
+    public boolean checkEmailExists(String email) {
+        return pendingUserRepository.existsByEmail(email) ||
+                userRepository.existsByEmail(email);
+    }
 }

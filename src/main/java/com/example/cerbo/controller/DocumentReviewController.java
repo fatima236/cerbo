@@ -102,6 +102,8 @@ public class DocumentReviewController {
             throw new BusinessException("All documents must be reviewed or validated before submission");
         }
 
+
+
         // Marquer le projet comme évaluation soumise
         project.setEvaluationStatus(EvaluationStatus.SUBMITTED);
         project.setEvaluationSubmitDate(LocalDateTime.now());
@@ -126,5 +128,12 @@ public class DocumentReviewController {
 
         }
         return dto;
+    }
+
+    @GetMapping("/{documentId}/submission-status")
+    public ResponseEntity<Boolean> getSubmissionStatus(@PathVariable Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        return ResponseEntity.ok(project.getEvaluationStatus() == EvaluationStatus.SUBMITTED);
     }
 }

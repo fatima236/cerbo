@@ -14,5 +14,8 @@ public class DocumentReviewDTO {
     private LocalDateTime reviewDate;
     private Long reviewerId;
     private String reviewerName;
+    private String documentName;
+    private String projectTitle;
+    private String projectDescription;
 
 }
