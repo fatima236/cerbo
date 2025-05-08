@@ -2,8 +2,10 @@ package com.example.cerbo.entity;
 
 import com.example.cerbo.dto.NotificationDTO;
 import com.example.cerbo.entity.enums.NotificationStatus;
+import com.itextpdf.text.Annotation;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Notification {
 
     @Id
@@ -34,6 +37,7 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
+
 
     @PrePersist
     public void prePersist() {
