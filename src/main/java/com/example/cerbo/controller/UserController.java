@@ -148,7 +148,46 @@ public class UserController {
     }
 
 
+    @PostMapping("/send-verification")
+    public ResponseEntity<?> sendVerification(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        try {
+            userDetailsServiceImp.sendVerificationCode(email);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Code de vérification envoyé",
+                    "status", "CODE_SENT"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
+    }
 
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        try {
+            boolean isValid = userDetailsServiceImp.verifyCode(email, code);
+            if (!isValid) {
+                throw new IllegalArgumentException("Code invalide ou expiré");
+            }
+            return ResponseEntity.ok(Map.of(
+                    "message", "Email vérifié avec succès",
+                    "status", "EMAIL_VERIFIED"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
+    }
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+        boolean exists = userDetailsServiceImp.checkEmailExists(email);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
 
 
 

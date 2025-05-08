@@ -119,6 +119,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     @Query("SELECT d FROM Document d WHERE d.id = :documentId AND d.project.id = :projectId")
     Optional<Document> findByIdAndProjectId(@Param("documentId") Long documentId, @Param("projectId") Long projectId);
 
+    long countByStatus(ProjectStatus status);
 
     List<Project> findByResponseDeadlineBeforeAndStatusNot(LocalDateTime date, ProjectStatus status);
 }
