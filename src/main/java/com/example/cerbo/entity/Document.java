@@ -44,6 +44,8 @@ public class Document {
     private LocalDateTime modificationDate;
     private LocalDateTime validationDate;
     private LocalDateTime reviewDate;
+    private Boolean includedInReport = false;
+
 
     @Enumerated(EnumType.STRING)
     private RemarkStatus reviewStatus;

@@ -72,23 +72,24 @@ public class RemarkReportController {
     public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId,
                                                       @RequestBody List<Long> documentIds) {
         try {
-            remarkReportService.generateAndSendReport(projectId, documentIds);
-
-            Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
-
-            // Vérifiez que les documents existent et sont bien validés
+            // Vérifiez d'abord que les documents existent et sont validés
             List<Document> documents = documentRepository.findAllById(documentIds);
             long validatedCount = documents.stream()
                     .filter(d -> d.getAdminStatus() == RemarkStatus.VALIDATED)
+                    .filter(d -> d.getReviewRemark() != null && !d.getReviewRemark().isEmpty())
                     .count();
 
             if (validatedCount != documentIds.size()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "message", "Certains documents ne sont pas validés"
+                        "message", "Certains documents ne sont pas validés ou n'ont pas de remarques"
                 ));
             }
+
+            remarkReportService.generateAndSendReport(projectId, documentIds);
+
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
             return ResponseEntity.ok(Map.of(
                     "success", true,

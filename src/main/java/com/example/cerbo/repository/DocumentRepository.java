@@ -19,6 +19,7 @@ public interface DocumentRepository extends JpaRepository<Document,Long> {
     List<Document> findByProjectIdAndReviewRemarkIsNotNull(Long projectId);
     List<Document> findByReviewStatusAndReviewRemarkIsNotNull(RemarkStatus status);
     List<Document> findByProjectIdAndAdminStatus(Long projectId, RemarkStatus adminStatus);
+    long countByProjectIdAndIncludedInReportTrueAndAdminResponseIsNull(Long projectId);
 
     Document getFirstByEvent(Event event);
 
