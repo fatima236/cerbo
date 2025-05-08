@@ -98,14 +98,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/projects/assign-evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/evaluators/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasRole("INVESTIGATEUR")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasRole("INVESTIGATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/investigator/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
 
                         .requestMatchers(HttpMethod.POST, "/api/projects/remarks").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/projects/remarks/response").authenticated()
 
                         // Endpoints admin pour les remarques
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/pending").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/stats").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/admin/remarks/projects/{projectId}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/remarks/{remarkId}/status").hasRole("ADMIN")
@@ -116,11 +117,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/send").hasRole("ADMIN")
 
-                        .requestMatchers(HttpMethod.GET, "/api/projects/assigned-to-me").hasRole("EVALUATEUR")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents").hasRole("EVALUATEUR")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentName}/content").hasRole("EVALUATEUR")
-                        .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/review").hasRole("EVALUATEUR")
-                        .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/documents/submit-review").hasRole("EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/assigned-to-me").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentName}/content").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/review").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/documents/submit-review").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/set-deadline").hasRole("ADMIN")
 
 
