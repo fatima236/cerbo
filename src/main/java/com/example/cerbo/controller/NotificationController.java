@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.NotificationDTO;
 import com.example.cerbo.entity.Notification;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.service.NotificationService;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -25,22 +27,28 @@ public class NotificationController {
 
 
     @GetMapping
-    public ResponseEntity<List<Notification>> getNotifications(Authentication authentication) {
+    public ResponseEntity<List<NotificationDTO>> getNotifications(Authentication authentication) {
         String email = authentication.getName();
         List<Notification> notifications = notificationService.getNotificationsForUser(email);
-        return ResponseEntity.ok(notifications);
+
+        List<NotificationDTO> dtos = notificationService.getNotificationDTOsForUser(authentication.getName());
+        return ResponseEntity.ok(dtos);
+
     }
 
+
     @GetMapping("/count-unread")
-    public ResponseEntity<Map<String, Integer>> countUnreadNotifications(Authentication authentication) {
-        String email = authentication.getName();
-        int count = notificationService.countUnreadNotifications(email);
-        return ResponseEntity.ok(Map.of("count", count));
+    public ResponseEntity<Integer> countUnread(Authentication authentication) {
+        int count = notificationService.countUnreadNotifications(authentication.getName());
+
+        return ResponseEntity.ok(count) ;
     }
+
 
     @PutMapping("/{id}/read")
     public ResponseEntity<Notification> markAsRead(@PathVariable Long id) {
         Notification notification = notificationService.markAsRead(id);
+
         return ResponseEntity.ok(notification);
     }
 
@@ -48,6 +56,7 @@ public class NotificationController {
     public ResponseEntity<?> markAllAsRead(Authentication authentication) {
         String email = authentication.getName();
         notificationService.markAllAsRead(email);
+
         return ResponseEntity.ok().build();
     }
 

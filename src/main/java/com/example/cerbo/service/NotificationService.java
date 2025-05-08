@@ -1,5 +1,6 @@
 package com.example.cerbo.service;
 
+import com.example.cerbo.dto.NotificationDTO;
 import com.example.cerbo.entity.ApplicationEvent;
 import com.example.cerbo.entity.Notification;
 import com.example.cerbo.entity.Project;
@@ -55,6 +56,21 @@ public class NotificationService {
     }
 
 
+    public List<NotificationDTO> getNotificationDTOsForUser(String email) {
+        return getNotificationsForUser(email).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    private NotificationDTO convertToDTO(Notification notification) {
+        return new NotificationDTO(
+                notification.getId(),
+                notification.getTitle(),
+                notification.getContent(),
+                notification.getSentDate(),
+                notification.getStatus()
+        );
+    }
 
     /**
      * Récupère toutes les notifications d'un utilisateur
@@ -196,4 +212,6 @@ public class NotificationService {
 
         });
     }
+
+
 }

@@ -1,5 +1,6 @@
 package com.example.cerbo.entity;
 
+import com.example.cerbo.dto.NotificationDTO;
 import com.example.cerbo.entity.enums.NotificationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -38,4 +39,16 @@ public class Notification {
     public void prePersist() {
         this.sentDate = LocalDateTime.now();
     }
+
+    public NotificationDTO toDTO() {
+        return new NotificationDTO(
+                this.id,
+                this.title,
+                this.content,
+                this.sentDate,
+                this.status
+        );
+    }
+
+
 }
