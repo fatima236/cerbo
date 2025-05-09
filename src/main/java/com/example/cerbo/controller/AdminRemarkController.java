@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.RemarkResponseDTO;
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Remark;
@@ -33,12 +34,16 @@ public class AdminRemarkController {
     @GetMapping("/pending")
     public ResponseEntity<List<RemarkResponseDTO>> getPendingRemarks() {
         List<Document> documents = documentRepository.findByReviewStatusAndReviewRemarkIsNotNull(RemarkStatus.REVIEWED);
+
         return ResponseEntity.ok(documents.stream().map(this::convertToDto).collect(Collectors.toList()));
     }
 
     @GetMapping("/projects/{projectId}")
     public ResponseEntity<List<RemarkResponseDTO>> getProjectRemarks(@PathVariable Long projectId) {
         List<Document> documents = documentRepository.findByProjectIdAndReviewRemarkIsNotNull(projectId);
+        List<DocumentReviewDTO> reviews = documents.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(documents.stream().map(this::convertToDto).collect(Collectors.toList()));
     }
 
@@ -115,6 +120,31 @@ public class AdminRemarkController {
             dto.setReviewer(reviewerDto);
         }
 
+        return dto;
+    }
+
+    private DocumentReviewDTO convertToDTO(Document document) {
+        DocumentReviewDTO dto = new DocumentReviewDTO();
+        dto.setId(document.getId());
+        dto.setName(document.getName());
+        dto.setReviewStatus(document.getReviewStatus());
+        dto.setReviewRemark(document.getReviewRemark());
+        dto.setReviewDate(document.getReviewDate());
+        if (document.getReviewer() != null) {
+            dto.setReviewerId(document.getReviewer().getId());
+            dto.setReviewerNom(document.getReviewer().getNom());
+            dto.setReviewerPrenom(document.getReviewer().getPrenom());
+            dto.setReviewerEmail(document.getReviewer().getEmail());
+
+        }
+
+        if (document.getProject() != null) {
+            dto.setProjectId(document.getProject().getId());
+            dto.setProjectTitle(document.getProject().getTitle());
+        }
+
+        dto.setDocumentName(document.getName());
+        dto.setDocumentType(document.getType().name());
         return dto;
     }
 }
