@@ -6,6 +6,7 @@ import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.EventRepository;
 import com.example.cerbo.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -38,7 +39,25 @@ public class CerboApplication {
 
     }
 
+    @PostConstruct
+    public void initAdminSysUser() {
+        String adminEmail = "adminsystem@example.com";
+        String rawPassword = "admin123"; // Mot de passe en clair
 
+        if (!userRepository.existsByEmail(adminEmail)) {
+            User adminSys = new User();
+            adminSys.setEmail(adminEmail);
+
+            String encodedPassword = passwordEncoder.encode(rawPassword);
+            adminSys.setPassword(encodedPassword);
+            adminSys.setRoles(Set.of("ADMINSYS"));
+            adminSys.setValidated(true);
+
+            userRepository.save(adminSys);
+
+
+        }
+    }
 
 
 

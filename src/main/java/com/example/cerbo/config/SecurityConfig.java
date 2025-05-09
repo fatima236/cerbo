@@ -148,6 +148,14 @@ public class SecurityConfig {
                         .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
                         .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
 
+                        // Endpoints spécifiques ADMINSYS
+                        .requestMatchers("/api/adminsys/**").hasRole("ADMINSYS")
+                        .requestMatchers("/api/adminsys/audit-logs").hasRole("ADMINSYS")
+                        .requestMatchers("/api/adminsys/users").hasRole("ADMINSYS")
+
+                        // Endpoints existants modifiés pour ADMINSYS
+                        .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS")
+                        .requestMatchers("/api/admin/audit-logs").hasAnyRole("ADMIN", "ADMINSYS")
                         // Tout le reste
                         .anyRequest().permitAll()
                 )

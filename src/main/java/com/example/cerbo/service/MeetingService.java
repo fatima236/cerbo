@@ -37,6 +37,7 @@ import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.BaseColor;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
+import com.example.cerbo.annotation.Loggable;
 import java.util.List;
 @Service
 public class MeetingService {
@@ -63,11 +64,13 @@ public class MeetingService {
         meeting.setStatus("Planifiée");
         return meeting;
     }
+    @Loggable(actionType = "READ", entityType = "MEETING")
 
     public List<Meeting> getMeetingsByYear(int year) {
         return meetingRepository.findByYear(year);
     }
 
+    @Loggable(actionType = "UPDATE", entityType = "MEETING")
     public Meeting updateMeeting(Long id, Meeting meetingDetails) {
         Meeting meeting = meetingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Meeting not found"));
@@ -113,10 +116,12 @@ public class MeetingService {
         return false;
     }
 
+    @Loggable(actionType = "DELETE", entityType = "MEETING")
     public void deleteMeeting(Long id) {
         meetingRepository.deleteById(id);
     }
 
+    @Loggable(actionType = "CREATE", entityType = "MEETING")
     @Transactional
     public List<Meeting> generateMeetings(int year) {
         meetingRepository.deleteByYear(year);

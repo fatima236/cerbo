@@ -8,7 +8,9 @@ import com.example.cerbo.repository.PasswordResetTokenRepository;
 import com.example.cerbo.repository.PendingUserRepository;
 import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.repository.VerificationCodeRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +31,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+import com.example.cerbo.annotation.Loggable;
 @Service
+@RequiredArgsConstructor
 public class UserDetailsServiceImp implements UserDetailsService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserDetailsServiceImp.class);
@@ -73,7 +76,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
     }
-
+    @Loggable(actionType = "CREATE", entityType = "USER")
     public User createUser(String email, String password, Set<String> roles) {
         if (userRepository.findByEmail(email) != null) {
             throw new IllegalArgumentException("Cet utilisateur existe déjà !");
@@ -87,8 +90,11 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
         return userRepository.save(user);
     }
+
     @Autowired
     private GmailVerificationService gmailVerificationService;
+
+    @Loggable(actionType = "CREATE", entityType = "PENDING_USER")
     public void requestInvestigateurSignup(User userRequest) {
         // 1. Vérification du format
 
@@ -149,6 +155,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
     }
 
 
+    @Loggable(actionType = "CREATE", entityType = "USER")
     public User approveInvestigateur(Long pendingUserId) {
         PendingUser pendingUser = pendingUserRepository.findById(pendingUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande introuvable"));
@@ -199,13 +206,14 @@ public class UserDetailsServiceImp implements UserDetailsService {
     }
 
 
+    @Loggable(actionType = "DELETE", entityType = "PENDING_USER")
     public void rejectInvestigateur(Long pendingUserId) {
         if (!pendingUserRepository.existsById(pendingUserId)) {
             throw new IllegalArgumentException("Demande introuvable");
         }
         pendingUserRepository.deleteById(pendingUserId);
     }
-
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     public void requestPasswordReset(String email) {
         User user = userRepository.findByEmail(email);
         if (user == null || !user.getRoles().contains("INVESTIGATEUR")) {
@@ -256,7 +264,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             throw new RuntimeException("Échec d'envoi de l'email de réinitialisation");
         }
     }
-
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     public void resetPassword(String token, String newPassword) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token);
         if (resetToken == null || resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
@@ -272,7 +280,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
     public User findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
-
+    @Loggable(actionType = "CREATE", entityType = "VERIFICATION_CODE")
     public void sendVerificationCode(String email) {
         // Supprimer d'abord les anciens codes pour cet email
         verificationCodeRepository.deleteByEmail(email);
@@ -321,7 +329,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
             throw new RuntimeException("Échec d'envoi du code de vérification");
         }
     }
-
+    @Loggable(actionType = "VERIFY", entityType = "VERIFICATION_CODE")
     public boolean verifyCode(String email, String code) {
         VerificationCode verificationCode = verificationCodeRepository.findByEmailAndCode(email, code);
         if (verificationCode == null || verificationCode.getExpiryDate().isBefore(LocalDateTime.now())) {
