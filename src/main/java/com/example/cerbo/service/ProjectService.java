@@ -96,7 +96,7 @@ public class ProjectService {
         savedProject.setDocuments(documents);
 
 
-        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),"nouvel projet","nouvel projet de l'investigateur");
+        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),"nouvel projet","nouvel projet de l'investigateur de l\'investigateur:"+principal.getNom()+" "+principal.getPrenom());
 
         return projectRepository.save(savedProject);
     }
