@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Year;
 import java.util.List;
 import java.util.stream.Collectors;
-
+import com.example.cerbo.annotation.Loggable;
 @Service
 @RequiredArgsConstructor
 public class MeetingAttendanceService {

@@ -1,11 +1,12 @@
 package com.example.cerbo.service;
 
-
+import com.example.cerbo.annotation.Loggable;
 import com.example.cerbo.entity.PendingUser;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.RoleType;
 import com.example.cerbo.repository.PendingUserRepository;
 import com.example.cerbo.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class AdminUserService {
 
     @Autowired
@@ -31,6 +33,7 @@ public class AdminUserService {
     /**
      * Récupère tous les utilisateurs
      */
+    @Loggable(actionType = "READ", entityType = "USER")
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -38,6 +41,7 @@ public class AdminUserService {
     /**
      * Récupère un utilisateur par son ID
      */
+    @Loggable(actionType = "READ", entityType = "USER")
     public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
@@ -45,6 +49,7 @@ public class AdminUserService {
     /**
      * Récupère toutes les demandes d'inscription en attente
      */
+    @Loggable(actionType = "READ", entityType = "PENDING_USER")
     public List<PendingUser> getAllPendingUsers() {
         return pendingUserRepository.findAll();
     }
@@ -52,6 +57,7 @@ public class AdminUserService {
     /**
      * Récupère une demande d'inscription en attente par son ID
      */
+    @Loggable(actionType = "READ", entityType = "PENDING_USER")
     public Optional<PendingUser> getPendingUserById(Long id) {
         return pendingUserRepository.findById(id);
     }
@@ -59,6 +65,7 @@ public class AdminUserService {
     /**
      * Approuve une demande d'inscription d'investigateur
      */
+    @Loggable(actionType = "CREATE", entityType = "USER")
     @Transactional
     public User approveInvestigator(Long pendingUserId) {
         PendingUser pendingUser = pendingUserRepository.findById(pendingUserId)
@@ -83,6 +90,7 @@ public class AdminUserService {
     /**
      * Approuve une demande d'inscription en tant qu'évaluateur
      */
+    @Loggable(actionType = "CREATE", entityType = "USER")
     @Transactional
     public User approveAsEvaluator(Long pendingUserId) {
         PendingUser pendingUser = pendingUserRepository.findById(pendingUserId)
@@ -107,6 +115,7 @@ public class AdminUserService {
     /**
      * Rejette une demande d'inscription
      */
+    @Loggable(actionType = "DELETE", entityType = "PENDING_USER")
     @Transactional
     public void rejectPendingUser(Long pendingUserId) {
         if (!pendingUserRepository.existsById(pendingUserId)) {
@@ -119,6 +128,7 @@ public class AdminUserService {
     /**
      * Crée un nouvel administrateur
      */
+    @Loggable(actionType = "CREATE", entityType = "USER")
     @Transactional
     public User createAdmin(String email, String password) {
         if (userRepository.findByEmail(email) != null) {
@@ -140,6 +150,7 @@ public class AdminUserService {
     /**
      * Crée un nouvel évaluateur
      */
+    @Loggable(actionType = "CREATE", entityType = "USER")
     @Transactional
     public User createEvaluateur(String email, String password) {
         if (userRepository.findByEmail(email) != null) {
@@ -161,6 +172,7 @@ public class AdminUserService {
     /**
      * Modifie le rôle d'un utilisateur existant
      */
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     @Transactional
     public User changeUserRole(Long userId, String newRole) {
         User user = userRepository.findById(userId)
@@ -181,6 +193,7 @@ public class AdminUserService {
     /**
      * Active ou désactive un utilisateur
      */
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     @Transactional
     public User setUserActivation(Long userId, boolean activated) {
         User user = userRepository.findById(userId)
@@ -193,6 +206,7 @@ public class AdminUserService {
     /**
      * Supprime un utilisateur
      */
+    @Loggable(actionType = "DELETE", entityType = "USER")
     @Transactional
     public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
@@ -204,6 +218,7 @@ public class AdminUserService {
     /**
      * Modifie l'email d'un utilisateur existant
      */
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     @Transactional
     public User changeUserEmail(Long userId, String newEmail) {
         User user = userRepository.findById(userId)
