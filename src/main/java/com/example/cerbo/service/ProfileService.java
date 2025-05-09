@@ -3,6 +3,7 @@ package com.example.cerbo.service;
 import com.example.cerbo.dto.UpdateProfileRequest;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+import com.example.cerbo.annotation.Loggable;
 @Service
+@RequiredArgsConstructor
 public class ProfileService {
 
     @Autowired
@@ -20,15 +23,19 @@ public class ProfileService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Loggable(actionType = "READ", entityType = "USER")
     @Transactional(readOnly = true)
     public User getUserProfile(String email) {
         return userRepository.findByEmail(email);
     }
 // Dans ProfileService.java
 
+    @Loggable(actionType = "READ", entityType = "USER")
     public List<User> getAllProfiles() {
         return userRepository.findAll(); // Supposant que vous utilisez JPA
     }
+
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     @Transactional
     public User updateUserProfile(String email, UpdateProfileRequest request, MultipartFile photoFile) {
         User user = userRepository.findByEmail(email);
@@ -53,6 +60,7 @@ public class ProfileService {
     @Autowired
     private PasswordEncoder passwordEncoder;
     // Dans ProfileService.java
+    @Loggable(actionType = "UPDATE", entityType = "USER")
     @Transactional
     public void changePassword(String email, String currentPassword, String newPassword) {
         User user = userRepository.findByEmail(email);

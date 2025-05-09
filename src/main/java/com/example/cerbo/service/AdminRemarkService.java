@@ -1,5 +1,6 @@
 package com.example.cerbo.service;
 
+import com.example.cerbo.annotation.Loggable;
 import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.dto.ReportPreview;
 import com.example.cerbo.entity.Document;
@@ -29,7 +30,7 @@ public class AdminRemarkService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ProjectRepository projectRepository;
-
+    @Loggable(actionType = "READ", entityType = "REPORT")
     public ReportPreview generateReportPreview(Long projectId, List<Long> documentIds) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));

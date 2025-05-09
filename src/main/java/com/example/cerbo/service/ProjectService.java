@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.example.cerbo.annotation.Loggable;
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
@@ -29,7 +30,7 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
-
+    @Loggable(actionType = "CREATE", entityType = "PROJECT")
     @Transactional
     public Project submitProject(ProjectSubmissionDTO submissionDTO) {
         // Validation des champs obligatoires
@@ -115,6 +116,7 @@ public class ProjectService {
     }
 
     // Les autres méthodes restent inchangées...
+    @Loggable(actionType = "READ", entityType = "PROJECT")
     public List<Project> findFilteredProjects(ProjectStatus status, String search) {
         Specification<Project> spec = Specification.where(null);
 
@@ -135,6 +137,7 @@ public class ProjectService {
 
         return projectRepository.findAll(spec);
     }
+    @Loggable(actionType = "READ", entityType = "PROJECT")
     public Page<Project> findFilteredProjects(ProjectStatus status, String search, Pageable pageable) {
         Specification<Project> spec = Specification.where(null);
 
@@ -157,6 +160,7 @@ public class ProjectService {
         return projectRepository.findAll(spec, pageable);
     }
 
+    @Loggable(actionType = "UPDATE", entityType = "PROJECT")
     @Transactional
     public Project assignReviewers(Long projectId, Set<Long> reviewerIds) {
         Project project = projectRepository.findById(projectId)
@@ -177,6 +181,7 @@ public class ProjectService {
         return projectRepository.save(project);
     }
 
+    @Loggable(actionType = "READ", entityType = "PROJECT")
     public List<Project> findUserProjects(Long userId, ProjectStatus status) {
         Specification<Project> spec = (root, query, cb) -> cb.or(
                 cb.equal(root.get("principalInvestigator").get("id"), userId),
@@ -193,23 +198,27 @@ public class ProjectService {
 
 
     // ... autres dépendances
-
+    @Loggable(actionType = "READ", entityType = "PROJECT")
     public List<Document> getProjectDocuments(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
         return project.getDocuments();
     }
     // Add these methods to your ProjectService class
-
+    @Loggable(actionType = "READ", entityType = "PROJECT")
     @Transactional(readOnly = true)
     public List<Project> getAllProjects() {
         return projectRepository.findAllWithInvestigatorsAndReviewers();
     }
+    @Loggable(actionType = "READ", entityType = "PROJECT")
     @Transactional
     public Project getProjectById(Long id) {
         return projectRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
     }
+
+
+    @Loggable(actionType = "UPDATE", entityType = "PROJECT")
     @Transactional
     public Project updateProjectStatus(Long id, String status, String comment) {
         Project project = projectRepository.findById(id)
@@ -243,7 +252,7 @@ public class ProjectService {
     }
 
 
-
+    @Loggable(actionType = "UPDATE", entityType = "PROJECT")
     @Transactional
     public Project assignEvaluator(Long projectId, Long evaluatorId) {
         Project project = projectRepository.findById(projectId)
@@ -271,6 +280,7 @@ public class ProjectService {
         return projectRepository.save(project);
     }
 
+    @Loggable(actionType = "UPDATE", entityType = "PROJECT")
     @Transactional
     public Project assignEvaluators(Long projectId, List<Long> evaluatorIds) {
         Project project = projectRepository.findByIdWithReviewers(projectId)
@@ -313,6 +323,8 @@ public class ProjectService {
         return projectRepository.save(project);
     }
 
+
+    @Loggable(actionType = "UPDATE", entityType = "PROJECT")
     @Transactional
     public void removeEvaluator(Long projectId, Long evaluatorId) {
         Project project = projectRepository.findByIdWithReviewers(projectId)
