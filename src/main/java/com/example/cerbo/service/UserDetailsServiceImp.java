@@ -8,6 +8,7 @@ import com.example.cerbo.repository.PasswordResetTokenRepository;
 import com.example.cerbo.repository.PendingUserRepository;
 import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.repository.VerificationCodeRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -89,6 +90,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
         return userRepository.save(user);
     }
+
     @Autowired
     private GmailVerificationService gmailVerificationService;
 
