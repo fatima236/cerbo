@@ -1,10 +1,12 @@
 package com.example.cerbo.service;
 
+import com.example.cerbo.annotation.Loggable;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.AuditLogRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +31,12 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
+    private final AuditLogRepository auditLogRepository;
+
 
     @Transactional
+
+    @Loggable(actionType = "SUBMIT_PROJECT", entityType = "PROJECT")
     public Project submitProject(ProjectSubmissionDTO submissionDTO) {
         // Validation des champs obligatoires
         if (submissionDTO.getPrincipalInvestigatorId() == null) {
@@ -96,7 +102,7 @@ public class ProjectService {
         savedProject.setDocuments(documents);
 
 
-        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),"nouvel projet","nouvel projet de l'investigateur");
+        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),"nouvel projet","nouvel projet de l'investigateur de l\'investigateur:"+principal.getNom()+" "+principal.getPrenom());
 
         return projectRepository.save(savedProject);
     }
@@ -158,6 +164,7 @@ public class ProjectService {
     }
 
     @Transactional
+    @Loggable(actionType = "ASSIGN_REVIEWERS", entityType = "PROJECT")
     public Project assignReviewers(Long projectId, Set<Long> reviewerIds) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
@@ -211,6 +218,7 @@ public class ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
     }
     @Transactional
+    @Loggable(actionType = "UPDATE_PROJECT_STATUS", entityType = "PROJECT")
     public Project updateProjectStatus(Long id, String status, String comment) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
@@ -245,6 +253,7 @@ public class ProjectService {
 
 
     @Transactional
+    @Loggable(actionType = "ASSIGN_EVALUATOR", entityType = "PROJECT")
     public Project assignEvaluator(Long projectId, Long evaluatorId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
@@ -272,6 +281,7 @@ public class ProjectService {
     }
 
     @Transactional
+    @Loggable(actionType = "ASSIGN_EVALUATORS", entityType = "PROJECT")
     public Project assignEvaluators(Long projectId, List<Long> evaluatorIds) {
         Project project = projectRepository.findByIdWithReviewers(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
@@ -314,6 +324,7 @@ public class ProjectService {
     }
 
     @Transactional
+    @Loggable(actionType = "REMOVE_EVALUATOR", entityType = "PROJECT")
     public void removeEvaluator(Long projectId, Long evaluatorId) {
         Project project = projectRepository.findByIdWithReviewers(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));

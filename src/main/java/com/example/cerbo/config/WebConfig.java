@@ -1,37 +1,31 @@
 package com.example.cerbo.config;
 
-import com.example.cerbo.controller.AuditAspect;
-import com.example.cerbo.repository.AuditLogRepository;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // Configuration des ressources
+    /**
+     * Configuration pour servir les fichiers uploadés
+     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:./uploads/");
+                .addResourceLocations("file:./uploads/")
+                .setCachePeriod(3600);
     }
 
-    // Configuration de l'Aspect
-    @Bean
-    public AuditAspect auditAspect(AuditLogRepository auditLogRepository) {
-        return new AuditAspect(auditLogRepository, request());
-    }
-
-    // Configuration de la requête HTTP
-    @Bean
-    @Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
-    public HttpServletRequest request() {
-        return ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+    /**
+     * Configuration des view controllers (pour Swagger UI par exemple)
+     * Note: Cette méthode remplace l'ancienne méthode incorrecte
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // Exemple pour Swagger UI
+        registry.addRedirectViewController("/", "/swagger-ui.html");
+        registry.addRedirectViewController("/api", "/swagger-ui.html");
     }
 }

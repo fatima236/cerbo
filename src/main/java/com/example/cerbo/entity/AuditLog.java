@@ -14,16 +14,19 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuditLog {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
+public class AuditLog {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private LocalDateTime timestamp;
-    private String username; // Utilisateur qui a effectué l'action
-    private String actionType; // CREATE, UPDATE, DELETE, etc.
-    private String entityType; // User, etc.
+    private String actionType;
+    private String entityType;
     private Long entityId;
-    private String details;
+    private String username;
+    private Long userId;
     private String ipAddress;
+    private String methodName;
+    private String details;
+
+    // Getters and setters
 }
