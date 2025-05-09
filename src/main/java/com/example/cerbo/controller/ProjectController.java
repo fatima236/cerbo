@@ -343,13 +343,7 @@ public class ProjectController {
 
             projectRepository.saveAndFlush(project); // Force l'écriture en base
 
-            // Notifications
-            newEvaluators.forEach(evaluator -> {
-                notificationService.createNotification(
-                        evaluator.getEmail(),
-                        "Assignation au projet: " + project.getTitle()
-                );
-            });
+            notificationService.sendNotificationByIds(evaluatorIds, "Projet assigné", "Projet assigné : " + project.getTitle());
 
             return ResponseEntity.ok(Map.of(
                     "message", "Évaluateurs assignés avec succès",
@@ -390,11 +384,10 @@ public class ProjectController {
             }
             projectRepository.save(project);
 
-            // Envoyer une notification
-            notificationService.createNotification(
-                    evaluator.getEmail(),
-                    "Vous avez été retiré du projet: " + project.getTitle()
-            );
+            notificationService.sendNotification(evaluator,
+                    "Retrait du projet",
+                    "Vous avez été retiré du projet \"" + project.getTitle() + "\".");
+
 
             return ResponseEntity.ok(Map.of(
                     "message", "Évaluateur retiré avec succès",
@@ -752,10 +745,10 @@ public class ProjectController {
                         .body("Tous les documents doivent être validés ou avoir des remarques avant de compléter l'évaluation");
             }
 
-            // Envoyer une notification
-            notificationService.createNotification(
-                    "admin@example.com", // À remplacer par l'email de l'admin
-                    "Évaluation complétée pour le projet: " + project.getTitle() + " par " + evaluator.getNom()
+            notificationService.sendNotification(
+                    userRepository.findByRolesContaining("ADMIN"),
+                    "Évaluation complétée",
+                    "Le projet \"" + project.getTitle() + "\" a été évalué par " + evaluator.getNom() + "."
             );
 
             return ResponseEntity.ok(Map.of(

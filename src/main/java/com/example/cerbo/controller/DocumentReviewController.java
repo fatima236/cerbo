@@ -109,8 +109,9 @@ public class DocumentReviewController {
         project.setEvaluationSubmitDate(LocalDateTime.now());
         projectRepository.save(project);
 
-        // Notifier les administrateurs
-        notificationService.notifyAdmins("Evaluation submitted for project: " + project.getTitle());
+        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),
+                "Évaluation soumise",
+                "Une évaluation a été soumise pour le projet \"" + project.getTitle() + "\".");
 
         return ResponseEntity.ok().build();
     }

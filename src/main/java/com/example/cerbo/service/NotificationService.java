@@ -65,6 +65,24 @@ public class NotificationService {
         return savedNotifications;
     }
 
+    public List<Notification> sendNotificationByIds(List<Long> recipients, String title, String content) {
+        List<Notification> notifications = recipients.stream()
+                .map(user -> createNotification(userRepository.findById(user).get(), title, content))
+                .collect(Collectors.toList());
+
+        List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
+
+        // Envoi des notifications via WebSocket
+        savedNotifications.forEach(notification -> {
+            messagingTemplate.convertAndSend(
+                    "/topic/notifications/" + notification.getRecipient().getId(),
+                    notification
+            );
+        });
+
+        return savedNotifications;
+    }
+
     private Notification createNotification(User user, String title, String content) {
         return Notification.builder()
                 .title(title)
