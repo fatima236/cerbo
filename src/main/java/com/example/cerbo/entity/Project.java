@@ -58,6 +58,8 @@ public class Project {
 
 
     private LocalDateTime evaluationSubmitDate;
+    private LocalDateTime LastReportDate;
+
 
     private String studyDuration;
     private String targetPopulation;

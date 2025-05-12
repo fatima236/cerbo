@@ -3,6 +3,7 @@ package com.example.cerbo.controller;
 import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.DocumentReviewRequest;
 import com.example.cerbo.entity.Document;
+import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.EvaluationStatus;
@@ -10,6 +11,7 @@ import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.BusinessException;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentRepository;
+import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.NotificationService;
@@ -23,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/documents")
@@ -33,6 +36,7 @@ public class DocumentReviewController {
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final DocumentReviewRepository documentReviewRepository;
 
     @PutMapping("/{documentId}/review")
     @PreAuthorize("hasRole('EVALUATEUR') and @projectSecurity.isProjectReviewer(#projectId, authentication)")
@@ -57,15 +61,22 @@ public class DocumentReviewController {
         User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Mise à jour du document
-        document.setReviewStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
-        document.setReviewRemark(request.getRemark());
-        document.setReviewer(reviewer);
-        document.setReviewDate(LocalDateTime.now());
+        // Créer une nouvelle évaluation au lieu de modifier le document
+        DocumentReview review = new DocumentReview();
+        review.setDocument(document);
+        review.setReviewer(reviewer);
+        review.setStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
+        review.setRemark(request.getRemark());
+        review.setReviewDate(LocalDateTime.now());
+        review.setFinalSubmission(false);
 
-        Document savedDoc = documentRepository.save(document);
+        documentReviewRepository.save(review);
 
-        return ResponseEntity.ok(convertToDTO(savedDoc));
+        // Vous pourriez aussi mettre à jour le dernier statut du document si nécessaire
+        document.setLatestReviewStatus(review.getStatus());
+        documentRepository.save(document);
+
+        return ResponseEntity.ok(convertToDTO(review));
     }
 
     @PutMapping("/set-deadline")
@@ -89,25 +100,29 @@ public class DocumentReviewController {
             @PathVariable Long projectId,
             Authentication authentication) {
 
+        // Récupérer le projet d'abord
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        // Vérifier que tous les documents sont traités
+        // 1. Vérifier que l'évaluateur a bien évalué tous les documents
+        User reviewer = userRepository.findByEmail(authentication.getName());
         List<Document> documents = documentRepository.findByProjectId(projectId);
-        boolean allProcessed = documents.stream()
-                .allMatch(d -> d.getReviewStatus() == RemarkStatus.VALIDATED
-                        || d.getReviewStatus() == RemarkStatus.REVIEWED);
 
-        if (!allProcessed) {
-            throw new BusinessException("All documents must be reviewed or validated before submission");
+        long reviewedCount = documentReviewRepository.countByDocumentProjectIdAndReviewer(projectId, reviewer);
+        if (reviewedCount < documents.size()) {
+            throw new BusinessException("Vous devez évaluer tous les documents avant la soumission finale");
         }
 
+        // 2. Marquer les évaluations comme "finalisées"
+        List<DocumentReview> evaluations = documentReviewRepository
+                .findByDocumentProjectIdAndReviewer(projectId, reviewer);
 
+        evaluations.forEach(eval -> {
+            eval.setFinalized(true);
+            eval.setSubmissionDate(LocalDateTime.now());
+        });
 
-        // Marquer le projet comme évaluation soumise
-        project.setEvaluationStatus(EvaluationStatus.SUBMITTED);
-        project.setEvaluationSubmitDate(LocalDateTime.now());
-        projectRepository.save(project);
+        documentReviewRepository.saveAll(evaluations);
 
         notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),
                 "Évaluation soumise",
@@ -115,6 +130,22 @@ public class DocumentReviewController {
 
         return ResponseEntity.ok().build();
     }
+
+    // Récupération des évaluations temporaires (pour affichage)
+    @GetMapping("/my-reviews")
+    public ResponseEntity<List<DocumentReviewDTO>> getMyReviews(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+
+        User reviewer = userRepository.findByEmail(authentication.getName());
+        List<DocumentReview> reviews = documentReviewRepository
+                .findByDocumentProjectIdAndReviewer(projectId, reviewer);
+
+        return ResponseEntity.ok(reviews.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList()));
+    }
+
 
     private DocumentReviewDTO convertToDTO(Document document) {
         DocumentReviewDTO dto = new DocumentReviewDTO();
@@ -146,5 +177,33 @@ public class DocumentReviewController {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
         return ResponseEntity.ok(project.getEvaluationStatus() == EvaluationStatus.SUBMITTED);
+    }
+
+    private DocumentReviewDTO convertToDTO(DocumentReview review) {
+        DocumentReviewDTO dto = new DocumentReviewDTO();
+        dto.setId(review.getId());
+        dto.setReviewStatus(review.getStatus());
+        dto.setReviewRemark(review.getRemark());
+        dto.setReviewDate(review.getReviewDate());
+
+        if (review.getReviewer() != null) {
+            dto.setReviewerId(review.getReviewer().getId());
+            dto.setReviewerNom(review.getReviewer().getNom());
+            dto.setReviewerPrenom(review.getReviewer().getPrenom());
+            dto.setReviewerEmail(review.getReviewer().getEmail());
+        }
+
+        if (review.getDocument() != null) {
+            dto.setDocumentId(review.getDocument().getId());
+            dto.setDocumentName(review.getDocument().getName());
+            dto.setDocumentType(review.getDocument().getType().name());
+
+            if (review.getDocument().getProject() != null) {
+                dto.setProjectId(review.getDocument().getProject().getId());
+                dto.setProjectTitle(review.getDocument().getProject().getTitle());
+            }
+        }
+
+        return dto;
     }
 }
