@@ -638,6 +638,16 @@ public class ProjectController {
                 projectMap.put("reference", project.getReference());
                 projectMap.put("description", project.getProjectDescription());
                 projectMap.put("dateAttribution", project.getReviewDate());
+                projectMap.put("reference", project.getReference());
+
+                projectMap.put("studyDuration", project.getStudyDuration());
+                projectMap.put("targetPopulation", project.getTargetPopulation());
+                projectMap.put("consentType", project.getConsentType());
+                projectMap.put("fundingSource", project.getFundingSource());
+                projectMap.put("fundingProgram", project.getFundingProgram());
+                projectMap.put("sampling", project.getSampling());
+                projectMap.put("sampleType", project.getSampleType());
+                projectMap.put("sampleQuantity", project.getSampleQuantity());
 
                 // Documents
                 List<Map<String, Object>> documents = project.getDocuments().stream()
@@ -649,6 +659,8 @@ public class ProjectController {
                             docMap.put("remark", doc.getRemark());
                             docMap.put("submitted", doc.isSubmitted());
                             docMap.put("validated", doc.isValidated());
+                            docMap.put("reviewStatus", doc.getReviewStatus()); // IMPORTANT
+                            docMap.put("reviewRemark", doc.getReviewRemark());
                             return docMap;
                         })
                         .collect(Collectors.toList());
