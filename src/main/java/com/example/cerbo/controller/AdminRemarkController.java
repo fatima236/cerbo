@@ -123,53 +123,46 @@ public class AdminRemarkController {
         return dto;
     }
 
-    @PutMapping("/{documentReviewId}/status")
+    @PutMapping("/{documentReviewId}/content-and-status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateRemarkStatus(
+    public ResponseEntity<?> updateRemarkContentAndStatus(
             @PathVariable Long documentReviewId,
-            @RequestBody Map<String, String> request,
+            @RequestBody UpdateRemarkRequest request,
             Authentication authentication) {
-
-        // Vérification du rôle admin
-        if (!authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accès refusé");
-        }
 
         try {
             DocumentReview review = documentReviewRepository.findById(documentReviewId)
                     .orElseThrow(() -> new ResourceNotFoundException("Évaluation non trouvée"));
 
-            if (!review.isFinalized()) {
-                return ResponseEntity.badRequest().body("Seules les évaluations finalisées peuvent être modifiées");
+            // Vérification si déjà validé/rejeté et tentative de modification
+            if ((review.getStatus() == RemarkStatus.VALIDATED || review.getStatus() == RemarkStatus.REJECTED)
+                    && !request.getStatus().equals(review.getStatus().name())) {
+                return ResponseEntity.badRequest().body("Une remarque validée ou rejetée ne peut plus changer de statut");
             }
 
-            if (!request.containsKey("status")) {
-                return ResponseEntity.badRequest().body("Le champ 'status' est requis");
+            // Mise à jour du contenu si autorisé
+            if (review.getStatus() != RemarkStatus.VALIDATED && review.getStatus() != RemarkStatus.REJECTED) {
+                review.setRemark(request.getContent());
+                review.setAdminComment(request.getComment());
             }
 
-            String status = request.get("status").toUpperCase();
-            String adminEmail = authentication.getName();
+            // Mise à jour du statut
+            if (request.getStatus() != null) {
+                RemarkStatus newStatus = RemarkStatus.valueOf(request.getStatus());
+                review.setStatus(newStatus);
 
-            try {
-                RemarkStatus remarkStatus = RemarkStatus.valueOf(status);
-
-                // Validation des données
-                if (review.getRemark() == null || review.getRemark().isEmpty()) {
-                    return ResponseEntity.badRequest().body("La remarque ne peut être vide");
+                if (newStatus == RemarkStatus.VALIDATED || newStatus == RemarkStatus.REJECTED) {
+                    review.setAdminResponse(request.getAdminResponse());
+                    review.setAdminResponseDate(LocalDateTime.now());
+                    review.setAdminEmail(authentication.getName());
                 }
-
-                // Mise à jour du statut
-                review.setStatus(remarkStatus);
-                review.setAdminEmail(adminEmail);
-                review.setAdminValidationDate(LocalDateTime.now());
-
-                DocumentReview updatedReview = documentReviewRepository.save(review);
-                return ResponseEntity.ok(convertReviewToDTO(updatedReview));
-
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.badRequest().body("Statut invalide. Valeurs acceptées: PENDING, VALIDATED, REJECTED");
             }
+
+            DocumentReview updatedReview = documentReviewRepository.save(review);
+            return ResponseEntity.ok(convertReviewToDTO(updatedReview));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Statut invalide. Valeurs acceptées: PENDING, VALIDATED, REJECTED");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Erreur serveur: " + e.getMessage());
         }
@@ -284,4 +277,5 @@ class UpdateRemarkRequest {
     private String content;
     private String comment;
     private String adminResponse;
+    private String status;
 }
