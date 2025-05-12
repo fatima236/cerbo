@@ -2,16 +2,10 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.DocumentReviewRequest;
-import com.example.cerbo.entity.Document;
-import com.example.cerbo.entity.Project;
-import com.example.cerbo.entity.User;
-import com.example.cerbo.entity.enums.EvaluationStatus;
+import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.RemarkStatus;
-import com.example.cerbo.exception.BusinessException;
-import com.example.cerbo.exception.ResourceNotFoundException;
-import com.example.cerbo.repository.DocumentRepository;
-import com.example.cerbo.repository.ProjectRepository;
-import com.example.cerbo.repository.UserRepository;
+import com.example.cerbo.exception.*;
+import com.example.cerbo.repository.*;
 import com.example.cerbo.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/documents")
@@ -33,118 +28,111 @@ public class DocumentReviewController {
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final DocumentReviewRepository documentReviewRepository;
 
     @PutMapping("/{documentId}/review")
-    @PreAuthorize("hasRole('EVALUATEUR') and @projectSecurity.isProjectReviewer(#projectId, authentication)")
+    @PreAuthorize("hasRole('EVALUATEUR')")
     public ResponseEntity<DocumentReviewDTO> reviewDocument(
             @PathVariable Long projectId,
             @PathVariable Long documentId,
             @RequestBody DocumentReviewRequest request,
             Authentication authentication) {
 
-        // Validation
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-        // Vérification de la date limite avec gestion du null
         if (project.getReviewDeadline() != null && project.getReviewDeadline().isBefore(LocalDate.now())) {
-            throw new BusinessException("Evaluation period has ended");
+            throw new BusinessException("La période d'évaluation est terminée");
         }
 
         Document document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
 
         User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
-        // Mise à jour du document
-        document.setReviewStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
-        document.setReviewRemark(request.getRemark());
-        document.setReviewer(reviewer);
-        document.setReviewDate(LocalDateTime.now());
+        DocumentReview review = new DocumentReview();
+        review.setDocument(document);
+        review.setReviewer(reviewer);
+        review.setStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
+        review.setRemark(request.getRemark());
+        review.setReviewDate(LocalDateTime.now());
+        review.setFinalized(false);
 
-        Document savedDoc = documentRepository.save(document);
-
-        return ResponseEntity.ok(convertToDTO(savedDoc));
+        DocumentReview savedReview = documentReviewRepository.save(review);
+        return ResponseEntity.ok(convertToDTO(savedReview));
     }
 
-    @PutMapping("/set-deadline")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> setReviewDeadline(
+    @GetMapping("/{documentId}/reviews")
+    public ResponseEntity<List<DocumentReviewDTO>> getDocumentReviews(
             @PathVariable Long projectId,
-            @RequestParam LocalDate deadline) {
+            @PathVariable Long documentId) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-        project.setReviewDeadline(deadline);
-        projectRepository.save(project);
-
-        return ResponseEntity.ok().build();
+        List<DocumentReview> reviews = documentReviewRepository.findByDocumentId(documentId);
+        return ResponseEntity.ok(reviews.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList()));
     }
 
     @PostMapping("/submit-review")
-    @PreAuthorize("hasRole('EVALUATEUR') and @projectSecurity.isProjectReviewer(#projectId, authentication)")
+    @PreAuthorize("hasRole('EVALUATEUR')")
     public ResponseEntity<Void> submitReview(
             @PathVariable Long projectId,
             Authentication authentication) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-        // Vérifier que tous les documents sont traités
+        User reviewer = userRepository.findByEmail(authentication.getName());
         List<Document> documents = documentRepository.findByProjectId(projectId);
-        boolean allProcessed = documents.stream()
-                .allMatch(d -> d.getReviewStatus() == RemarkStatus.VALIDATED
-                        || d.getReviewStatus() == RemarkStatus.REVIEWED);
 
-        if (!allProcessed) {
-            throw new BusinessException("All documents must be reviewed or validated before submission");
+        long reviewedCount = documentReviewRepository.countByDocumentProjectIdAndReviewer(projectId, reviewer);
+        if (reviewedCount < documents.size()) {
+            throw new BusinessException("Vous devez évaluer tous les documents avant la soumission finale");
         }
 
+        List<DocumentReview> evaluations = documentReviewRepository
+                .findByDocumentProjectIdAndReviewer(projectId, reviewer);
 
+        evaluations.forEach(eval -> {
+            eval.setFinalized(true);
+            eval.setSubmissionDate(LocalDateTime.now());
+        });
 
-        // Marquer le projet comme évaluation soumise
-        project.setEvaluationStatus(EvaluationStatus.SUBMITTED);
-        project.setEvaluationSubmitDate(LocalDateTime.now());
-        projectRepository.save(project);
+        documentReviewRepository.saveAll(evaluations);
 
-        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),
+        notificationService.sendNotification(
+                userRepository.findByRolesContaining("ADMIN"),
                 "Évaluation soumise",
-                "Une évaluation a été soumise pour le projet \"" + project.getTitle() + "\".");
+                "Une évaluation a été soumise pour le projet \"" +
+                        projectRepository.findById(projectId).get().getTitle() + "\".");
 
         return ResponseEntity.ok().build();
     }
 
-    private DocumentReviewDTO convertToDTO(Document document) {
+    private DocumentReviewDTO convertToDTO(DocumentReview review) {
         DocumentReviewDTO dto = new DocumentReviewDTO();
-        dto.setId(document.getId());
-        dto.setName(document.getName());
-        dto.setReviewStatus(document.getReviewStatus());
-        dto.setReviewRemark(document.getReviewRemark());
-        dto.setReviewDate(document.getReviewDate());
-        if (document.getReviewer() != null) {
-            dto.setReviewerId(document.getReviewer().getId());
-            dto.setReviewerNom(document.getReviewer().getNom());
-            dto.setReviewerPrenom(document.getReviewer().getPrenom());
-            dto.setReviewerEmail(document.getReviewer().getEmail());
+        dto.setId(review.getId());
+        dto.setReviewStatus(review.getStatus());
+        dto.setReviewRemark(review.getRemark());
+        dto.setReviewDate(review.getReviewDate());
+        dto.setFinalized(review.isFinalized());
 
+        if (review.getReviewer() != null) {
+            dto.setReviewerId(review.getReviewer().getId());
+            dto.setReviewerNom(review.getReviewer().getNom());
+            dto.setReviewerPrenom(review.getReviewer().getPrenom());
+            dto.setReviewerEmail(review.getReviewer().getEmail());
         }
 
-        if (document.getProject() != null) {
-            dto.setProjectId(document.getProject().getId());
-            dto.setProjectTitle(document.getProject().getTitle());
+        if (review.getDocument() != null) {
+            dto.setDocumentId(review.getDocument().getId());
+            dto.setDocumentName(review.getDocument().getName());
+            dto.setDocumentType(review.getDocument().getType().name());
+
+            if (review.getDocument().getProject() != null) {
+                dto.setProjectId(review.getDocument().getProject().getId());
+                dto.setProjectTitle(review.getDocument().getProject().getTitle());
+            }
         }
 
-        dto.setDocumentName(document.getName());
-        dto.setDocumentType(document.getType().name());
         return dto;
-    }
-
-    @GetMapping("/{documentId}/submission-status")
-    public ResponseEntity<Boolean> getSubmissionStatus(@PathVariable Long projectId) {
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-        return ResponseEntity.ok(project.getEvaluationStatus() == EvaluationStatus.SUBMITTED);
     }
 }

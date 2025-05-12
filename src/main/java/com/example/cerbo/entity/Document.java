@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "documents")
@@ -92,6 +93,15 @@ public class Document {
     @JoinColumn(name = "event_id",nullable = true)
     private Event event;
 
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
+    private List<DocumentReview> reviews;
+
+    @Enumerated(EnumType.STRING)
+    private RemarkStatus latestReviewStatus;
+
+
+    @Column(name = "report_inclusion_date")
+    private LocalDateTime reportInclusionDate;
 
 }
 

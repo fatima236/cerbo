@@ -1,5 +1,6 @@
 package com.example.cerbo.dto;
 
+import com.example.cerbo.entity.enums.DocumentType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,8 @@ public class RemarkResponseDTO {
     private String comment;
     private String adminResponse;
     private LocalDateTime adminResponseDate;
+    private String documentName;
+    private DocumentType documentType;
 
     @Data
     public static class ReviewerDTO {

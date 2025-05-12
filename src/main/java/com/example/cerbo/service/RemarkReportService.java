@@ -50,18 +50,28 @@ public class RemarkReportService {
             throw new ResourceNotFoundException("Aucune remarque valide sélectionnée");
         }
 
+        // Vérifier que toutes les remarques sont bien validées
+        long invalidCount = documentIds.size() - documentsToInclude.size();
+        if (invalidCount > 0) {
+            throw new IllegalStateException(invalidCount + " document(s) ne sont pas validés ou n'ont pas de remarques");
+        }
+
+        // Marquer les documents comme inclus dans le rapport
         documentsToInclude.forEach(doc -> {
             doc.setIncludedInReport(true);
+            doc.setReportInclusionDate(LocalDateTime.now());
             documentRepository.save(doc);
         });
 
         project.setResponseDeadline(LocalDateTime.now().plusDays(7));
+        project.setLastReportDate(LocalDateTime.now());
         projectRepository.save(project);
 
         try {
             sendOfficialReport(project, documentsToInclude);
         } catch (Exception e) {
             System.err.println("Échec d'envoi d'email: " + e.getMessage());
+            throw e;
         }
     }
 
