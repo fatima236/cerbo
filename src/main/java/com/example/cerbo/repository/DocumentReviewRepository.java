@@ -18,7 +18,7 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     List<DocumentReview> findByDocumentProjectId(Long projectId);
 
-
+    List<DocumentReview> findByDocumentIdIn(List<Long> documentIds);
     // @Query("SELECT COUNT(dr) FROM DocumentReview dr WHERE dr.document.project.id = :projectId AND dr.reviewer = :reviewer")
    // long countByProjectAndReviewer(@Param("projectId") Long projectId, @Param("reviewer") User reviewer);
 }

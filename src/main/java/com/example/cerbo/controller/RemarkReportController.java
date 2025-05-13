@@ -2,10 +2,12 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.entity.Document;
+import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentRepository;
+import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.service.RemarkReportService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,7 @@ public class RemarkReportController {
     private final RemarkReportService remarkReportService;
     private final ProjectRepository projectRepository;
     private final DocumentRepository documentRepository;
-
+    private final DocumentReviewRepository documentReviewRepository;
     private RemarkDTO convertToDto(Document document) {
         RemarkDTO dto = new RemarkDTO();
         dto.setId(document.getId());
@@ -70,32 +72,40 @@ public class RemarkReportController {
 
     @PostMapping("/send")
     public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId,
-                                                      @RequestBody List<Long> documentIds) {
+                                                      @RequestBody List<Long> documentReviewIds) {
         try {
-            // Vérifiez d'abord que les documents existent et sont validés
-            List<Document> documents = documentRepository.findAllById(documentIds);
-            long validatedCount = documents.stream()
-                    .filter(d -> d.getAdminStatus() == RemarkStatus.VALIDATED)
-                    .filter(d -> d.getReviewRemark() != null && !d.getReviewRemark().isEmpty())
-                    .count();
+            // Récupérer les DocumentReview qui répondent aux critères
+            List<DocumentReview> validReviews = documentReviewRepository.findAllById(documentReviewIds).stream()
+                    .filter(review -> review.getAdminEmail() != null)
+                    .filter(review -> review.getAdminValidationDate() != null)
+                    .filter(review -> review.getRemark() != null && !review.getRemark().isEmpty())
+                    .collect(Collectors.toList());
 
-            if (validatedCount != documentIds.size()) {
+            if (validReviews.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "message", "Certains documents ne sont pas validés ou n'ont pas de remarques"
+                        "message", "Aucune remarque valide sélectionnée (doit avoir admin_email, admin_validation_date et remark non vide)"
                 ));
             }
 
-            remarkReportService.generateAndSendReport(projectId, documentIds);
+            // Extraire les IDs des documents associés
+            List<Long> validDocumentIds = validReviews.stream()
+                    .map(review -> review.getDocument().getId())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            // Appeler le service avec les documents valides
+            remarkReportService.generateAndSendReport(projectId, validDocumentIds);
 
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Rapport généré avec succès. L'email a peut-être été envoyé.",
+                    "message", "Rapport généré avec succès",
                     "deadline", project.getResponseDeadline().format(DateTimeFormatter.ISO_DATE_TIME),
-                    "documentsIncluded", documentIds.size()
+                    "documentsIncluded", validDocumentIds.size(),
+                    "remarksIncluded", validReviews.size()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
