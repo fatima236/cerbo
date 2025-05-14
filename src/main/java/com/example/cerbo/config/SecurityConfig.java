@@ -127,7 +127,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/my-reviews").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/set-deadline").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/submission-status").hasRole("EVALUATEUR")
-
+                        .requestMatchers(HttpMethod.GET, "/api/investigator/reports/project/{projectId}").hasRole("INVESTIGATEUR")
 
 
 
