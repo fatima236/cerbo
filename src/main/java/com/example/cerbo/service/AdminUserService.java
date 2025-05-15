@@ -6,12 +6,16 @@ import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.RoleType;
 import com.example.cerbo.repository.PendingUserRepository;
 import com.example.cerbo.repository.UserRepository;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +33,8 @@ public class AdminUserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
+    @Autowired
+    private JavaMailSender mailSender;
     /**
      * Récupère tous les utilisateurs
      */
@@ -41,7 +46,7 @@ public class AdminUserService {
     /**
      * Récupère un utilisateur par son ID
      */
-    @Loggable(actionType = "READ", entityType = "USER")
+
     public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
@@ -49,7 +54,7 @@ public class AdminUserService {
     /**
      * Récupère toutes les demandes d'inscription en attente
      */
-    @Loggable(actionType = "READ", entityType = "PENDING_USER")
+
     public List<PendingUser> getAllPendingUsers() {
         return pendingUserRepository.findAll();
     }
@@ -57,7 +62,7 @@ public class AdminUserService {
     /**
      * Récupère une demande d'inscription en attente par son ID
      */
-    @Loggable(actionType = "READ", entityType = "PENDING_USER")
+
     public Optional<PendingUser> getPendingUserById(Long id) {
         return pendingUserRepository.findById(id);
     }
@@ -65,16 +70,25 @@ public class AdminUserService {
     /**
      * Approuve une demande d'inscription d'investigateur
      */
+  // Ajoutez cette dépendance
+
     @Loggable(actionType = "CREATE", entityType = "USER")
     @Transactional
     public User approveInvestigator(Long pendingUserId) {
         PendingUser pendingUser = pendingUserRepository.findById(pendingUserId)
-                .orElseThrow(() -> new IllegalArgumentException("Demande d'inscription non trouvée avec l'ID: " + pendingUserId));
+                .orElseThrow(() -> new IllegalArgumentException("Demande d'inscription non trouvée"));
 
-        // Créer l'utilisateur final
+        // Créer l'utilisateur final avec TOUTES les informations
         User user = new User();
         user.setEmail(pendingUser.getEmail());
-        user.setPassword(pendingUser.getPassword()); // Pas besoin de réencoder car déjà encodé
+        user.setPassword(pendingUser.getPassword());
+        user.setCivilite(pendingUser.getCivilite());
+        user.setNom(pendingUser.getNom());
+        user.setPrenom(pendingUser.getPrenom());
+        user.setTitre(pendingUser.getTitre());
+        user.setLaboratoire(pendingUser.getLaboratoire());
+        user.setAffiliation(pendingUser.getAffiliation());
+        user.setPhotoUrl(pendingUser.getPhotoUrl());
 
         Set<String> roles = new HashSet<>();
         roles.add(RoleType.INVESTIGATEUR.name());
@@ -84,9 +98,42 @@ public class AdminUserService {
         User savedUser = userRepository.save(user);
         pendingUserRepository.delete(pendingUser);
 
+        // Envoyer l'email de confirmation
+        sendApprovalEmail(savedUser.getEmail(), "investigateur");
+
         return savedUser;
     }
 
+    private void sendApprovalEmail(String email, String role) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom("bouayadi.fatimazahra23@ump.ac.ma");
+
+            helper.setTo(email);
+            helper.setSubject("Votre inscription a été approuvée");
+
+            String htmlContent = "<html>" +
+                    "<body style=\"font-family: Arial, sans-serif;\">" +
+                    "<h2 style=\"color: #2e6c80;\">Félicitations !</h2>" +
+                    "<p>Votre inscription en tant que " + role + " a été approuvée.</p>" +
+                    "<p>Vous pouvez maintenant vous connecter à votre compte :</p>" +
+                    "<a href=\"http://localhost:3000/login\" " +
+                    "style=\"background-color: #4CAF50; color: white; " +
+                    "padding: 10px 20px; text-decoration: none; " +
+                    "border-radius: 5px; display: inline-block;\">" +
+                    "Se connecter" +
+                    "</a>" +
+                    "</body>" +
+                    "</html>";
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Échec d'envoi de l'email de confirmation");
+        }
+    }
     /**
      * Approuve une demande d'inscription en tant qu'évaluateur
      */
