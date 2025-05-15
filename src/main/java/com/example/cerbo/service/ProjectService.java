@@ -91,12 +91,15 @@ public class ProjectService {
         addDocumentIfPresent(documents, submissionDTO.getCvPath(), DocumentType.INVESTIGATOR_CV, savedProject);
         addDocumentIfPresent(documents, submissionDTO.getProjectDescriptionFilePath(), DocumentType.PROJECT_DESCRIPTION, savedProject);
         addDocumentIfPresent(documents, submissionDTO.getEthicalConsiderationsFilePath(), DocumentType.ETHICAL_CONSIDERATIONS, savedProject);
-
-        // Autres documents
+        // Ajouter la lettre de motivation
+        addDocumentIfPresent(documents, submissionDTO.getMotivationLetterPath(),
+                DocumentType.MOTIVATION_LETTER, savedProject);
+        // Ajouter les autres documents
         if (submissionDTO.getOtherDocumentsPaths() != null) {
             submissionDTO.getOtherDocumentsPaths().forEach(path ->
                     addDocumentIfPresent(documents, path, DocumentType.OTHER, savedProject));
         }
+
 
         // Set the documents and save again
         savedProject.setDocuments(documents);
