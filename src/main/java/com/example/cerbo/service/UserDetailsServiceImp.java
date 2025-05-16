@@ -96,11 +96,6 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
     @Loggable(actionType = "CREATE", entityType = "PENDING_USER")
     public void requestInvestigateurSignup(User userRequest) {
-        // 1. Vérification du format
-
-
-        // 2. Vérification de l'existence du compte
-
         if (pendingUserRepository.existsByEmail(userRequest.getEmail()) ||
                 userRepository.existsByEmail(userRequest.getEmail())) {
             throw new IllegalArgumentException("Un compte ou une demande existe déjà pour cet email");
@@ -109,12 +104,18 @@ public class UserDetailsServiceImp implements UserDetailsService {
         PendingUser pendingUser = new PendingUser();
         pendingUser.setEmail(userRequest.getEmail());
         pendingUser.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+        pendingUser.setCivilite(userRequest.getCivilite());
+        pendingUser.setNom(userRequest.getNom());
+        pendingUser.setPrenom(userRequest.getPrenom());
+        pendingUser.setTitre(userRequest.getTitre());
+        pendingUser.setLaboratoire(userRequest.getLaboratoire());
+        pendingUser.setAffiliation(userRequest.getAffiliation());
+        pendingUser.setPhotoUrl(userRequest.getPhotoUrl()); // N'oubliez pas la photo
         pendingUser.setRequestDate(LocalDateTime.now());
 
         pendingUserRepository.save(pendingUser);
         sendValidationRequestToAdmin(pendingUser);
     }
-
     private void sendValidationRequestToAdmin(PendingUser pendingUser) {
         try {
             String emailContent = "<html>" +
@@ -161,8 +162,16 @@ public class UserDetailsServiceImp implements UserDetailsService {
                 .orElseThrow(() -> new IllegalArgumentException("Demande introuvable"));
 
         User user = new User();
+        // Copiez TOUTES les informations du PendingUser vers User
         user.setEmail(pendingUser.getEmail());
         user.setPassword(pendingUser.getPassword());
+        user.setCivilite(pendingUser.getCivilite());
+        user.setNom(pendingUser.getNom());
+        user.setPrenom(pendingUser.getPrenom());
+        user.setTitre(pendingUser.getTitre());
+        user.setLaboratoire(pendingUser.getLaboratoire());
+        user.setAffiliation(pendingUser.getAffiliation());
+        user.setPhotoUrl(pendingUser.getPhotoUrl()); // N'oubliez pas la photo
         user.setRoles(Set.of("INVESTIGATEUR"));
         user.setValidated(true);
 
@@ -172,7 +181,6 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
         return savedUser;
     }
-
     private void sendApprovalConfirmation(String userEmail) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

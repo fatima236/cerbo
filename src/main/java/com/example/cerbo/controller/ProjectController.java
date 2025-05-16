@@ -67,6 +67,8 @@ public class ProjectController {
             @RequestPart(value = "projectDescriptionFile", required = false) MultipartFile projectDescriptionFile,
             @RequestPart(value = "ethicalConsiderationsFile", required = false) MultipartFile ethicalConsiderationsFile,
             @RequestPart(value = "otherDocuments", required = false) MultipartFile[] otherDocuments,
+
+            @RequestPart(value = "motivationLetter", required = false) MultipartFile motivationLetter,
             HttpServletRequest request) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -94,7 +96,15 @@ public class ProjectController {
             submissionDTO.setCvPath(processFile(cv));
             submissionDTO.setProjectDescriptionFilePath(processFile(projectDescriptionFile));
             submissionDTO.setEthicalConsiderationsFilePath(processFile(ethicalConsiderationsFile));
-
+            submissionDTO.setMotivationLetterPath(processFile(motivationLetter));
+            // Traiter les autres documents
+            if (otherDocuments != null && otherDocuments.length > 0) {
+                List<String> otherDocsPaths = new ArrayList<>();
+                for (MultipartFile file : otherDocuments) {
+                    otherDocsPaths.add(processFile(file));
+                }
+                submissionDTO.setOtherDocumentsPaths(otherDocsPaths);
+            }
             Project project = projectService.submitProject(submissionDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(project);
 
@@ -172,8 +182,8 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
-           // Project projet = projectRepository.findByIdWithReviewers(id)
-                  //  .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+            // Project projet = projectRepository.findByIdWithReviewers(id)
+            //  .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
             //Project project = projectService.getProjectById(id);
 
             Project project = projectRepository.findByIdWithDetails(id)

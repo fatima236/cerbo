@@ -9,7 +9,8 @@ public enum DocumentType {
     CONSENT_FORM_AR("Formulaire consentement arabe"),
     COMMITMENT_CERTIFICATE("Attestation d'engagement"),
     INVESTIGATOR_CV("CV investigateur"),
-    OTHER("Autre document");
+    OTHER("Autre document"),
+    MOTIVATION_LETTER("Lettre de motivation");
 
 
     private final String displayName;

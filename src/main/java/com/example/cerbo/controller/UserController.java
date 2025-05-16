@@ -3,7 +3,9 @@ package com.example.cerbo.controller;
 import com.example.cerbo.dto.*;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.UserRepository;
+import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.UserDetailsServiceImp;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -31,7 +34,8 @@ public class UserController {
 
     @Autowired
     private UserDetailsServiceImp userDetailsServiceImp;
-
+    @Autowired
+    private FileStorageService fileStorageService;
     @Autowired
     private AuthenticationManager authenticationManager;
     @Autowired
@@ -41,12 +45,29 @@ public class UserController {
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
 
-    @PostMapping("/request-investigateur")
-    public ResponseEntity<?> requestInvestigateurSignup(@RequestBody SignupRequest request) {
+    @PostMapping(value = "/request-investigateur", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> requestInvestigateurSignup(
+            @RequestPart("userData") String userDataStr,
+            @RequestPart(value = "photo", required = false) MultipartFile photo) {
+
         try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            SignupRequest request = objectMapper.readValue(userDataStr, SignupRequest.class);
+
             User userRequest = new User();
             userRequest.setEmail(request.getEmail());
             userRequest.setPassword(request.getPassword());
+            userRequest.setCivilite(request.getCivilite());
+            userRequest.setNom(request.getNom());
+            userRequest.setPrenom(request.getPrenom());
+            userRequest.setTitre(request.getTitre());
+            userRequest.setLaboratoire(request.getLaboratoire());
+            userRequest.setAffiliation(request.getAffiliation());
+
+            if (photo != null && !photo.isEmpty()) {
+                String fileName = fileStorageService.storeFile(photo);
+                userRequest.setPhotoUrl(fileName);
+            }
 
             userDetailsServiceImp.requestInvestigateurSignup(userRequest);
 
@@ -54,15 +75,12 @@ public class UserController {
                     "status", "PENDING",
                     "message", "Votre demande a été envoyée. Un administrateur doit la valider."
             ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of(
-                    "error", "Erreur lors du traitement de votre demande"
+                    "error", "Erreur lors du traitement de votre demande: " + e.getMessage()
             ));
         }
     }
-
     @GetMapping("/approve/{pendingUserId}")
     public ResponseEntity<String> approveInvestigateur(@PathVariable Long pendingUserId) {
         try {

@@ -35,30 +35,43 @@ public class ProjectSubmissionDTO {
     private Boolean sampling = false;
     private String sampleType;
     private String sampleQuantity;
+
     private String fundingSource;
     private String fundingProgram;
 
     private String projectDescription;
     private String ethicalConsiderations;
-    @Size(max = 50, message = "Status must be at most 50 characters")
-    private String status;
+
     @NotNull(message = "L'investigateur principal est obligatoire")
     private Long principalInvestigatorId;
 
     private Set<Long> investigatorIds = new HashSet<>();
 
-    // Fichiers (transients - non persistés)
+    // Fichiers obligatoires
+    @NotNull(message = "La fiche info FR est obligatoire")
     private transient MultipartFile infoSheetFr;
+
+    @NotNull(message = "La fiche info AR est obligatoire")
     private transient MultipartFile infoSheetAr;
+
+    @NotNull(message = "Le formulaire de consentement FR est obligatoire")
     private transient MultipartFile consentFormFr;
+
+    @NotNull(message = "Le formulaire de consentement AR est obligatoire")
     private transient MultipartFile consentFormAr;
+
+    @NotNull(message = "L'attestation d'engagement est obligatoire")
     private transient MultipartFile commitmentCertificate;
+
+    @NotNull(message = "Le CV est obligatoire")
     private transient MultipartFile cv;
+
+    // Fichiers optionnels
     private transient MultipartFile projectDescriptionFile;
     private transient MultipartFile ethicalConsiderationsFile;
     private transient List<MultipartFile> otherDocuments;
 
-    // Chemins des fichiers (persistés)
+    // Chemins des fichiers
     private String infoSheetFrPath;
     private String infoSheetArPath;
     private String consentFormFrPath;
@@ -68,4 +81,24 @@ public class ProjectSubmissionDTO {
     private String projectDescriptionFilePath;
     private String ethicalConsiderationsFilePath;
     private List<String> otherDocumentsPaths = new ArrayList<>();
+    // Dans ProjectSubmissionDTO.java
+    private transient MultipartFile motivationLetter;
+    private String motivationLetterPath;
+
+    // Ajoutez les getters/setters
+    public MultipartFile getMotivationLetter() {
+        return motivationLetter;
+    }
+
+    public void setMotivationLetter(MultipartFile motivationLetter) {
+        this.motivationLetter = motivationLetter;
+    }
+
+    public String getMotivationLetterPath() {
+        return motivationLetterPath;
+    }
+
+    public void setMotivationLetterPath(String motivationLetterPath) {
+        this.motivationLetterPath = motivationLetterPath;
+    }
 }

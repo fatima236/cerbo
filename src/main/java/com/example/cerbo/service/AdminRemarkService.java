@@ -29,7 +29,7 @@ public class AdminRemarkService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ProjectRepository projectRepository;
-    @Loggable(actionType = "READ", entityType = "REPORT")
+
     public ReportPreview generateReportPreview(Long projectId, List<Long> documentIds) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));

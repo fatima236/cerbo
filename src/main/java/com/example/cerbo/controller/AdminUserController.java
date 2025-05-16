@@ -1,15 +1,20 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.annotation.Loggable;
 import com.example.cerbo.entity.PendingUser;
 import com.example.cerbo.entity.User;
+import com.example.cerbo.entity.enums.RoleType;
 import com.example.cerbo.service.AdminUserService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/admin/users")
@@ -59,16 +64,41 @@ public class AdminUserController {
     /**
      * Approuver une demande d'inscription en tant qu'investigateur
      */
+
+
+    // ... autres méthodes inchangées ...
+
+    /**
+     * Approuver une demande d'inscription en tant qu'investigateur
+     */
     @PostMapping("/pending/{id}/approve-investigator")
     public ResponseEntity<?> approveInvestigator(@PathVariable Long id) {
         try {
             User user = adminUserService.approveInvestigator(id);
             return ResponseEntity.ok(Map.of(
-                    "message", "Demande approuvée en tant qu'investigateur",
-                    "user", user
+                    "status", "success",
+                    "message", "Demande approuvée en tant qu'investigateur et email envoyé",
+                    "user", Map.of(
+                            "id", user.getId(),
+                            "email", user.getEmail(),
+                            "civilite", user.getCivilite(),
+                            "nom", user.getNom(),
+                            "prenom", user.getPrenom(),
+                            "photoUrl", user.getPhotoUrl() != null ?
+                                    "/api/users/" + user.getId() + "/photo" : null,
+                            "roles", user.getRoles()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "status", "error",
+                    "error", "Erreur lors de l'approbation: " + e.getMessage()
+            ));
         }
     }
 
@@ -80,11 +110,27 @@ public class AdminUserController {
         try {
             User user = adminUserService.approveAsEvaluator(id);
             return ResponseEntity.ok(Map.of(
-                    "message", "Demande approuvée en tant qu'évaluateur",
-                    "user", user
+                    "status", "success",
+                    "message", "Demande approuvée en tant qu'évaluateur et email envoyé",
+                    "user", Map.of(
+                            "id", user.getId(),
+                            "email", user.getEmail(),
+                            "civilite", user.getCivilite(),
+                            "nom", user.getNom(),
+                            "prenom", user.getPrenom(),
+                            "roles", user.getRoles()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "status", "error",
+                    "error", "Erreur lors de l'approbation: " + e.getMessage()
+            ));
         }
     }
 
@@ -96,10 +142,14 @@ public class AdminUserController {
         try {
             adminUserService.rejectPendingUser(id);
             return ResponseEntity.ok(Map.of(
-                    "message", "Demande d'inscription rejetée"
+                    "status", "success",
+                    "message", "Demande d'inscription rejetée avec succès"
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
 
@@ -115,11 +165,19 @@ public class AdminUserController {
             User newAdmin = adminUserService.createAdmin(email, password);
 
             return ResponseEntity.ok(Map.of(
+                    "status", "success",
                     "message", "Administrateur créé avec succès",
-                    "user", newAdmin
+                    "user", Map.of(
+                            "id", newAdmin.getId(),
+                            "email", newAdmin.getEmail(),
+                            "roles", newAdmin.getRoles()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
 
@@ -135,11 +193,19 @@ public class AdminUserController {
             User newEvaluateur = adminUserService.createEvaluateur(email, password);
 
             return ResponseEntity.ok(Map.of(
+                    "status", "success",
                     "message", "Évaluateur créé avec succès",
-                    "user", newEvaluateur
+                    "user", Map.of(
+                            "id", newEvaluateur.getId(),
+                            "email", newEvaluateur.getEmail(),
+                            "roles", newEvaluateur.getRoles()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
 
@@ -153,11 +219,19 @@ public class AdminUserController {
             User updatedUser = adminUserService.changeUserRole(id, newRole);
 
             return ResponseEntity.ok(Map.of(
+                    "status", "success",
                     "message", "Rôle mis à jour avec succès",
-                    "user", updatedUser
+                    "user", Map.of(
+                            "id", updatedUser.getId(),
+                            "email", updatedUser.getEmail(),
+                            "roles", updatedUser.getRoles()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
 
@@ -172,11 +246,19 @@ public class AdminUserController {
 
             String action = activated ? "activé" : "désactivé";
             return ResponseEntity.ok(Map.of(
+                    "status", "success",
                     "message", "Utilisateur " + action + " avec succès",
-                    "user", updatedUser
+                    "user", Map.of(
+                            "id", updatedUser.getId(),
+                            "email", updatedUser.getEmail(),
+                            "active", updatedUser.isValidated()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
 
@@ -187,14 +269,18 @@ public class AdminUserController {
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             adminUserService.deleteUser(id);
-
             return ResponseEntity.ok(Map.of(
+                    "status", "success",
                     "message", "Utilisateur supprimé avec succès"
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
+
     /**
      * Modifier l'email d'un utilisateur
      */
@@ -205,11 +291,18 @@ public class AdminUserController {
             User updatedUser = adminUserService.changeUserEmail(id, newEmail);
 
             return ResponseEntity.ok(Map.of(
+                    "status", "success",
                     "message", "Email mis à jour avec succès",
-                    "user", updatedUser
+                    "user", Map.of(
+                            "id", updatedUser.getId(),
+                            "email", updatedUser.getEmail()
+                    )
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "error", e.getMessage()
+            ));
         }
     }
 }
