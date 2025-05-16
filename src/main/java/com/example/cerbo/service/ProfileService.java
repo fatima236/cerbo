@@ -23,14 +23,14 @@ public class ProfileService {
     @Autowired
     private FileStorageService fileStorageService;
 
-    @Loggable(actionType = "READ", entityType = "USER")
+
     @Transactional(readOnly = true)
     public User getUserProfile(String email) {
         return userRepository.findByEmail(email);
     }
 // Dans ProfileService.java
 
-    @Loggable(actionType = "READ", entityType = "USER")
+
     public List<User> getAllProfiles() {
         return userRepository.findAll(); // Supposant que vous utilisez JPA
     }

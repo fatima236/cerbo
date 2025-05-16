@@ -38,7 +38,7 @@ public class AdminUserService {
     /**
      * Récupère tous les utilisateurs
      */
-    @Loggable(actionType = "READ", entityType = "USER")
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
