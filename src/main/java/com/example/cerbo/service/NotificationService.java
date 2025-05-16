@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -32,17 +34,12 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final ApplicationEventPublisher eventPublisher;
-    private final EmailService emailService;
-
-    @Autowired
-    private NotificationRepository notificationRepository;
-
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    @Autowired
+    private final JavaMailSender mailSender;
+    private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
 
+    // Méthodes existantes inchangées
     public List<Notification> sendNotification(User recipient, String title, String content) {
         return sendNotification(Collections.singletonList(recipient), title, content);
     }
@@ -54,12 +51,12 @@ public class NotificationService {
 
         List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
 
-        // Envoi des notifications via WebSocket
         savedNotifications.forEach(notification -> {
             messagingTemplate.convertAndSend(
                     "/topic/notifications/" + notification.getRecipient().getId(),
                     notification
             );
+            sendEmailNotification(notification.getRecipient().getEmail(), title, content);
         });
 
         return savedNotifications;
@@ -67,32 +64,68 @@ public class NotificationService {
 
     public List<Notification> sendNotificationByIds(List<Long> recipients, String title, String content) {
         List<Notification> notifications = recipients.stream()
-                .map(user -> createNotification(userRepository.findById(user).get(), title, content))
+                .map(userId -> createNotification(userRepository.findById(userId).get(), title, content))
                 .collect(Collectors.toList());
 
         List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
 
-        // Envoi des notifications via WebSocket
         savedNotifications.forEach(notification -> {
             messagingTemplate.convertAndSend(
                     "/topic/notifications/" + notification.getRecipient().getId(),
                     notification
             );
+            sendEmailNotification(notification.getRecipient().getEmail(), title, content);
         });
 
         return savedNotifications;
     }
 
-    private Notification createNotification(User user, String title, String content) {
-        return Notification.builder()
-                .title(title)
-                .content(content)
-                .recipient(user)
-                .status(NotificationStatus.NON_LUE)
-                .build();
+    // Ancienne version de createNotification (inchangée)
+    @Transactional
+    public Notification createNotification(String recipientEmail, String content) {
+        User recipient = userRepository.findByEmail(recipientEmail);
+
+        Notification notification = new Notification();
+        notification.setRecipient(recipient);
+        notification.setContent(content);
+        notification.setSentDate(LocalDateTime.now());
+        notification.setStatus(NotificationStatus.NON_LUE);
+
+        // Ajout de l'envoi d'email
+        sendEmailNotification(recipientEmail, "Nouvelle notification", content);
+
+        return notificationRepository.save(notification);
     }
 
+    // Nouvelle méthode pour l'envoi d'email
+    @Async
+    protected void sendEmailNotification(String recipientEmail, String subject, String content) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(recipientEmail);
+            message.setSubject(subject);
+            message.setText("Notification:\n\n" + content + "\n\nCordialement,\nVotre application");
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Échec de l'envoi de l'email à {}", recipientEmail, e);
+        }
+    }
 
+    // Méthode createNotification avec User (pour compatibilité)
+    private Notification createNotification(User user, String title, String content) {
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setContent(content);
+        notification.setRecipient(user);
+        notification.setStatus(NotificationStatus.NON_LUE);
+        notification.setSentDate(LocalDateTime.now());
+
+        sendEmailNotification(user.getEmail(), title, content);
+
+        return notification;
+    }
+
+    // Reste des méthodes existantes inchangées...
     public List<NotificationDTO> getNotificationDTOsForUser(String email) {
         return getNotificationsForUser(email).stream()
                 .map(this::convertToDTO)
@@ -109,9 +142,6 @@ public class NotificationService {
         );
     }
 
-    /**
-     * Récupère toutes les notifications d'un utilisateur
-     */
     public List<Notification> getNotificationsForUser(Long userId) {
         return notificationRepository.findByRecipientIdOrderBySentDateDesc(userId);
     }
@@ -121,17 +151,11 @@ public class NotificationService {
         return notificationRepository.findByRecipientOrderBySentDateDesc(user);
     }
 
-    /**
-     * Compte les notifications non lues d'un utilisateur
-     */
     public int countUnreadNotifications(String email) {
         User user = userRepository.findByEmail(email);
         return notificationRepository.countByRecipientAndStatus(user, NotificationStatus.NON_LUE);
     }
 
-    /**
-     * Marque une notification comme lue
-     */
     @Transactional
     public Notification markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -141,35 +165,13 @@ public class NotificationService {
         return notificationRepository.save(notification);
     }
 
-    /**
-     * Marque toutes les notifications d'un utilisateur comme lues
-     */
     @Transactional
     public void markAllAsRead(String email) {
         User user = userRepository.findByEmail(email);
         List<Notification> notifications = notificationRepository.findByRecipientOrderBySentDateDesc(user);
 
-        for (Notification notification : notifications) {
-            notification.setStatus(NotificationStatus.LUE);
-        }
-
+        notifications.forEach(notification -> notification.setStatus(NotificationStatus.LUE));
         notificationRepository.saveAll(notifications);
-    }
-
-    /**
-     * Crée une nouvelle notification pour un utilisateur
-     */
-    @Transactional
-    public Notification createNotification(String recipientEmail, String content) {
-        User recipient = userRepository.findByEmail(recipientEmail);
-
-        Notification notification = new Notification();
-        notification.setRecipient(recipient);
-        notification.setContent(content);
-        notification.setSentDate(LocalDateTime.now());
-        notification.setStatus(NotificationStatus.NON_LUE);
-
-        return notificationRepository.save(notification);
     }
 
     public void notifyProjectSubmitted(Project project) {
@@ -185,33 +187,20 @@ public class NotificationService {
     @EventListener
     public void handleProjectSubmitted(ApplicationEvent event) {
         if (event.getType() == EventType.PROJECT_SUBMITTED) {
-            // 1. Notifier les admins
             List<User> admins = userRepository.findAll().stream()
                     .filter(user -> user.getRoles().contains("ADMIN"))
                     .collect(Collectors.toList());
             admins.forEach(admin -> {
-                // Notification in-app
-                createInAppNotification(admin, "Nouveau projet soumis",
+                createNotification(admin, "Nouveau projet soumis",
                         "Le projet " + event.getData().get("projectTitle") + " a été soumis.");
 
-                // Email
-                emailService.sendEmail(
+                sendEmailNotification(
                         admin.getEmail(),
                         "Nouveau projet soumis",
-                        "notification-project-submitted",
-                        Map.of("projectName", event.getData().get("projectTitle"))
+                        "Le projet " + event.getData().get("projectTitle") + " a été soumis pour validation."
                 );
             });
         }
-    }
-
-    private void createInAppNotification(User user, String title, String message) {
-        Notification notification = new Notification();
-        notification.setRecipient(user);
-        notification.setContent(message);
-        notification.setSentDate(LocalDateTime.now());
-        notification.setStatus(NotificationStatus.NON_LUE);
-        notificationRepository.save(notification);
     }
 
     @Async
@@ -219,36 +208,25 @@ public class NotificationService {
         String message = "Votre projet " + project.getTitle() + " a été " +
                 project.getStatus().getDisplayName();
 
-        // Notification in-app
-        Notification notification = new Notification();
-        notification.setRecipient(project.getPrincipalInvestigator());
-        notification.setContent(message);
-        notification.setSentDate(LocalDateTime.now());
-        notification.setStatus(NotificationStatus.NON_LUE);
+        Notification notification = createNotification(
+                project.getPrincipalInvestigator(),
+                "Statut de projet mis à jour",
+                message
+        );
         notificationRepository.save(notification);
 
-        // Envoyer un email
-        emailService.sendEmail(
+        sendEmailNotification(
                 project.getPrincipalInvestigator().getEmail(),
-                "Statut de votre projet mis à jour",
-                "project-status-updated",
-                Map.of(
-                        "projectName", project.getTitle(),
-                        "status", project.getStatus().getDisplayName()
-                )
+                "Statut de projet mis à jour",
+                message
         );
     }
 
     public void notifyAdmins(String message) {
         List<User> admins = userRepository.findByRolesContaining("ADMIN");
         admins.forEach(admin -> {
-            log.info(                admin.getEmail(),
-                    "Notification Admin",
-                    "admin-notification",
-                    Map.of("message", message));
-
+            createNotification(admin, "Notification Admin", message);
+            sendEmailNotification(admin.getEmail(), "Notification Admin", message);
         });
     }
-
-
 }
