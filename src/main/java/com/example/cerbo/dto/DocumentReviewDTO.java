@@ -14,6 +14,7 @@ public class DocumentReviewDTO {
     private Long documentId;
     private String name;
     private RemarkStatus reviewStatus;
+    private DocumentType type;
     private String reviewRemark;
     private LocalDateTime reviewDate;
     private Long reviewerId;

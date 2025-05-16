@@ -193,6 +193,7 @@ public class ProjectController {
             response.put("sampleQuantity", project.getSampleQuantity());
             response.put("fundingSource", project.getFundingSource());
             response.put("fundingProgram", project.getFundingProgram());
+            response.put("reportStatus", project.getReportStatus());
 
             // Investigateur principal
             if (project.getPrincipalInvestigator() != null) {

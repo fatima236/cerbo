@@ -1,6 +1,9 @@
 package com.example.cerbo.dto;
 
 import com.example.cerbo.entity.enums.DocumentType;
+import com.example.cerbo.entity.enums.ReportStatus;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import com.example.cerbo.entity.enums.ProjectStatus;
@@ -35,6 +38,9 @@ public class ProjectDTO {
     private String sampleQuantity;
     private String fundingSource;
     private String fundingProgram;
+
+    @Enumerated(EnumType.STRING)
+    private ReportStatus reportStatus;
 
     @NotNull(message = "L'investigateur principal est obligatoire")
     private Long principalInvestigatorId;

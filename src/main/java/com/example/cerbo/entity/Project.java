@@ -2,6 +2,7 @@ package com.example.cerbo.entity;
 
 import com.example.cerbo.entity.enums.EvaluationStatus;
 import com.example.cerbo.entity.enums.ProjectStatus;
+import com.example.cerbo.entity.enums.ReportStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -70,6 +71,10 @@ public class Project {
     private String fundingSource;
     private String fundingProgram;
     private String Description;
+
+    @Enumerated(EnumType.STRING)
+    private ReportStatus reportStatus = ReportStatus.NON_ENVOYE;
+
 
 
 

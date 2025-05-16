@@ -4,6 +4,7 @@ import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
+import com.example.cerbo.entity.Report;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentRepository;
@@ -93,12 +94,11 @@ public class RemarkReportController {
                     .map(review -> review.getDocument().getId())
                     .distinct()
                     .collect(Collectors.toList());
-
-            // Appeler le service avec les documents valides
-            remarkReportService.generateAndSendReport(projectId, validDocumentIds);
-
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
+
+            // Appeler le service avec les documents valides
+            Report report =remarkReportService.generateAndSendReportx(projectId);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,

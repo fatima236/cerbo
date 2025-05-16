@@ -34,6 +34,7 @@ public class DocumentReview {
     @ManyToOne
     private User reviewer;
 
+    @Enumerated(EnumType.STRING)
     private RemarkStatus status;
     private String remark;
     private LocalDateTime reviewDate;

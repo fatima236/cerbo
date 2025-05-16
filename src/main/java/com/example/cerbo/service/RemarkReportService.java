@@ -1,21 +1,21 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.dto.RemarkDTO;
-import com.example.cerbo.entity.Document;
-import com.example.cerbo.entity.DocumentReview;
-import com.example.cerbo.entity.Project;
-import com.example.cerbo.entity.User;
+import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.RemarkStatus;
+import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
+import com.example.cerbo.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -32,9 +32,42 @@ public class RemarkReportService {
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final DocumentReviewRepository documentReviewRepository;
+    private final ReportRepository reportRepository;
+    private final ReportGenerationService reportGenerationService;
+
     @Transactional(readOnly = true)
     public List<Document> getValidatedDocuments(Long projectId) {
         return documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
+    }
+
+
+    @Transactional
+    public Report generateAndSendReportx(Long projectId) throws Exception {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
+
+
+
+
+
+        project.setResponseDeadline(LocalDateTime.now().plusDays(7));
+        project.setLastReportDate(LocalDateTime.now());
+        project.setReportStatus(ReportStatus.ENVOYE);
+        projectRepository.save(project);
+
+        Report report = new Report();
+        report.setProject(project);
+        report.setCreationDate(LocalDateTime.now());
+        reportRepository.save(report);
+
+        Path pdfPath = reportGenerationService.generateReportPdf(report);
+
+        report.setPath(pdfPath.toString());
+        report.setFileName(pdfPath.getFileName().toString());
+        reportRepository.save(report);
+
+
+        return report;
     }
 
     @Transactional
@@ -64,6 +97,7 @@ public class RemarkReportService {
 
         project.setResponseDeadline(LocalDateTime.now().plusDays(7));
         project.setLastReportDate(LocalDateTime.now());
+        project.setReportStatus(ReportStatus.ENVOYE);
         projectRepository.save(project);
 
         // Envoyer le rapport avec les DocumentReview valides
