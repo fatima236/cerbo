@@ -1,6 +1,6 @@
 package com.example.cerbo.controller;
 
-import com.example.cerbo.entity.Document;
+import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.service.NotificationService;
@@ -9,8 +9,6 @@ import com.example.cerbo.repository.DocumentRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
-import com.example.cerbo.entity.Project;
-import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.ProjectService;
 import com.example.cerbo.service.FileStorageService;
@@ -204,6 +202,14 @@ public class ProjectController {
             response.put("fundingSource", project.getFundingSource());
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getReportStatus());
+            List<Report> reports = project.getReports();
+            if (reports != null && !reports.isEmpty()) {
+                Report lastReport = reports.get(reports.size() - 1);
+                response.put("creationDateOfReport", lastReport.getCreationDate());
+                response.put("reportResponsed", lastReport.getReportResponsed());
+            } else {
+                response.put("creationDateOfReport", null); // ou une valeur par défaut
+            }
 
             // Investigateur principal
             if (project.getPrincipalInvestigator() != null) {

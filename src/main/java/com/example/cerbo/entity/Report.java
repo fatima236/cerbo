@@ -27,6 +27,8 @@ public class Report {
 
     private LocalDateTime creationDate;
 
+    private Boolean reportResponsed = false;
+
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
