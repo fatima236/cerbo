@@ -18,6 +18,8 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     List<DocumentReview> findByProjectIdAndFinalizedTrue(Long projectId);
 
+    List<DocumentReview> findByProjectIdAndFinalizedTrueAndIncludedInReportFalse(Long projectId);
+
     List<DocumentReview> findByDocumentProjectId(Long projectId);
 
     @Query("SELECT dr FROM DocumentReview dr " +
