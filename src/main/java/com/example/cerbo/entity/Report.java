@@ -1,5 +1,6 @@
 package com.example.cerbo.entity;
 
+import com.example.cerbo.entity.enums.ReportStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,20 +20,27 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String type;
+    private String fileName;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "report_id")
-    private List<Remark> remarks;
+    private String filePath;
 
     private LocalDateTime creationDate;
 
-    private Boolean reportResponsed = false;
+    private LocalDateTime sentDate;
+
+    private LocalDateTime responseDeadline;
+
+    private Boolean responsed = false;
+
+    private LocalDateTime responseDate;
+
+    private ReportStatus status =ReportStatus.NON_ENVOYE;
+
+    @OneToMany(mappedBy = "report")
+    private List<DocumentReview> includedReviews;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    private String fileName;
-    private String path;
 }

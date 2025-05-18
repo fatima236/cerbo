@@ -12,26 +12,26 @@ import java.util.Map;
 public class DocumentReviewDTO {
     private Long id;
     private Long documentId;
-    private String name;
-    private RemarkStatus reviewStatus;
-    private DocumentType type;
-    private String reviewRemark;
-    private LocalDateTime reviewDate;
+    private String documentName;
+    private DocumentType documentType;
     private Long reviewerId;
+    private String content;
+    private LocalDateTime creationDate;
+    private RemarkStatus  status;
     private String reviewerNom;
     private String reviewerPrenom;
     private String reviewerEmail;
-    private String documentName;
-    private String documentType;
+    private LocalDateTime validationDate;
+    private Long validatedById;
+    private String validatedByName;
+    private String response;
+    private LocalDateTime responseDate;
+    private Boolean hasResponseFile;
+    private String adminComent;
+    private boolean finalized;
+    private LocalDateTime finalizedDate;
     private Long projectId;
     private String projectTitle;
-    private String projectDescription;
 
-    private boolean finalized;
-    private LocalDateTime submissionDate;
-
-    private String adminComment;
-    private String adminResponse;
-    private LocalDateTime adminResponseDate;
 
 }

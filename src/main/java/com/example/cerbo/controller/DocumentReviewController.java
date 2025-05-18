@@ -30,6 +30,37 @@ public class DocumentReviewController {
     private final NotificationService notificationService;
     private final DocumentReviewRepository documentReviewRepository;
 
+
+    private DocumentReviewDTO convertToDTO(DocumentReview review) {
+        DocumentReviewDTO dto = new DocumentReviewDTO();
+        dto.setId(review.getId());
+        dto.setStatus(review.getStatus());
+        dto.setContent(review.getContent());
+        dto.setCreationDate(review.getReviewDate());
+        dto.setFinalized(review.isFinalized());
+        dto.setResponse(review.getResponse());
+
+        if (review.getReviewer() != null) {
+            dto.setReviewerId(review.getReviewer().getId());
+            dto.setReviewerNom(review.getReviewer().getNom());
+            dto.setReviewerPrenom(review.getReviewer().getPrenom());
+            dto.setReviewerEmail(review.getReviewer().getEmail());
+        }
+
+        if (review.getDocument() != null) {
+            dto.setDocumentId(review.getDocument().getId());
+            dto.setDocumentName(review.getDocument().getName());
+            dto.setDocumentType(review.getDocument().getType());
+
+            if (review.getDocument().getProject() != null) {
+                dto.setProjectId(review.getDocument().getProject().getId());
+                dto.setProjectTitle(review.getDocument().getProject().getTitle());
+            }
+        }
+
+        return dto;
+    }
+
     @PutMapping("/{documentId}/review")
     @PreAuthorize("hasRole('EVALUATEUR')")
     public ResponseEntity<DocumentReviewDTO> reviewDocument(
@@ -48,6 +79,10 @@ public class DocumentReviewController {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
 
+        if (!document.getProject().getId().equals(projectId)) {
+            throw new BusinessException("Ce document n'appartient pas au projet spécifié");
+            }
+
         User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
@@ -55,13 +90,16 @@ public class DocumentReviewController {
         review.setDocument(document);
         review.setReviewer(reviewer);
         review.setStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
-        review.setRemark(request.getRemark());
+        review.setContent(request.getRemark());
         review.setReviewDate(LocalDateTime.now());
+        review.setProject(document.getProject());
         review.setFinalized(false);
 
         DocumentReview savedReview = documentReviewRepository.save(review);
         return ResponseEntity.ok(convertToDTO(savedReview));
     }
+
+
 
     @GetMapping("/{documentId}/reviews")
     public ResponseEntity<List<DocumentReviewDTO>> getDocumentReviews(
@@ -107,32 +145,5 @@ public class DocumentReviewController {
         return ResponseEntity.ok().build();
     }
 
-    private DocumentReviewDTO convertToDTO(DocumentReview review) {
-        DocumentReviewDTO dto = new DocumentReviewDTO();
-        dto.setId(review.getId());
-        dto.setReviewStatus(review.getStatus());
-        dto.setReviewRemark(review.getRemark());
-        dto.setReviewDate(review.getReviewDate());
-        dto.setFinalized(review.isFinalized());
 
-        if (review.getReviewer() != null) {
-            dto.setReviewerId(review.getReviewer().getId());
-            dto.setReviewerNom(review.getReviewer().getNom());
-            dto.setReviewerPrenom(review.getReviewer().getPrenom());
-            dto.setReviewerEmail(review.getReviewer().getEmail());
-        }
-
-        if (review.getDocument() != null) {
-            dto.setDocumentId(review.getDocument().getId());
-            dto.setDocumentName(review.getDocument().getName());
-            dto.setDocumentType(review.getDocument().getType().name());
-
-            if (review.getDocument().getProject() != null) {
-                dto.setProjectId(review.getDocument().getProject().getId());
-                dto.setProjectTitle(review.getDocument().getProject().getTitle());
-            }
-        }
-
-        return dto;
-    }
 }

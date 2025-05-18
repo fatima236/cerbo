@@ -17,18 +17,17 @@ public interface DocumentRepository extends JpaRepository<Document,Long> {
     List<Document> findDocumentsByEventId(Long eventId);
     List<Document> findByProjectId(Long projectId);
 
-    // Ajoutez ces nouvelles méthodes
-    List<Document> findByProjectIdAndReviewRemarkIsNotNull(Long projectId);
-    List<Document> findByReviewStatusAndReviewRemarkIsNotNull(RemarkStatus status);
-    List<Document> findByProjectIdAndAdminStatus(Long projectId, RemarkStatus adminStatus);
-    long countByProjectIdAndIncludedInReportTrueAndAdminResponseIsNull(Long projectId);
+//    // Ajoutez ces nouvelles méthodes
+//    List<Document> findByProjectIdAndReviewRemarkIsNotNull(Long projectId);
+//    List<Document> findByReviewStatusAndReviewRemarkIsNotNull(RemarkStatus status);
+
 
     Document getFirstByEvent(Event event);
 
     Document getFirsByArticle(Article article);
 
-    @Query("SELECT NEW com.example.cerbo.dto.DocumentInfoDTO(d.id, d.name, d.type) " +
-            "FROM Document d WHERE d.project.id = :projectId")
-    List<DocumentInfoDTO> findBasicInfoByProjectId(Long projectId);
+//    @Query("SELECT NEW com.example.cerbo.dto.DocumentInfoDTO(d.id, d.name, d.type) " +
+//            "FROM Document d WHERE d.project.id = :projectId")
+//    List<DocumentInfoDTO> findBasicInfoByProjectId(Long projectId);
 
 }

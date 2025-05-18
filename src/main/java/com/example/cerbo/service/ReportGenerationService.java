@@ -54,7 +54,7 @@ public class ReportGenerationService {
             List<DocumentReview> docReviews = groupedReviews.get(docType);
             int remarkNumber = 1;
             for (DocumentReview review : docReviews) {
-                document.add(new Paragraph("remarque " + remarkNumber + ": " + review.getRemark()));
+                document.add(new Paragraph("remarque " + remarkNumber + ": " + review.getContent()));
                 remarkNumber++;
             }
             document.add(new Paragraph(" "));

@@ -3,6 +3,7 @@ package com.example.cerbo.repository;
 import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.DocumentType;
+import com.example.cerbo.entity.enums.RemarkStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,13 +16,13 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     long countByDocumentProjectIdAndReviewer(Long projectId, User reviewer);
 
-    List<DocumentReview> findByDocumentProjectIdAndFinalizedTrue(Long projectId);
+    List<DocumentReview> findByProjectIdAndFinalizedTrue(Long projectId);
 
     List<DocumentReview> findByDocumentProjectId(Long projectId);
 
     @Query("SELECT dr FROM DocumentReview dr " +
             "WHERE dr.document.project.id = :projectId " +
-            "AND dr.remark IS NOT NULL " +
+            "AND dr.content IS NOT NULL " +
             "AND dr.status = 'VALIDATED'")
     List<DocumentReview> findValidatedRemarksByProjectId(@Param("projectId") Long projectId);
 
@@ -34,4 +35,6 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
             "WHERE d.project.id = :projectId " +
             "AND dr.status = 'VALIDATED'")
     List<DocumentType> findDocumentTypeByProjectId(@Param("projectId") Long projectId);
+
+    List<DocumentReview> findByProjectIdAndStatus(Long projectId, RemarkStatus status);
 }

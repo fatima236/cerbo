@@ -84,8 +84,8 @@ public class InvestigatorReportController {
                     .filter(review -> {
                         boolean isValid = review.getAdminEmail() != null
                                 && review.getAdminValidationDate() != null
-                                && review.getRemark() != null
-                                && !review.getRemark().isEmpty();
+                                && review.getContent() != null
+                                && !review.getContent().isEmpty();
                         if (!isValid) {
                             logger.trace("Review filtrée ID: {}", review.getId());
                         }
@@ -132,7 +132,7 @@ public class InvestigatorReportController {
     private RemarkDTO convertToRemarkDTO(DocumentReview review) {
         RemarkDTO dto = new RemarkDTO();
         dto.setId(review.getId());
-        dto.setContent(review.getRemark());
+        dto.setContent(review.getContent());
         dto.setCreationDate(review.getReviewDate());
         dto.setAdminStatus(review.getStatus() != null ? review.getStatus().toString() : null);
         dto.setValidationDate(review.getAdminValidationDate());

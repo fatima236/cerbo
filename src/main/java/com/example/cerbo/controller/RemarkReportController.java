@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.DocumentReview;
@@ -32,42 +33,72 @@ public class RemarkReportController {
     private final ProjectRepository projectRepository;
     private final DocumentRepository documentRepository;
     private final DocumentReviewRepository documentReviewRepository;
-    private RemarkDTO convertToDto(Document document) {
-        RemarkDTO dto = new RemarkDTO();
-        dto.setId(document.getId());
-        dto.setContent(document.getReviewRemark());
-        dto.setCreationDate(document.getReviewDate());
-        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().toString() : null);
-        dto.setValidationDate(document.getAdminValidationDate());
 
-        if (document.getReviewer() != null) {
-            dto.setReviewerId(document.getReviewer().getId());
-            dto.setReviewerName(document.getReviewer().getPrenom() + " " + document.getReviewer().getNom());
+    private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
+        DocumentReviewDTO dto = new DocumentReviewDTO();
+        dto.setId(documentReview.getId());
+        dto.setReviewerNom(documentReview.getReviewer().getNom());
+        dto.setStatus(documentReview.getStatus());
+        dto.setContent(documentReview.getContent());
+        dto.setCreationDate(documentReview.getCreationDate());
+        dto.setResponse(documentReview.getResponse());
+        if (documentReview.getReviewer() != null) {
+            dto.setReviewerId(documentReview.getReviewer().getId());
+            dto.setReviewerNom(documentReview.getReviewer().getNom());
+            dto.setReviewerPrenom(documentReview.getReviewer().getPrenom());
+            dto.setReviewerEmail(documentReview.getReviewer().getEmail());
+
         }
 
-        dto.setResponse(document.getAdminResponse());
-        dto.setResponseDate(document.getAdminResponseDate());
-        dto.setHasResponseFile(document.getResponseFilePath() != null);
+//        if (documentReview.getReport().getProject() != null) {
+//            dto.setProjectId(documentReview.getReport().getProject().getId());
+//            dto.setProjectTitle(documentReview.getReport().getProject().getTitle());
+//        }
+
+        dto.setDocumentName(documentReview.getReviewer().getFullName());
+
+
 
         return dto;
     }
 
-    @GetMapping("/preview")
-    public ResponseEntity<List<RemarkDTO>> getRemarksForReport(@PathVariable Long projectId) {
-        List<Document> documents = documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
-        return ResponseEntity.ok(documents.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList()));
-    }
+
+//    private RemarkDTO convertToDto(Document document) {
+//        RemarkDTO dto = new RemarkDTO();
+//        dto.setId(document.getId());
+//        dto.setContent(document.getReviewRemark());
+//        dto.setCreationDate(document.getReviewDate());
+//        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().toString() : null);
+//        dto.setValidationDate(document.getAdminValidationDate());
+//
+//        if (document.getReviewer() != null) {
+//            dto.setReviewerId(document.getReviewer().getId());
+//            dto.setReviewerName(document.getReviewer().getPrenom() + " " + document.getReviewer().getNom());
+//        }
+//
+//        dto.setResponse(document.getAdminResponse());
+//        dto.setResponseDate(document.getAdminResponseDate());
+//        dto.setHasResponseFile(document.getResponseFilePath() != null);
+//
+//        return dto;
+//    }
+
+//    @GetMapping("/preview")
+//    public ResponseEntity<List<RemarkDTO>> getRemarksForReport(@PathVariable Long projectId) {
+//        List<Document> documents = documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
+//        return ResponseEntity.ok(documents.stream()
+//                .map(this::convertToDto)
+//                .collect(Collectors.toList()));
+//    }
 
     @PostMapping("/preview")
-    public ResponseEntity<List<RemarkDTO>> generateReportPreview(
+    public ResponseEntity<List<DocumentReviewDTO>> generateReportPreview(
             @PathVariable Long projectId,
             @RequestBody List<Long> documentIds) {
 
-        List<Document> documents = documentRepository.findAllById(documentIds);
-        return ResponseEntity.ok(documents.stream()
-                .map(this::convertToDto)
+        List<DocumentReview > documentReviews = documentReviewRepository.findValidatedRemarksByProjectId(projectId);
+        return ResponseEntity.ok(documentReviews.stream()
+                .map(this::convertToDTO)
                 .collect(Collectors.toList()));
     }
 
@@ -79,7 +110,7 @@ public class RemarkReportController {
             List<DocumentReview> validReviews = documentReviewRepository.findAllById(documentReviewIds).stream()
                     .filter(review -> review.getAdminEmail() != null)
                     .filter(review -> review.getAdminValidationDate() != null)
-                    .filter(review -> review.getRemark() != null && !review.getRemark().isEmpty())
+                    .filter(review -> review.getContent() != null && !review.getContent().isEmpty())
                     .collect(Collectors.toList());
 
             if (validReviews.isEmpty()) {

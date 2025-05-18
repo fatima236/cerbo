@@ -32,50 +32,15 @@ public class Document {
 
     @Column(nullable = false)
     private String path;
+
     private String contentType;
+
     private Long size;
-    @Column(columnDefinition = "TEXT")
-    private String remark;
-
-    private boolean submitted;
-    private boolean validated;
-
 
     private LocalDateTime creationDate = LocalDateTime.now();
     private LocalDateTime modificationDate;
-    private LocalDateTime validationDate;
-    private LocalDateTime reviewDate;
-    private Boolean includedInReport = false;
-
-
-    @Enumerated(EnumType.STRING)
-    private RemarkStatus reviewStatus;
-
-    @Column(columnDefinition = "TEXT")
-    private String reviewRemark;
-
-
-    @Enumerated(EnumType.STRING)
-    private RemarkStatus adminStatus;
-
-    private LocalDateTime adminValidationDate;
 
     private String adminEmail;
-
-    private LocalDateTime adminResponseDate;
-
-    private String responseFilePath;
-
-    @Column(columnDefinition = "TEXT")
-    private String adminComment;
-
-    @Column(columnDefinition = "TEXT")
-    private String adminResponse;
-
-
-
-    @ManyToOne
-    private User reviewer;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = true) // Changé de nullable=true à false
@@ -96,12 +61,6 @@ public class Document {
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
     private List<DocumentReview> reviews;
 
-    @Enumerated(EnumType.STRING)
-    private RemarkStatus latestReviewStatus;
-
-
-    @Column(name = "report_inclusion_date")
-    private LocalDateTime reportInclusionDate;
 
 }
 

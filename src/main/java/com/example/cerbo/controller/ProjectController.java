@@ -201,12 +201,12 @@ public class ProjectController {
             response.put("sampleQuantity", project.getSampleQuantity());
             response.put("fundingSource", project.getFundingSource());
             response.put("fundingProgram", project.getFundingProgram());
-            response.put("reportStatus", project.getReportStatus());
+            response.put("reportStatus", project.getLatestReportStatus());
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
                 Report lastReport = reports.get(reports.size() - 1);
                 response.put("creationDateOfReport", lastReport.getCreationDate());
-                response.put("reportResponsed", lastReport.getReportResponsed());
+                response.put("reportResponsed", lastReport.getResponsed());
             } else {
                 response.put("creationDateOfReport", null); // ou une valeur par défaut
             }
@@ -622,10 +622,10 @@ public class ProjectController {
                         docMap.put("type", doc.getType().name());
                         docMap.put("path", doc.getPath());
                         docMap.put("size", doc.getSize());
-                        docMap.put("remark", doc.getRemark());
-                        docMap.put("submitted", doc.isSubmitted());
-                        docMap.put("validated", doc.isValidated());
-                        docMap.put("validationDate", doc.getValidationDate());
+//                        docMap.put("remark", doc.getRemark());
+//                        docMap.put("submitted", doc.isSubmitted());
+//                        docMap.put("validated", doc.isValidated());
+//                        docMap.put("validationDate", doc.getValidationDate());
                         return docMap;
                     })
                     .collect(Collectors.toList());
@@ -673,11 +673,11 @@ public class ProjectController {
                             docMap.put("id", doc.getId());
                             docMap.put("name", doc.getName());
                             docMap.put("size", doc.getSize());
-                            docMap.put("remark", doc.getRemark());
-                            docMap.put("submitted", doc.isSubmitted());
-                            docMap.put("validated", doc.isValidated());
-                            docMap.put("reviewStatus", doc.getReviewStatus()); // IMPORTANT
-                            docMap.put("reviewRemark", doc.getReviewRemark());
+//                            docMap.put("remark", doc.getRemark());
+//                            docMap.put("submitted", doc.isSubmitted());
+//                            docMap.put("validated", doc.isValidated());
+//                            docMap.put("reviewStatus", doc.getReviewStatus()); // IMPORTANT
+//                            docMap.put("reviewRemark", doc.getReviewRemark());
                             return docMap;
                         })
                         .collect(Collectors.toList());
@@ -722,20 +722,20 @@ public class ProjectController {
                     .findFirst()
                     .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
 
-            // Mettre à jour les champs
-            if (updates.containsKey("remark")) {
-                document.setRemark((String) updates.get("remark"));
-            }
-            if (updates.containsKey("submitted")) {
-                document.setSubmitted((Boolean) updates.get("submitted"));
-            }
-            if (updates.containsKey("validated")) {
-                boolean validated = (Boolean) updates.get("validated");
-                document.setValidated(validated);
-                if (validated) {
-                    document.setValidationDate(LocalDateTime.now());
-                }
-            }
+//            // Mettre à jour les champs
+//            if (updates.containsKey("remark")) {
+//                document.setRemark((String) updates.get("remark"));
+//            }
+//            if (updates.containsKey("submitted")) {
+//                document.setSubmitted((Boolean) updates.get("submitted"));
+//            }
+//            if (updates.containsKey("validated")) {
+//                boolean validated = (Boolean) updates.get("validated");
+//                document.setValidated(validated);
+//                if (validated) {
+//                    document.setValidationDate(LocalDateTime.now());
+//                }
+//            }
             document.setModificationDate(LocalDateTime.now());
 
             projectRepository.save(project);
@@ -766,13 +766,13 @@ public class ProjectController {
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
 
             // Vérifier que tous les documents ont été traités
-            boolean allDocumentsProcessed = project.getDocuments().stream()
-                    .allMatch(doc -> doc.isValidated() || doc.isSubmitted());
-
-            if (!allDocumentsProcessed) {
-                return ResponseEntity.badRequest()
-                        .body("Tous les documents doivent être validés ou avoir des remarques avant de compléter l'évaluation");
-            }
+//            boolean allDocumentsProcessed = project.getDocuments().stream()
+//                    .allMatch(doc -> doc.isValidated() || doc.isSubmitted());
+//
+//            if (!allDocumentsProcessed) {
+//                return ResponseEntity.badRequest()
+//                        .body("Tous les documents doivent être validés ou avoir des remarques avant de compléter l'évaluation");
+//            }
 
             notificationService.sendNotification(
                     userRepository.findByRolesContaining("ADMIN"),

@@ -13,6 +13,7 @@ public class RemarkResponseDTO {
     private String adminStatus;
     private LocalDateTime validationDate;
     private ReviewerDTO reviewer;
+    private String response;
     private String comment;
     private String adminResponse;
     private LocalDateTime adminResponseDate;
