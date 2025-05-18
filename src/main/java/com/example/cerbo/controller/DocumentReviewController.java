@@ -51,9 +51,23 @@ public class DocumentReviewController {
         User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
-        DocumentReview review = new DocumentReview();
-        review.setDocument(document);
-        review.setReviewer(reviewer);
+        // Check if this reviewer already has a review for this document
+        DocumentReview existingReview = documentReviewRepository
+                .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
+                .orElse(null);
+
+        DocumentReview review;
+        if (existingReview != null) {
+            // Update existing review
+            review = existingReview;
+        } else {
+            // Create new review
+            review = new DocumentReview();
+            review.setDocument(document);
+            review.setReviewer(reviewer);
+        }
+
+        // Update review details
         review.setStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
         review.setRemark(request.getRemark());
         review.setReviewDate(LocalDateTime.now());
@@ -63,6 +77,25 @@ public class DocumentReviewController {
         return ResponseEntity.ok(convertToDTO(savedReview));
     }
 
+    // this endpoint to clear a review
+    @PutMapping("/{documentId}/clear-review")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<Void> clearReview(
+            @PathVariable Long projectId,
+            @PathVariable Long documentId,
+            Authentication authentication) {
+
+        User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+
+        DocumentReview review = documentReviewRepository
+                .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Évaluation non trouvée"));
+
+        documentReviewRepository.delete(review);
+
+        return ResponseEntity.noContent().build();
+    }
     @GetMapping("/{documentId}/reviews")
     public ResponseEntity<List<DocumentReviewDTO>> getDocumentReviews(
             @PathVariable Long projectId,

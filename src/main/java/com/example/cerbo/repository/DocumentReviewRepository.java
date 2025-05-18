@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DocumentReviewRepository extends JpaRepository<DocumentReview, Long> {
     List<DocumentReview> findByDocumentId(Long documentId);
@@ -34,4 +35,6 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
             "WHERE d.project.id = :projectId " +
             "AND dr.status = 'VALIDATED'")
     List<DocumentType> findDocumentTypeByProjectId(@Param("projectId") Long projectId);
+    // Add this method to find a review by documentId and reviewerId
+    Optional<DocumentReview> findByDocumentIdAndReviewerId(Long documentId, Long reviewerId);
 }
