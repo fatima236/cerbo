@@ -3,13 +3,12 @@ package com.example.cerbo.controller;
 import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.OrganizedRemarksDTO;
 import com.example.cerbo.dto.RemarkResponseDTO;
-import com.example.cerbo.entity.Document;
-import com.example.cerbo.entity.DocumentReview;
-import com.example.cerbo.entity.Remark;
+import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.DocumentReviewRepository;
+import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.RemarkRepository;
 import com.example.cerbo.service.AdminRemarkService;
 import com.example.cerbo.service.documentReview.DocumentReviewService;
@@ -24,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.cerbo.dto.ReportPreview;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +39,8 @@ public class AdminRemarkController {
     private final DocumentRepository documentRepository;
     private final DocumentReviewRepository documentReviewRepository;
     private final DocumentReviewService documentReviewService;
+    private final DocumentReviewRepository adminRemarkRepository;
+    private final ProjectRepository projectRepository;
 
 
 //    @GetMapping("/pending")
@@ -107,6 +109,7 @@ public class AdminRemarkController {
         dto.setStatus(review.getStatus());
         dto.setContent(review.getContent());
         dto.setCreationDate(review.getReviewDate());
+        dto.setResponse(review.getResponse());
 
         if (review.getReviewer() != null) {
             dto.setReviewerId(review.getReviewer().getId());
@@ -184,7 +187,7 @@ public class AdminRemarkController {
     @GetMapping("/projects/{projectId}/validated")
     public ResponseEntity<List<DocumentReviewDTO>> getValidatedRemarks(@PathVariable Long projectId) {
 
-        List<DocumentReview> documentReviews = documentReviewRepository.findValidatedRemarksByProjectId(projectId);
+        List<DocumentReview> documentReviews = documentReviewRepository.findValidatedUnreportedRemarks(projectId,RemarkStatus.VALIDATED);
 
         return ResponseEntity.ok(documentReviews.stream().map(this::convertReviewToDTO).collect(Collectors.toList()));
     }
@@ -239,27 +242,18 @@ public class AdminRemarkController {
         return ResponseEntity.ok(organizedRemarks);
     }
 
-//    private DocumentReviewDTO convertToDto(Document document) {
-//        DocumentReview dto = new DocumentReview();
-//        dto.setId(document.getId());
-//        dto.setContent(document.get());
-//        dto.setCreationDate(document.getReviewDate());
-//        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().name() : null);
-//        dto.setValidationDate(document.getAdminValidationDate());
-//        dto.setComment(document.getAdminComment());
-//        dto.setAdminResponse(document.getAdminResponse());
-//        dto.setAdminResponseDate(document.getAdminResponseDate());
-//
-//        if (document.getReviewer() != null) {
-//            RemarkResponseDTO.ReviewerDTO reviewerDto = new RemarkResponseDTO.ReviewerDTO();
-//            reviewerDto.setEmail(document.getReviewer().getEmail());
-//            reviewerDto.setPrenom(document.getReviewer().getPrenom());
-//            reviewerDto.setNom(document.getReviewer().getNom());
-//            dto.setReviewer(reviewerDto);
-//        }
-//
-//        return dto;
-//    }
+    @GetMapping("/projects/{projectId}/remarksOfReport")
+    public ResponseEntity<List<DocumentReviewDTO>> getRemarksOfReport(@PathVariable Long projectId) {
+
+        Project project = projectRepository.findById(projectId).orElseThrow(() -> new ResourceNotFoundException("Project"));
+        Report report = project.getLatestReport();
+        List<DocumentReview> documentReviews = documentReviewRepository.findByReportIdAndIncludedInReportTrue(report.getId());
+
+        return ResponseEntity.ok(documentReviews.stream().map(this::convertReviewToDTO).collect(Collectors.toList()));
+
+    }
+
+
 
     private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
         DocumentReviewDTO dto = new DocumentReviewDTO();

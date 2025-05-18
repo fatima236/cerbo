@@ -37,4 +37,12 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
     List<DocumentType> findDocumentTypeByProjectId(@Param("projectId") Long projectId);
 
     List<DocumentReview> findByProjectIdAndStatus(Long projectId, RemarkStatus status);
+
+    @Query("SELECT dr FROM DocumentReview dr WHERE dr.project.id = :projectId AND dr.status = :status AND dr.includedInReport = false AND TRIM(dr.content) <> '' AND dr.content is not null ")
+    List<DocumentReview> findValidatedUnreportedRemarks(@Param("projectId") Long projectId, @Param("status") RemarkStatus status);
+
+    List<DocumentReview> findByReportIdAndIncludedInReportTrue(Long reportId);
+
+
+
 }

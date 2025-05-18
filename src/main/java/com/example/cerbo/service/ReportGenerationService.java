@@ -33,7 +33,9 @@ public class ReportGenerationService {
 
         Path path = folder.resolve(fileName);
 
-        List<DocumentReview> reviews = documentReviewRepository.findValidatedRemarksByProjectId(report.getProject().getId());
+        List<DocumentReview> reviews = documentReviewRepository
+                .findByReportIdAndIncludedInReportTrue(report.getId());
+
 
         Map<String, List<DocumentReview>> groupedReviews = reviews.stream()
                 .collect(Collectors.groupingBy(review -> review.getDocument().getType().toString()));
@@ -54,7 +56,7 @@ public class ReportGenerationService {
             List<DocumentReview> docReviews = groupedReviews.get(docType);
             int remarkNumber = 1;
             for (DocumentReview review : docReviews) {
-                document.add(new Paragraph("remarque " + remarkNumber + ": " + review.getContent()));
+                document.add(new Paragraph(review.getContent()));
                 remarkNumber++;
             }
             document.add(new Paragraph(" "));

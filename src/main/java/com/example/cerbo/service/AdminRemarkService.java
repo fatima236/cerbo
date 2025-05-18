@@ -30,49 +30,11 @@ public class AdminRemarkService {
     private final NotificationService notificationService;
     private final ProjectRepository projectRepository;
 
-//    public ReportPreview generateReportPreview(Long projectId, List<Long> documentIds) {
-//        Project project = projectRepository.findById(projectId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
-//
-//        List<Document> documents = documentRepository.findAllById(documentIds).stream()
-//                .filter(d -> d.getProject().getId().equals(projectId))
-//                .filter(d -> d.getAdminStatus() == RemarkStatus.VALIDATED)
-//                .collect(Collectors.toList());
-//
-//        List<RemarkDTO> remarkDTOs = documents.stream()
-//                .map(this::convertToDto)
-//                .collect(Collectors.toList());
-//
-//        return new ReportPreview(
-//                projectId,
-//                project.getTitle(),
-//                remarkDTOs
-//        );
-//    }
 
-//    private RemarkDTO convertToDto(Document document) {
-//        RemarkDTO dto = new RemarkDTO();
-//        dto.setId(document.getId());
-//        dto.setContent(document.getReviewRemark());
-//        dto.setCreationDate(document.getReviewDate());
-//        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().toString() : null);
-//        dto.setValidationDate(document.getAdminValidationDate());
-//
-//        if (document.getReviewer() != null) {
-//            dto.setReviewerId(document.getReviewer().getId());
-//            dto.setReviewerName(document.getReviewer().getPrenom() + " " + document.getReviewer().getNom());
-//        }
-//
-//        dto.setResponse(document.getAdminResponse());
-//        dto.setResponseDate(document.getAdminResponseDate());
-//        dto.setHasResponseFile(document.getResponseFilePath() != null);
-//
-//        return dto;
-//    }
     public OrganizedRemarksDTO getOrganizedRemarks(Long projectId) {
         // Récupérer toutes les évaluations finalisées
         List<DocumentReview> evaluations = documentReviewRepository
-                .findByProjectIdAndFinalizedTrue(projectId)
+                .findValidatedUnreportedRemarks(projectId,RemarkStatus.VALIDATED)
                 .stream()
                 .filter(review -> review.getContent() != null && !review.getContent().isEmpty())
                 .collect(Collectors.toList());
@@ -180,44 +142,5 @@ public class AdminRemarkService {
         return dto;
     }
 
-//    private RemarkResponseDTO convertToRemarkResponseDTO(Document document) {
-//        RemarkResponseDTO dto = new RemarkResponseDTO();
-//        dto.setId(document.getId());
-//        dto.setContent(document.getReviewRemark());
-//        dto.setCreationDate(document.getReviewDate());
-//        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().name() : null);
-//        dto.setValidationDate(document.getAdminValidationDate());
-//        dto.setComment(document.getAdminComment());
-//        dto.setAdminResponse(document.getAdminResponse());
-//        dto.setAdminResponseDate(document.getAdminResponseDate());
-//
-//
-//        // Info reviewer
-//        if (document.getReviewer() != null) {
-//            RemarkResponseDTO.ReviewerDTO reviewerDto = new RemarkResponseDTO.ReviewerDTO();
-//            reviewerDto.setEmail(document.getReviewer().getEmail());
-//            reviewerDto.setPrenom(document.getReviewer().getPrenom());
-//            reviewerDto.setNom(document.getReviewer().getNom());
-//            dto.setReviewer(reviewerDto);
-//        }
-//
-//        // Info document
-//        dto.setDocumentName(document.getName());
-//        dto.setDocumentType(document.getType());
-//
-//        return dto;
-//    }
 
-//    public List<RemarkResponseDTO> getValidatedRemarksForReport(Long projectId) {
-//        return documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED).stream()
-//                .filter(d -> d.getReviewRemark() != null && !d.getReviewRemark().isEmpty())
-//                .map(this::convertToRemarkResponseDTO)
-//                .collect(Collectors.toList());
-//    }
-//
-//    public List<RemarkResponseDTO> getRejectedRemarks(Long projectId) {
-//        return documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.REJECTED).stream()
-//                .map(this::convertToRemarkResponseDTO)
-//                .collect(Collectors.toList());
-//    }
 }

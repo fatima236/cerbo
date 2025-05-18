@@ -180,9 +180,6 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
-            // Project projet = projectRepository.findByIdWithReviewers(id)
-            //  .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-            //Project project = projectService.getProjectById(id);
 
             Project project = projectRepository.findByIdWithDetails(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
@@ -764,15 +761,6 @@ public class ProjectController {
 
             Project project = projectRepository.findByIdAndReviewerIdWithDocuments(projectId, evaluator.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
-
-            // Vérifier que tous les documents ont été traités
-//            boolean allDocumentsProcessed = project.getDocuments().stream()
-//                    .allMatch(doc -> doc.isValidated() || doc.isSubmitted());
-//
-//            if (!allDocumentsProcessed) {
-//                return ResponseEntity.badRequest()
-//                        .body("Tous les documents doivent être validés ou avoir des remarques avant de compléter l'évaluation");
-//            }
 
             notificationService.sendNotification(
                     userRepository.findByRolesContaining("ADMIN"),

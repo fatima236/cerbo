@@ -42,6 +42,7 @@ public class RemarkReportService {
 
 
     @Transactional
+
     public Report generateAndSendReportx(Long projectId) throws Exception {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
@@ -50,9 +51,36 @@ public class RemarkReportService {
         Report report = new Report();
         report.setProject(project);
         report.setCreationDate(LocalDateTime.now());
+        report.setResponseDeadline(LocalDateTime.now().plusDays(7));
         reportRepository.save(report);
 
+        List<DocumentReview> validated = documentReviewRepository
+                .findValidatedUnreportedRemarks(projectId, RemarkStatus.VALIDATED);
 
+        Map<Document, List<DocumentReview>> grouped = validated.stream()
+                .collect(Collectors.groupingBy(DocumentReview::getDocument));
+
+        for (Map.Entry<Document, List<DocumentReview>> entry : grouped.entrySet()) {
+            Document doc = entry.getKey();
+            List<DocumentReview> docRemarks = entry.getValue();
+
+            String content = docRemarks.stream()
+                    .map(dr -> "- " + dr.getContent())
+                    .collect(Collectors.joining("\n"));
+
+            DocumentReview synthetic = new DocumentReview();
+            synthetic.setDocument(doc);
+            synthetic.setProject(project);
+            synthetic.setReport(report);
+            synthetic.setContent(content);
+            synthetic.setIncludedInReport(true);
+            synthetic.setFinalized(true);
+            synthetic.setFinal_submission(true);
+            synthetic.setStatus(RemarkStatus.VALIDATED); // facultatif si tu veux les filtrer dans le PDF
+            synthetic.setCreationDate(LocalDateTime.now());
+
+            documentReviewRepository.save(synthetic);
+        }
 
         project.setResponseDeadline(LocalDateTime.now().plusDays(7));
         project.setLastReportDate(LocalDateTime.now());
@@ -62,7 +90,6 @@ public class RemarkReportService {
 
 
         Path pdfPath = reportGenerationService.generateReportPdf(report);
-
         report.setFilePath(pdfPath.toString());
         report.setFileName(pdfPath.getFileName().toString());
         reportRepository.save(report);

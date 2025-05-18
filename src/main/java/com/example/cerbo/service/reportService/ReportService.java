@@ -91,7 +91,7 @@ public class ReportService {
         projectRepository.save(project);
 
         // Notifier l'investigateur principal
-        User investigator = project.getPrincipalInvestigator();
+//        User investigator = project.getPrincipalInvestigator();
 //        notificationService.notifyUser(
 //                investigator.getId(),
 //                "Nouveau rapport disponible",

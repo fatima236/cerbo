@@ -34,6 +34,8 @@ public class Report {
 
     private LocalDateTime responseDate;
 
+    @Enumerated(EnumType.STRING)
+
     private ReportStatus status =ReportStatus.NON_ENVOYE;
 
     @OneToMany(mappedBy = "report")
