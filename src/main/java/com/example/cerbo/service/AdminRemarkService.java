@@ -34,7 +34,7 @@ public class AdminRemarkService {
     public OrganizedRemarksDTO getOrganizedRemarks(Long projectId) {
         // Récupérer toutes les évaluations finalisées
         List<DocumentReview> evaluations = documentReviewRepository
-                .findValidatedUnreportedRemarks(projectId,RemarkStatus.VALIDATED)
+                .findByProjectIdAndFinalizedTrue(projectId)
                 .stream()
                 .filter(review -> review.getContent() != null && !review.getContent().isEmpty())
                 .collect(Collectors.toList());
