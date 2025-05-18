@@ -56,6 +56,11 @@ public class DocumentReviewController {
                 .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
                 .orElse(null);
 
+        // Vérifier si une soumission finale a déjà été faite
+        if (existingReview != null && existingReview.isFinalSubmission()) {
+            throw new BusinessException("La soumission finale a déjà été effectuée, vous ne pouvez plus modifier cette évaluation");
+        }
+
         DocumentReview review;
         if (existingReview != null) {
             // Update existing review
@@ -96,15 +101,75 @@ public class DocumentReviewController {
 
         return ResponseEntity.noContent().build();
     }
-    @GetMapping("/{documentId}/reviews")
-    public ResponseEntity<List<DocumentReviewDTO>> getDocumentReviews(
+    @GetMapping("/{documentId}/reviews/me")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<DocumentReviewDTO> getMyDocumentReview(
             @PathVariable Long projectId,
-            @PathVariable Long documentId) {
+            @PathVariable Long documentId,
+            Authentication authentication) {
 
-        List<DocumentReview> reviews = documentReviewRepository.findByDocumentId(documentId);
-        return ResponseEntity.ok(reviews.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList()));
+        User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+
+        DocumentReview review = documentReviewRepository
+                .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
+                .orElse(null);
+
+        if (review != null) {
+            return ResponseEntity.ok(convertToDTO(review));
+        } else {
+            // Retourner un DTO vide avec juste les infos de base si aucune évaluation existe
+            DocumentReviewDTO emptyReview = new DocumentReviewDTO();
+
+            Document document = documentRepository.findById(documentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
+
+            emptyReview.setDocumentId(document.getId());
+            emptyReview.setDocumentName(document.getName());
+            emptyReview.setDocumentType(document.getType().name());
+            emptyReview.setReviewStatus(RemarkStatus.PENDING);
+
+            if (document.getProject() != null) {
+                emptyReview.setProjectId(document.getProject().getId());
+                emptyReview.setProjectTitle(document.getProject().getTitle());
+            }
+
+            return ResponseEntity.ok(emptyReview);
+        }
+    }
+
+    @GetMapping("/reviews/me")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<List<DocumentReviewDTO>> getMyProjectReviews(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+
+        User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+
+        // Récupérer tous les documents du projet
+        List<Document> documents = documentRepository.findByProjectId(projectId);
+
+        List<DocumentReviewDTO> result = documents.stream().map(document -> {
+            DocumentReview review = documentReviewRepository
+                    .findByDocumentIdAndReviewerId(document.getId(), reviewer.getId())
+                    .orElse(null);
+
+            if (review != null) {
+                return convertToDTO(review);
+            } else {
+                DocumentReviewDTO emptyReview = new DocumentReviewDTO();
+                emptyReview.setDocumentId(document.getId());
+                emptyReview.setDocumentName(document.getName());
+                emptyReview.setDocumentType(document.getType().name());
+                emptyReview.setReviewStatus(RemarkStatus.PENDING);
+                emptyReview.setProjectId(projectId);
+                emptyReview.setProjectTitle(document.getProject().getTitle());
+                return emptyReview;
+            }
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/submit-review")
@@ -126,6 +191,7 @@ public class DocumentReviewController {
 
         evaluations.forEach(eval -> {
             eval.setFinalized(true);
+            eval.setFinalSubmission(true); // Marquer comme soumission finale
             eval.setSubmissionDate(LocalDateTime.now());
         });
 

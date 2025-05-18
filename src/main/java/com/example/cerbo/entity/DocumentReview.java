@@ -44,5 +44,5 @@ public class DocumentReview {
 
     private LocalDateTime submissionDate; // Date de soumission finale
     @Column(nullable = false)
-    private boolean finalSubmission = false;
+    private boolean finalSubmission = false; // Indique si la soumission finale a été faite
 }
