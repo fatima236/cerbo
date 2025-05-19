@@ -665,6 +665,17 @@ public class ProjectController {
                 projectMap.put("sampleType", project.getSampleType());
                 projectMap.put("sampleQuantity", project.getSampleQuantity());
 
+                boolean isProjectLocked = project.getDocuments().stream()
+                        .anyMatch(doc -> {
+                            DocumentReview review = documentReviewRepository
+                                    .findByDocumentIdAndReviewerId(doc.getId(), currentUser.getId())
+                                    .orElse(null);
+                            return review != null && review.getFinal_submission();
+                        });
+
+                projectMap.put("final_submission", isProjectLocked);
+                projectMap.put("evaluationStatus", isProjectLocked ? "SUBMITTED" : "PENDING");
+
                 // Documents
                 List<Map<String, Object>> documents = project.getDocuments().stream()
                         .map(doc -> {
@@ -674,6 +685,7 @@ public class ProjectController {
                             docMap.put("name", doc.getName());
                             docMap.put("size", doc.getSize());
                             if (review != null) {
+                                docMap.put("locked", review.getFinal_submission());
                                 docMap.put("remark", review.getContent());
                                 docMap.put("finalSubmission", review.getFinal_submission());
                                 docMap.put("validated", review.isValidated());
@@ -787,15 +799,4 @@ public class ProjectController {
                     .body("Erreur lors de la complétion de l'évaluation: " + e.getMessage());
         }
     }
-
-
-
 }
-
-
-
-
-
-
-
-

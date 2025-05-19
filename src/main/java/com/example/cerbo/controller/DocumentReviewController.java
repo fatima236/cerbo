@@ -40,6 +40,7 @@ public class DocumentReviewController {
         dto.setFinalized(review.isFinalized());
         dto.setResponse(review.getResponse());
         dto.setFinalSubmission(review.getFinal_submission());
+        dto.setLocked(review.getFinal_submission());
 
         if (review.getReviewer() != null) {
             dto.setReviewerId(review.getReviewer().getId());
@@ -179,27 +180,30 @@ public class DocumentReviewController {
                 .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
                 .orElse(null);
 
+        DocumentReviewDTO dto;
         if (review != null) {
-            return ResponseEntity.ok(convertToDTO(review));
+            dto = convertToDTO(review);
+            // Ajouter le statut de verrouillage
+            dto.setLocked(review.getFinal_submission());
         } else {
             // Retourner un DTO vide avec juste les infos de base si aucune évaluation existe
-            DocumentReviewDTO emptyReview = new DocumentReviewDTO();
+            dto = new DocumentReviewDTO();
 
             Document document = documentRepository.findById(documentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
 
-            emptyReview.setDocumentId(document.getId());
-            emptyReview.setDocumentName(document.getName());
-            emptyReview.setDocumentType(document.getType());
-            emptyReview.setStatus(RemarkStatus.PENDING);
+            dto.setDocumentId(document.getId());
+            dto.setDocumentName(document.getName());
+            dto.setDocumentType(document.getType());
+            dto.setStatus(RemarkStatus.PENDING);
 
             if (document.getProject() != null) {
-                emptyReview.setProjectId(document.getProject().getId());
-                emptyReview.setProjectTitle(document.getProject().getTitle());
+                dto.setProjectId(document.getProject().getId());
+                dto.setProjectTitle(document.getProject().getTitle());
             }
-
-            return ResponseEntity.ok(emptyReview);
         }
+
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/submit-review")

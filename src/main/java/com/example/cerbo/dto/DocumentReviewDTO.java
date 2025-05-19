@@ -31,6 +31,7 @@ public class DocumentReviewDTO {
     private boolean finalized;
     private LocalDateTime finalizedDate;
     private Boolean finalSubmission ;
+    private Boolean Locked ;
     private Long projectId;
     private String projectTitle;
 
