@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DocumentReviewRepository extends JpaRepository<DocumentReview, Long> {
     List<DocumentReview> findByDocumentId(Long documentId);
@@ -30,7 +31,7 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     List<DocumentReview> findByDocumentIdIn(List<Long> documentIds);
     // @Query("SELECT COUNT(dr) FROM DocumentReview dr WHERE dr.document.project.id = :projectId AND dr.reviewer = :reviewer")
-   // long countByProjectAndReviewer(@Param("projectId") Long projectId, @Param("reviewer") User reviewer);
+    // long countByProjectAndReviewer(@Param("projectId") Long projectId, @Param("reviewer") User reviewer);
 
     @Query("SELECT DISTINCT d.type FROM DocumentReview dr " +
             "JOIN dr.document d " +
@@ -45,6 +46,13 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     List<DocumentReview> findByReportIdAndIncludedInReportTrue(Long reportId);
 
+    Optional<DocumentReview> findByDocumentIdAndReviewerId(Long documentId, Long reviewerId);
 
+
+    @Query("SELECT  dr.id FROM DocumentReview dr " +
+            "WHERE dr.project.id = :projectId " +
+            "AND dr.status = 'VALIDATED'"+
+            "AND dr.content <> '' ")
+    List<Long> documentReviewValidated(@Param("projectId") Long projectId);
 
 }
