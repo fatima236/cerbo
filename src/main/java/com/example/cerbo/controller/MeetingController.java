@@ -19,9 +19,17 @@ public class MeetingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Meeting>> getMeetingsByYear(@RequestParam int year) {
-        return ResponseEntity.ok(meetingService.getMeetingsByYear(year));
+    public ResponseEntity<List<Meeting>> getMeetingsByYear(
+            @RequestParam int year,
+            @RequestParam(required = false) Integer month) {
+
+        if (month != null) {
+            return ResponseEntity.ok(meetingService.getMeetingsByYearAndMonth(year, month));
+        } else {
+            return ResponseEntity.ok(meetingService.getMeetingsByYear(year));
+        }
     }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Meeting> updateMeeting(

@@ -39,6 +39,8 @@ import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 import com.example.cerbo.annotation.Loggable;
 import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class MeetingService {
 
@@ -68,6 +70,16 @@ public class MeetingService {
 
     public List<Meeting> getMeetingsByYear(int year) {
         return meetingRepository.findByYear(year);
+    }
+
+    @Loggable(actionType = "READ", entityType = "MEETING")
+    public List<Meeting> getMeetingsByYearAndMonth(int year, int month) {
+        return meetingRepository.findByYear(year).stream()
+                .filter(meeting -> {
+                    LocalDate meetingDate = meeting.getDate();
+                    return meetingDate.getMonthValue() == month;
+                })
+                .collect(Collectors.toList());
     }
 
     @Loggable(actionType = "UPDATE", entityType = "MEETING")
@@ -179,6 +191,7 @@ public class MeetingService {
             }
         }
     }
+
 
     private List<String> getParticipantEmailsForMeeting(Long meetingId) {
         // Implémentez cette méthode pour retourner la liste des emails des participants
