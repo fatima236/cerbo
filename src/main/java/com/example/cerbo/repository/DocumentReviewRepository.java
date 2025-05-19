@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DocumentReviewRepository extends JpaRepository<DocumentReview, Long> {
     List<DocumentReview> findByDocumentId(Long documentId);
@@ -17,6 +18,8 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
     long countByDocumentProjectIdAndReviewer(Long projectId, User reviewer);
 
     List<DocumentReview> findByProjectIdAndFinalizedTrue(Long projectId);
+
+    List<DocumentReview> findByProjectIdAndFinalizedTrueAndIncludedInReportFalse(Long projectId);
 
     List<DocumentReview> findByDocumentProjectId(Long projectId);
 
@@ -43,6 +46,6 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     List<DocumentReview> findByReportIdAndIncludedInReportTrue(Long reportId);
 
-
+    Optional<DocumentReview> findByDocumentIdAndReviewerId(Long documentId, Long reviewerId);
 
 }
