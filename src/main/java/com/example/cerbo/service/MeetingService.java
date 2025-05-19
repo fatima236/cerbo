@@ -39,6 +39,8 @@ import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 import com.example.cerbo.annotation.Loggable;
 import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class MeetingService {
 
@@ -70,33 +72,35 @@ public class MeetingService {
         return meetingRepository.findByYear(year);
     }
 
+    @Loggable(actionType = "READ", entityType = "MEETING")
+    public List<Meeting> getMeetingsByYearAndMonth(int year, int month) {
+        return meetingRepository.findByYear(year).stream()
+                .filter(meeting -> {
+                    LocalDate meetingDate = meeting.getDate();
+                    return meetingDate.getMonthValue() == month;
+                })
+                .collect(Collectors.toList());
+    }
+
+
     @Loggable(actionType = "UPDATE", entityType = "MEETING")
-    public Meeting updateMeeting(Long id, Meeting meetingDetails) {
-        Meeting meeting = meetingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Meeting not found"));
-
-        // Mettre à jour tous les champs modifiables
-        if (meetingDetails.getDate() != null) {
-            meeting.setDate(meetingDetails.getDate());
-        }
-
-        if (meetingDetails.getTime() != null) {
-            meeting.setTime(meetingDetails.getTime());
-        }
-
-        if (meetingDetails.getStatus() != null &&
-                ("Planifiée".equals(meetingDetails.getStatus()) ||
-                        "Annulée".equals(meetingDetails.getStatus()) ||
-                        "Terminée".equals(meetingDetails.getStatus()))) {
-            meeting.setStatus(meetingDetails.getStatus());
-        }
-
-        // Vérifier si la réunion est passée
-        if (isPastMeeting(meeting)) {
+    @Transactional
+    public Meeting updateMeeting(Meeting meeting) {
+        // Vérifier si la réunion est dans le passé après modification
+        if (isPastMeeting(meeting) && !"Terminée".equals(meeting.getStatus())) {
             meeting.setStatus("Terminée");
         }
 
-        return meetingRepository.save(meeting);
+        // Mettre à jour l'année si la date a changé
+        if (meeting.getDate() != null) {
+            meeting.setYear(meeting.getDate().getYear());
+        }
+
+        Meeting savedMeeting = meetingRepository.save(meeting);
+
+
+
+        return savedMeeting;
     }
 
     private boolean isPastMeeting(Meeting meeting) {
@@ -155,6 +159,12 @@ public class MeetingService {
         return savedMeetings;
     }
 
+    @Loggable(actionType = "READ", entityType = "MEETING")
+    public Meeting getMeetingById(Long id) {
+        return meetingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Meeting not found with id: " + id));
+    }
+
     @Scheduled(cron = "0 0 9 * * ?") // Exécuté tous les jours à 9h du matin
     public void checkMeetingReminders() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
@@ -179,6 +189,7 @@ public class MeetingService {
             }
         }
     }
+
 
     private List<String> getParticipantEmailsForMeeting(Long meetingId) {
         // Implémentez cette méthode pour retourner la liste des emails des participants
