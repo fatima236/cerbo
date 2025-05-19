@@ -3,6 +3,7 @@ package com.example.cerbo.controller;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.core.io.Resource;
 import com.example.cerbo.repository.DocumentRepository;
@@ -51,6 +52,7 @@ public class ProjectController {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
+    private final DocumentReviewRepository documentReviewRepository;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -667,14 +669,20 @@ public class ProjectController {
                 List<Map<String, Object>> documents = project.getDocuments().stream()
                         .map(doc -> {
                             Map<String, Object> docMap = new HashMap<>();
+                            DocumentReview review = documentReviewRepository.findByDocumentIdAndReviewerId(doc.getId(),currentUser.getId()).orElse(null);
                             docMap.put("id", doc.getId());
                             docMap.put("name", doc.getName());
                             docMap.put("size", doc.getSize());
-//                            docMap.put("remark", doc.getRemark());
-//                            docMap.put("submitted", doc.isSubmitted());
-//                            docMap.put("validated", doc.isValidated());
-//                            docMap.put("reviewStatus", doc.getReviewStatus()); // IMPORTANT
-//                            docMap.put("reviewRemark", doc.getReviewRemark());
+                            if (review != null) {
+                                docMap.put("remark", review.getContent());
+                                docMap.put("finalSubmission", review.getFinal_submission());
+                                docMap.put("validated", review.isValidated());
+                                docMap.put("reviewStatus", review.getStatus()); // IMPORTANT
+                                docMap.put("reviewRemark", review.getContent());
+                                docMap.put("remarqueOriginal", review.getContent());
+                                docMap.put("remarque", review.getContent());
+                                docMap.put("remarqueEditMode", !review.getFinal_submission());
+                            }
                             return docMap;
                         })
                         .collect(Collectors.toList());

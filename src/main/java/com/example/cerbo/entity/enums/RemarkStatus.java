@@ -9,6 +9,7 @@ public enum RemarkStatus {
     MODIFIED("Modifiée"),
     REVIEWED("Relue");
 
+
     private final String label;
 
     RemarkStatus(String label) {
