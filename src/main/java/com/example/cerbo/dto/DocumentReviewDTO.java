@@ -30,7 +30,6 @@ public class DocumentReviewDTO {
     private String adminComent;
     private boolean finalized;
     private LocalDateTime finalizedDate;
-    private Boolean finalSubmission ;
     private Long projectId;
     private String projectTitle;
 

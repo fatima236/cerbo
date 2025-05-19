@@ -39,7 +39,6 @@ public class DocumentReviewController {
         dto.setCreationDate(review.getReviewDate());
         dto.setFinalized(review.isFinalized());
         dto.setResponse(review.getResponse());
-        dto.setFinalSubmission(review.getFinal_submission());
 
         if (review.getReviewer() != null) {
             dto.setReviewerId(review.getReviewer().getId());
@@ -61,28 +60,6 @@ public class DocumentReviewController {
 
         return dto;
     }
-
-
-    @PutMapping("/{documentId}/clear-review")
-    @PreAuthorize("hasRole('EVALUATEUR')")
-    public ResponseEntity<Void> clearReview(
-            @PathVariable Long projectId,
-            @PathVariable Long documentId,
-            Authentication authentication) {
-
-        User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
-                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
-
-        DocumentReview review = documentReviewRepository
-                .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Évaluation non trouvée"));
-
-        documentReviewRepository.delete(review);
-
-        return ResponseEntity.noContent().build();
-    }
-
-
 
     @PutMapping("/{documentId}/review")
     @PreAuthorize("hasRole('EVALUATEUR')")
@@ -109,48 +86,17 @@ public class DocumentReviewController {
         User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
-
-        DocumentReview existingReview = documentReviewRepository
-                .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
-                .orElse(null);
-
-        DocumentReview review;
-
-        if (existingReview != null && existingReview.getFinal_submission()) {
-            throw new BusinessException("La soumission finale a déjà été effectuée, vous ne pouvez plus modifier cette évaluation");
-        }
-        if (existingReview != null) {
-            // Update existing review
-            review = existingReview;
-        } else {
-            // Create new review
-            review = new DocumentReview();
-            review.setDocument(document);
-            review.setReviewer(reviewer);
-            review.setProject(project);
-        }
-
-
-        // Update review details
+        DocumentReview review = new DocumentReview();
+        review.setDocument(document);
+        review.setReviewer(reviewer);
         review.setStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
         review.setContent(request.getRemark());
         review.setReviewDate(LocalDateTime.now());
+        review.setProject(document.getProject());
         review.setFinalized(false);
 
         DocumentReview savedReview = documentReviewRepository.save(review);
-
         return ResponseEntity.ok(convertToDTO(savedReview));
-//        DocumentReview review = new DocumentReview();
-//        review.setDocument(document);
-//        review.setReviewer(reviewer);
-//        review.setStatus(request.isValidated() ? RemarkStatus.VALIDATED : RemarkStatus.REVIEWED);
-//        review.setContent(request.getRemark());
-//        review.setReviewDate(LocalDateTime.now());
-//        review.setProject(document.getProject());
-//        review.setFinalized(false);
-//
-//        DocumentReview savedReview = documentReviewRepository.save(review);
-//        return ResponseEntity.ok(convertToDTO(savedReview));
     }
 
 
@@ -164,42 +110,6 @@ public class DocumentReviewController {
         return ResponseEntity.ok(reviews.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList()));
-    }
-    @GetMapping("/{documentId}/reviews/me")
-    @PreAuthorize("hasRole('EVALUATEUR')")
-    public ResponseEntity<DocumentReviewDTO> getMyDocumentReview(
-            @PathVariable Long projectId,
-            @PathVariable Long documentId,
-            Authentication authentication) {
-
-        User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
-                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
-
-        DocumentReview review = documentReviewRepository
-                .findByDocumentIdAndReviewerId(documentId, reviewer.getId())
-                .orElse(null);
-
-        if (review != null) {
-            return ResponseEntity.ok(convertToDTO(review));
-        } else {
-            // Retourner un DTO vide avec juste les infos de base si aucune évaluation existe
-            DocumentReviewDTO emptyReview = new DocumentReviewDTO();
-
-            Document document = documentRepository.findById(documentId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
-
-            emptyReview.setDocumentId(document.getId());
-            emptyReview.setDocumentName(document.getName());
-            emptyReview.setDocumentType(document.getType());
-            emptyReview.setStatus(RemarkStatus.PENDING);
-
-            if (document.getProject() != null) {
-                emptyReview.setProjectId(document.getProject().getId());
-                emptyReview.setProjectTitle(document.getProject().getTitle());
-            }
-
-            return ResponseEntity.ok(emptyReview);
-        }
     }
 
     @PostMapping("/submit-review")
@@ -221,7 +131,6 @@ public class DocumentReviewController {
 
         evaluations.forEach(eval -> {
             eval.setFinalized(true);
-            eval.setFinal_submission(true);
             eval.setSubmissionDate(LocalDateTime.now());
         });
 
@@ -236,38 +145,5 @@ public class DocumentReviewController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/reviews/me")
-    @PreAuthorize("hasRole('EVALUATEUR')")
-    public ResponseEntity<List<DocumentReviewDTO>> getMyProjectReviews(
-            @PathVariable Long projectId,
-        Authentication authentication) {
-
-            User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
-                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
-
-            // Récupérer tous les documents du projet
-            List<Document> documents = documentRepository.findByProjectId(projectId);
-
-            List<DocumentReviewDTO> result = documents.stream().map(document -> {
-                DocumentReview review = documentReviewRepository
-                        .findByDocumentIdAndReviewerId(document.getId(), reviewer.getId())
-                        .orElse(null);
-
-                if (review != null) {
-                    return convertToDTO(review);
-                } else {
-                    DocumentReviewDTO emptyReview = new DocumentReviewDTO();
-                    emptyReview.setDocumentId(document.getId());
-                    emptyReview.setDocumentName(document.getName());
-                    emptyReview.setDocumentType(document.getType());
-                    emptyReview.setStatus(RemarkStatus.PENDING);
-                    emptyReview.setProjectId(projectId);
-                    emptyReview.setProjectTitle(document.getProject().getTitle());
-                    return emptyReview;
-                }
-            }).collect(Collectors.toList());
-
-        return ResponseEntity.ok(result);
-    }
 
 }
