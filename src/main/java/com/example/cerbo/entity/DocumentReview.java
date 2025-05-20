@@ -63,11 +63,16 @@ public class DocumentReview {
 
     private boolean includedInReport = false;
 
+    private boolean validated = false;
+
+    private String raisonOfRejection;
+
 
     @Column(nullable = false)
     private boolean finalized = false; // False = brouillon, True = soumission finale
 
     private LocalDateTime submissionDate; // Date de soumission finale
+
 
     @ManyToOne
     @JoinColumn
