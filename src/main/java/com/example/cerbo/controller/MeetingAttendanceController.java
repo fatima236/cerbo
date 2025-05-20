@@ -9,15 +9,19 @@ import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.MeetingAttendance;
 import com.example.cerbo.service.MeetingAttendanceService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/meetings")
 @RequiredArgsConstructor
+@Slf4j
 public class MeetingAttendanceController {
     private final MeetingAttendanceService attendanceService;
     private final UserRepository userRepository;
@@ -65,7 +69,7 @@ public class MeetingAttendanceController {
 
                     return new EvaluatorStatsResponse(
                             evaluator.getId(),
-                            evaluator.getNom(), // Assurez-vous que ces champs existent
+                            evaluator.getNom(),
                             evaluator.getPrenom(),
                             evaluator.getEmail(),
                             presences,
@@ -76,5 +80,25 @@ public class MeetingAttendanceController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(stats);
+    }
+
+    @PostMapping("/{meetingId}/attendance/initialize-from-invitations")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> initializeAttendanceFromInvitations(@PathVariable Long meetingId) {
+        try {
+            int createdCount = attendanceService.initializeAttendanceFromInvitations(meetingId);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Présences initialisées avec succès",
+                    "createdCount", createdCount
+            ));
+        } catch (Exception e) {
+            log.error("Erreur lors de l'initialisation des présences", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "message", "Erreur lors de l'initialisation des présences: " + e.getMessage()
+            ));
+        }
     }
 }

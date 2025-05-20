@@ -1,12 +1,21 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.entity.Meeting;
+import com.example.cerbo.entity.MeetingProject;
+import com.example.cerbo.entity.Project;
 import com.example.cerbo.repository.MeetingRepository;
+import com.example.cerbo.repository.MeetingProjectRepository;
+import com.example.cerbo.repository.ProjectRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 import java.io.IOException;
-import com.itextpdf.text.Phrase;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,42 +23,33 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.FontFactory;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.PdfPCell;
-import com.itextpdf.text.pdf.PdfPTable;
-import java.io.IOException;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.pdf.PdfWriter;
-import com.itextpdf.text.BaseColor;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 import com.example.cerbo.annotation.Loggable;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.itextpdf.text.BaseColor;
 
 @Service
 public class MeetingService {
 
     private final MeetingRepository meetingRepository;
     private final EmailService emailService;
+    private final MeetingProjectRepository meetingProjectRepository;
+    private final ProjectRepository projectRepository;
 
-    public MeetingService(MeetingRepository meetingRepository, EmailService emailService) {
+    public MeetingService(MeetingRepository meetingRepository,
+                          EmailService emailService,
+                          MeetingProjectRepository meetingProjectRepository,
+                          ProjectRepository projectRepository) {
         this.meetingRepository = meetingRepository;
         this.emailService = emailService;
+        this.meetingProjectRepository = meetingProjectRepository;
+        this.projectRepository = projectRepository;
     }
 
     private Meeting createMeeting(int year, int month, int day, DayOfWeek dayOfWeek, int hour, int minute) {
@@ -66,8 +66,8 @@ public class MeetingService {
         meeting.setStatus("Planifiée");
         return meeting;
     }
-    @Loggable(actionType = "READ", entityType = "MEETING")
 
+    @Loggable(actionType = "READ", entityType = "MEETING")
     public List<Meeting> getMeetingsByYear(int year) {
         return meetingRepository.findByYear(year);
     }
@@ -81,7 +81,6 @@ public class MeetingService {
                 })
                 .collect(Collectors.toList());
     }
-
 
     @Loggable(actionType = "UPDATE", entityType = "MEETING")
     @Transactional
@@ -97,9 +96,6 @@ public class MeetingService {
         }
 
         Meeting savedMeeting = meetingRepository.save(meeting);
-
-
-
         return savedMeeting;
     }
 
@@ -190,11 +186,11 @@ public class MeetingService {
         }
     }
 
-
     private List<String> getParticipantEmailsForMeeting(Long meetingId) {
         // Implémentez cette méthode pour retourner la liste des emails des participants
         return Arrays.asList("participant1@example.com", "participant2@example.com");
     }
+
     public ResponseEntity<Resource> generatePdfPlanning(int year) {
         try {
             List<Meeting> meetings = getMeetingsByYear(year);
@@ -268,6 +264,87 @@ public class MeetingService {
                     .body(resource);
         } catch (DocumentException e) {
             throw new RuntimeException("Erreur lors de la génération du PDF", e);
+        }
+    }
+
+    // ==== MÉTHODES DE GESTION DE L'ORDRE DU JOUR (anciennement dans MeetingAgendaService) ====
+
+    /**
+     * Récupère tous les projets à l'ordre du jour d'une réunion
+     */
+    @Transactional(readOnly = true)
+    public List<Project> getAgendaProjects(Long meetingId) {
+        return meetingProjectRepository.findByMeetingIdOrderByOrderIndex(meetingId)
+                .stream()
+                .map(MeetingProject::getProject)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Ajoute un projet à l'ordre du jour d'une réunion
+     */
+    @Transactional
+    public void addProjectToAgenda(Long meetingId, Long projectId) {
+        // Vérifier si déjà présent
+        if (meetingProjectRepository.existsByMeetingIdAndProjectId(meetingId, projectId)) {
+            throw new IllegalArgumentException("Le projet est déjà dans l'ordre du jour");
+        }
+
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Réunion non trouvée"));
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Projet non trouvé"));
+
+        Integer nextOrder = meetingProjectRepository.getNextOrderIndex(meetingId);
+
+        MeetingProject meetingProject = new MeetingProject();
+        meetingProject.setMeeting(meeting);
+        meetingProject.setProject(project);
+        meetingProject.setOrderIndex(nextOrder);
+
+        meetingProjectRepository.save(meetingProject);
+    }
+
+    /**
+     * Supprime un projet de l'ordre du jour d'une réunion
+     */
+    @Transactional
+    public void removeProjectFromAgenda(Long meetingId, Long projectId) {
+        if (!meetingProjectRepository.existsByMeetingIdAndProjectId(meetingId, projectId)) {
+            throw new IllegalArgumentException("Le projet n'est pas dans l'ordre du jour");
+        }
+
+        meetingProjectRepository.deleteByMeetingIdAndProjectId(meetingId, projectId);
+
+        // Réorganiser les indices
+        List<MeetingProject> agenda = meetingProjectRepository.findByMeetingIdOrderByOrderIndex(meetingId);
+        for (int i = 0; i < agenda.size(); i++) {
+            agenda.get(i).setOrderIndex(i);
+            meetingProjectRepository.save(agenda.get(i));
+        }
+    }
+
+    /**
+     * Réorganise l'ordre du jour d'une réunion
+     */
+    @Transactional
+    public void reorderAgenda(Long meetingId, List<Long> projectIds) {
+        List<MeetingProject> currentAgenda = meetingProjectRepository.findByMeetingIdOrderByOrderIndex(meetingId);
+
+        if (currentAgenda.size() != projectIds.size()) {
+            throw new IllegalArgumentException("Le nombre de projets ne correspond pas");
+        }
+
+        for (int i = 0; i < projectIds.size(); i++) {
+            Long projectId = projectIds.get(i);
+            MeetingProject mp = currentAgenda.stream()
+                    .filter(item -> item.getProject().getId().equals(projectId))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Projet non trouvé dans l'ordre du jour"));
+
+            mp.setOrderIndex(i);
+            meetingProjectRepository.save(mp);
         }
     }
 }

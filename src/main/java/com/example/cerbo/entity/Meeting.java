@@ -10,6 +10,8 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -33,5 +35,15 @@ public class Meeting {
     @JsonSerialize(using = LocalTimeSerializer.class)
     @Column(name = "time")
     private LocalTime time;
-    // Getters et setters (générés par @Data de Lombok)
+
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<MeetingProject> agendaItems = new ArrayList<>();
+
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MeetingAttendee> attendees = new ArrayList<>();
+
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MeetingAttendance> attendances = new ArrayList<>();
+
 }

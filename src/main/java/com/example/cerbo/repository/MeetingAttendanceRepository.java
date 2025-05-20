@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MeetingAttendanceRepository extends JpaRepository<MeetingAttendance, Long> {
@@ -34,6 +35,8 @@ public interface MeetingAttendanceRepository extends JpaRepository<MeetingAttend
 
     MeetingAttendance findByMeetingAndEvaluator(Meeting meeting, User evaluator);
 
+    Optional<MeetingAttendance> findByMeetingIdAndEvaluatorId(Long meetingId, Long evaluatorId);
+
     @Modifying
     @Query("DELETE FROM MeetingAttendance a WHERE a.evaluator.id = :evaluatorId")
     void deleteAllByEvaluatorId(@Param("evaluatorId") Long evaluatorId);
@@ -51,4 +54,8 @@ public interface MeetingAttendanceRepository extends JpaRepository<MeetingAttend
             "YEAR(a.meeting.date) = :year")
     int countAnnualUnjustifiedAbsences(@Param("evaluatorId") Long evaluatorId,
                                        @Param("year") int year);
+
+    @Modifying
+    @Query("DELETE FROM MeetingAttendance ma WHERE ma.evaluator.id = :evaluatorId")
+    void deleteByEvaluatorId(@Param("evaluatorId") Long evaluatorId);
 }
