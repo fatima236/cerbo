@@ -670,6 +670,15 @@ public class ProjectController {
                 projectMap.put("sampleType", project.getSampleType());
                 projectMap.put("sampleQuantity", project.getSampleQuantity());
 
+                Map<String, Object> investigator = new HashMap<>();
+                investigator.put("id", project.getPrincipalInvestigator().getId());
+                investigator.put("email", project.getPrincipalInvestigator().getEmail());
+// Corriger les clés pour correspondre au frontend
+                investigator.put("prenom", project.getPrincipalInvestigator().getPrenom());
+                investigator.put("nom", project.getPrincipalInvestigator().getNom());
+                investigator.put("affiliation", project.getPrincipalInvestigator().getAffiliation());
+                investigator.put("laboratoire", project.getPrincipalInvestigator().getLaboratoire());
+                projectMap.put("principalInvestigator", investigator);
                 // Documents
                 List<Map<String, Object>> documents = project.getDocuments().stream()
                         .map(doc -> {
