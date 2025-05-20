@@ -48,6 +48,7 @@ public class DocumentReview {
     private User validatedBy;
 
 
+
     @Column(columnDefinition = "TEXT")
     private String content;
 
@@ -62,6 +63,8 @@ public class DocumentReview {
     private boolean includedInReport = false;
 
     private boolean validated = false;
+
+    private String raisonOfRejection;
 
 
     @Column(nullable = false)

@@ -16,6 +16,7 @@ import com.lowagie.text.FontFactory;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfWriter;
 import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileOutputStream;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Service
 @AllArgsConstructor
 public class ReportService {
     private final ReportRepository reportRepository;
@@ -39,8 +41,16 @@ public class ReportService {
     public Report createReport(Long projectId, List<Long> reviewIds) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        Report report = new Report();
+        report.setProject(project);
+        report.setCreationDate(LocalDateTime.now());
+        report.setResponseDeadline(LocalDateTime.now().plusDays(7));
+        reportRepository.save(report);
 
         List<DocumentReview> reviews = documentReviewRepository.findAllById(reviewIds);
+
+        Map<com.example.cerbo.entity.Document, List<DocumentReview>> grouped = reviews.stream()
+                .collect(Collectors.groupingBy(DocumentReview::getDocument));
 
         // Vérifier que toutes les remarques appartiennent au même projet
         reviews.forEach(review -> {
@@ -53,19 +63,33 @@ public class ReportService {
             }
         });
 
-        Report report = new Report();
-        report.setProject(project);
-        report.setCreationDate(LocalDateTime.now());
+        for (Map.Entry<com.example.cerbo.entity.Document, List<DocumentReview>> entry : grouped.entrySet()) {
+            com.example.cerbo.entity.Document doc = entry.getKey();
+            List<DocumentReview> docRemarks = entry.getValue();
+
+            String content = docRemarks.stream()
+                    .map(dr -> "- " + dr.getContent())
+                    .collect(Collectors.joining("\n"));
+
+            DocumentReview synthetic = new DocumentReview();
+            synthetic.setDocument(doc);
+            synthetic.setProject(project);
+            synthetic.setReport(report);
+            synthetic.setContent(content);
+            synthetic.setIncludedInReport(true);
+            synthetic.setFinalized(true);
+            synthetic.setFinal_submission(true);
+            synthetic.setStatus(RemarkStatus.VALIDATED);
+            synthetic.setCreationDate(LocalDateTime.now());
+
+            documentReviewRepository.save(synthetic);
+        }
+
+        projectRepository.save(project);
+
         report.setStatus(ReportStatus.NON_ENVOYE);
 
         Report savedReport = reportRepository.save(report);
-
-        // Associer les remarques au rapport
-        reviews.forEach(review -> {
-            review.setReport(savedReport);
-            review.setIncludedInReport(true);
-            documentReviewRepository.save(review);
-        });
 
         return savedReport;
     }
@@ -114,7 +138,7 @@ public class ReportService {
 
         Path path = folder.resolve(fileName);
 
-        List<DocumentReview> reviews = documentReviewRepository.findValidatedRemarksByProjectId(report.getProject().getId());
+        List<DocumentReview> reviews = documentReviewRepository.findByReportIdAndIncludedInReportTrue(report.getId());
 
         Map<String, List<DocumentReview>> groupedReviews = reviews.stream()
                 .collect(Collectors.groupingBy(review -> review.getDocument().getType().toString()));

@@ -12,6 +12,7 @@ import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.service.RemarkReportService;
+import com.example.cerbo.service.reportService.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,7 @@ public class RemarkReportController {
     private final ProjectRepository projectRepository;
     private final DocumentRepository documentRepository;
     private final DocumentReviewRepository documentReviewRepository;
+    private final ReportService reportService;
 
     private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
         DocumentReviewDTO dto = new DocumentReviewDTO();
@@ -103,46 +105,75 @@ public class RemarkReportController {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId,
-                                                      @RequestBody List<Long> documentReviewIds) {
+    public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId) {
         try {
-            // Récupérer les DocumentReview qui répondent aux critères
-            List<DocumentReview> validReviews = documentReviewRepository.findAllById(documentReviewIds).stream()
-                    .filter(review -> review.getAdminEmail() != null)
-                    .filter(review -> review.getAdminValidationDate() != null)
-                    .filter(review -> review.getContent() != null && !review.getContent().isEmpty())
-                    .collect(Collectors.toList());
+            Project project = projectRepository.findById(projectId).orElse(null);
+            Report report = reportService.finalizeAndSendReport(project.getLatestReport().getId());
 
-            if (validReviews.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Aucune remarque valide sélectionnée (doit avoir admin_email, admin_validation_date et remark non vide)"
-                ));
-            }
+            return ResponseEntity.ok(report);
 
-            // Extraire les IDs des documents associés
-            List<Long> validDocumentIds = validReviews.stream()
-                    .map(review -> review.getDocument().getId())
-                    .distinct()
-                    .collect(Collectors.toList());
-            Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
-
-            // Appeler le service avec les documents valides
-            Report report =remarkReportService.generateAndSendReportx(projectId);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Rapport généré avec succès",
-                    "deadline", project.getResponseDeadline().format(DateTimeFormatter.ISO_DATE_TIME),
-                    "documentsIncluded", validDocumentIds.size(),
-                    "remarksIncluded", validReviews.size()
-            ));
-        } catch (Exception e) {
+        }
+        catch (Exception e){
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Erreur lors de la génération du rapport: " + e.getMessage()
             ));
         }
+    }
+
+//    @PostMapping("/send")
+//    public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId,
+//                                                      @RequestBody List<Long> documentReviewIds) {
+//        try {
+//            // Récupérer les DocumentReview qui répondent aux critères
+//            List<DocumentReview> validReviews = documentReviewRepository.findAllById(documentReviewIds).stream()
+//                    .filter(review -> review.getAdminEmail() != null)
+//                    .filter(review -> review.getAdminValidationDate() != null)
+//                    .filter(review -> review.getContent() != null && !review.getContent().isEmpty())
+//                    .collect(Collectors.toList());
+//
+//            if (validReviews.isEmpty()) {
+//                return ResponseEntity.badRequest().body(Map.of(
+//                        "success", false,
+//                        "message", "Aucune remarque valide sélectionnée (doit avoir admin_email, admin_validation_date et remark non vide)"
+//                ));
+//            }
+//
+//            // Extraire les IDs des documents associés
+//            List<Long> validDocumentIds = validReviews.stream()
+//                    .map(review -> review.getDocument().getId())
+//                    .distinct()
+//                    .collect(Collectors.toList());
+//            Project project = projectRepository.findById(projectId)
+//                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
+//
+//            // Appeler le service avec les documents valides
+//            Report report =remarkReportService.generateAndSendReportx(projectId);
+//
+//            return ResponseEntity.ok(Map.of(
+//                    "success", true,
+//                    "message", "Rapport généré avec succès",
+//                    "deadline", project.getResponseDeadline().format(DateTimeFormatter.ISO_DATE_TIME),
+//                    "documentsIncluded", validDocumentIds.size(),
+//                    "remarksIncluded", validReviews.size()
+//            ));
+//        } catch (Exception e) {
+//            return ResponseEntity.badRequest().body(Map.of(
+//                    "success", false,
+//                    "message", "Erreur lors de la génération du rapport: " + e.getMessage()
+//            ));
+//        }
+//    }
+
+    @PostMapping("/genered")
+    public ResponseEntity<Report> generedReport(@PathVariable Long projectId) {
+        Project project =projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        List<Long> documentReview = documentReviewRepository.documentReviewValidated(projectId);
+        Report report = reportService.createReport(projectId, documentReview);
+
+        return ResponseEntity.ok(report);
     }
 }

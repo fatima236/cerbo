@@ -219,7 +219,7 @@ public class AdminRemarkController {
             }
 
             // Empêcher la modification si déjà validé
-            if (review.getStatus() == RemarkStatus.VALIDATED) {
+            if (review.getStatus() == RemarkStatus.VALIDATED && review.getReport() == null) {
                 return ResponseEntity.badRequest().body("Une remarque validée ne peut plus être modifiée");
             }
 

@@ -104,7 +104,7 @@ public class DocumentReviewController {
 
         if (!document.getProject().getId().equals(projectId)) {
             throw new BusinessException("Ce document n'appartient pas au projet spécifié");
-            }
+        }
 
         User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
@@ -240,32 +240,32 @@ public class DocumentReviewController {
     @PreAuthorize("hasRole('EVALUATEUR')")
     public ResponseEntity<List<DocumentReviewDTO>> getMyProjectReviews(
             @PathVariable Long projectId,
-        Authentication authentication) {
+            Authentication authentication) {
 
-            User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
-                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+        User reviewer = Optional.ofNullable(userRepository.findByEmail(authentication.getName()))
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
-            // Récupérer tous les documents du projet
-            List<Document> documents = documentRepository.findByProjectId(projectId);
+        // Récupérer tous les documents du projet
+        List<Document> documents = documentRepository.findByProjectId(projectId);
 
-            List<DocumentReviewDTO> result = documents.stream().map(document -> {
-                DocumentReview review = documentReviewRepository
-                        .findByDocumentIdAndReviewerId(document.getId(), reviewer.getId())
-                        .orElse(null);
+        List<DocumentReviewDTO> result = documents.stream().map(document -> {
+            DocumentReview review = documentReviewRepository
+                    .findByDocumentIdAndReviewerId(document.getId(), reviewer.getId())
+                    .orElse(null);
 
-                if (review != null) {
-                    return convertToDTO(review);
-                } else {
-                    DocumentReviewDTO emptyReview = new DocumentReviewDTO();
-                    emptyReview.setDocumentId(document.getId());
-                    emptyReview.setDocumentName(document.getName());
-                    emptyReview.setDocumentType(document.getType());
-                    emptyReview.setStatus(RemarkStatus.PENDING);
-                    emptyReview.setProjectId(projectId);
-                    emptyReview.setProjectTitle(document.getProject().getTitle());
-                    return emptyReview;
-                }
-            }).collect(Collectors.toList());
+            if (review != null) {
+                return convertToDTO(review);
+            } else {
+                DocumentReviewDTO emptyReview = new DocumentReviewDTO();
+                emptyReview.setDocumentId(document.getId());
+                emptyReview.setDocumentName(document.getName());
+                emptyReview.setDocumentType(document.getType());
+                emptyReview.setStatus(RemarkStatus.PENDING);
+                emptyReview.setProjectId(projectId);
+                emptyReview.setProjectTitle(document.getProject().getTitle());
+                return emptyReview;
+            }
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(result);
     }
