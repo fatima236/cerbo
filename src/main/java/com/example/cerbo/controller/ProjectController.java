@@ -211,12 +211,17 @@ public class ProjectController {
             }
 
             // Investigateur principal
+            // In ProjectController.java
             if (project.getPrincipalInvestigator() != null) {
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
                 investigator.put("email", project.getPrincipalInvestigator().getEmail());
                 investigator.put("firstName", project.getPrincipalInvestigator().getPrenom());
                 investigator.put("lastName", project.getPrincipalInvestigator().getNom());
+                // Add these new fields:
+                investigator.put("affiliation", project.getPrincipalInvestigator().getAffiliation());
+                investigator.put("laboratoire", project.getPrincipalInvestigator().getLaboratoire());
+                investigator.put("titre", project.getPrincipalInvestigator().getTitre());
                 response.put("principalInvestigator", investigator);
             }
 
