@@ -1,14 +1,19 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.*;
+import com.example.cerbo.entity.User;
+
 import com.example.cerbo.entity.*;
+import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.ProjectStatus;
+import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.core.io.Resource;
 import com.example.cerbo.repository.DocumentRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.ProjectService;
 import com.example.cerbo.service.FileStorageService;
@@ -26,6 +31,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,6 +57,9 @@ public class ProjectController {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
+    private final DocumentRepository documentRepository;
+    private final DocumentReviewRepository documentReviewRepository;
+
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -782,7 +791,23 @@ public class ProjectController {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
+
+
 
 
 

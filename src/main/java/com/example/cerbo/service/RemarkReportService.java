@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -185,5 +186,12 @@ public class RemarkReportService {
 //                );
 //            }
 //        }
+    @Transactional(readOnly = true)
+    public Optional<Report> findLatestReportForProject(Long projectId) {
+        return reportRepository.findTopByProjectIdAndStatusOrderByCreatedAtDesc(
+                projectId,
+                ReportStatus.SENT
+        );
+    }
 //    }
 }

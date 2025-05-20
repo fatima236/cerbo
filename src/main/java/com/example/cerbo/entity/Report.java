@@ -31,6 +31,8 @@ public class Report {
     private LocalDateTime responseDeadline;
 
     private Boolean responsed = false;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     private LocalDateTime responseDate;
 

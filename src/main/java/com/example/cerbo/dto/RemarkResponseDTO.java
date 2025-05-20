@@ -1,4 +1,5 @@
 package com.example.cerbo.dto;
+import java.util.List;
 
 import com.example.cerbo.entity.enums.DocumentType;
 import lombok.Data;
@@ -7,6 +8,8 @@ import java.time.LocalDateTime;
 
 @Data
 public class RemarkResponseDTO {
+    private List<DocumentInfoDTO> documents;
+    private List<RemarkDTO> remarks;
     private Long id;
     private String content;
     private LocalDateTime creationDate;

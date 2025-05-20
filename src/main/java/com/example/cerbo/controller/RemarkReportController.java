@@ -1,13 +1,21 @@
 package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.DocumentReviewDTO;
+
+import java.nio.file.*;
+import java.io.IOException;
+import java.nio.file.Path;
+
+import com.example.cerbo.entity.*;
+import com.example.cerbo.service.ProjectService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import com.example.cerbo.dto.RemarkDTO;
-import com.example.cerbo.entity.Document;
-import com.example.cerbo.entity.DocumentReview;
-import com.example.cerbo.entity.Project;
-import com.example.cerbo.entity.Report;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.entity.User;
 import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
@@ -16,6 +24,7 @@ import com.example.cerbo.service.reportService.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.example.cerbo.repository.DocumentReviewRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,6 +40,7 @@ import java.util.stream.Collectors;
 public class RemarkReportController {
 
     private final RemarkReportService remarkReportService;
+    private final ProjectService projectService;
     private final ProjectRepository projectRepository;
     private final DocumentRepository documentRepository;
     private final DocumentReviewRepository documentReviewRepository;
@@ -175,5 +185,66 @@ public class RemarkReportController {
         Report report = reportService.createReport(projectId, documentReview);
 
         return ResponseEntity.ok(report);
+    }
+    @GetMapping(value = "/download", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("INVESTIGATEUR")
+    public ResponseEntity<byte[]> downloadReport(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal User currentUser) throws IOException {
+
+        // 1. Vérification du projet et des permissions
+        Project project = projectService.getProjectById(projectId);
+        if (project == null) {
+            System.err.println("❌ Projet non trouvé ID: " + projectId); // Log 2
+            throw new RuntimeException("Projet non trouvé");
+        }
+
+        if (!project.getPrincipalInvestigator().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Accès refusé pour l'utilisateur ID: " + currentUser.getId());
+        }
+
+        // 2. Récupération du rapport
+        Report report = remarkReportService.findLatestReportForProject(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aucun rapport disponible pour le projet ID: " + projectId));
+
+        // 3. Construction du chemin du fichier
+        Path filePath;
+        try {
+            // Solution temporaire - À supprimer après correction de la base de données
+            String correctedPath = report.getFilePath().contains("reportstrapport")
+                    ? report.getFilePath().replace("reportstrapport", "reports/rapport")
+                    : report.getFilePath();
+
+            filePath = Paths.get(correctedPath).normalize().toAbsolutePath();
+
+            // Validation de sécurité: empêche les attaques par path traversal
+            if (!filePath.startsWith(Paths.get("uploads").toAbsolutePath())) {
+                throw new SecurityException("Chemin du rapport non autorisé");
+            }
+        } catch (InvalidPathException e) {
+            throw new ResourceNotFoundException("Chemin du rapport invalide: " + report.getFilePath());
+        }
+
+        // 4. Vérification et lecture du fichier
+        if (!Files.exists(filePath)) {
+            throw new ResourceNotFoundException(
+                    String.format("Fichier rapport introuvable. Chemin: %s | Nom du fichier: %s",
+                            filePath.getParent(), report.getFileName())
+            );
+        }
+
+        // 5. Préparation de la réponse
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + report.getFileName() + "\"");
+        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+        headers.add(HttpHeaders.PRAGMA, "no-cache");
+        headers.add(HttpHeaders.EXPIRES, "0");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(Files.size(filePath))
+                .body(Files.readAllBytes(filePath));
     }
 }
