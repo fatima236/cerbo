@@ -47,7 +47,6 @@ public class DocumentReview {
     @JoinColumn(name = "validated_by")
     private User validatedBy;
 
-    private Boolean validated=false;
 
 
     @Column(columnDefinition = "TEXT")
