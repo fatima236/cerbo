@@ -48,6 +48,7 @@ public class DocumentReview {
     private User validatedBy;
 
 
+
     @Column(columnDefinition = "TEXT")
     private String content;
 
