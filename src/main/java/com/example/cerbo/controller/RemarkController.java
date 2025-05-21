@@ -1,12 +1,15 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.RemarkDTO;
+import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.Remark;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
+import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.RemarkRepository;
 import com.example.cerbo.repository.UserRepository;
@@ -47,7 +50,7 @@ public class RemarkController {
     private final RemarkService remarkService;
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
-
+    private final DocumentReviewRepository documentReviewRepository;
     @GetMapping
     @PreAuthorize("@projectSecurity.isProjectMember(#projectId, authentication)")
     public ResponseEntity<List<RemarkDTO>> getProjectRemarks(@PathVariable Long projectId) {
@@ -277,57 +280,56 @@ public class RemarkController {
 
         return dto;
     }
+
+
     @GetMapping("/validated-remarks-grouped")
-    @PreAuthorize("@projectSecurity.isProjectMember(#projectId, authentication)")
     public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
             @PathVariable Long projectId) {
 
         try {
-            // 1. Validation du projectId
-            if (projectId == null || projectId <= 0) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "error", "ID de projet invalide"
-                ));
-            }
+            // 1. Utilisez la même méthode que le POST
+            List<Long> documentReviewIds = documentReviewRepository.documentReviewValidated(projectId);
 
-            // 2. Vérification de l'existence du projet
-            if (!projectRepository.existsById(projectId)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                        "success", false,
-                        "error", "Projet non trouvé"
-                ));
-            }
+            // 2. Récupérez les DocumentReview complets
+            List<DocumentReview> reviews = documentReviewRepository.findAllById(documentReviewIds);
 
-            // 3. Récupération des remarques validées
-            List<Remark> validatedRemarks = remarkRepository.findByProjectIdAndAdminStatus(
-                    projectId,
-                    RemarkStatus.VALIDATED
-            );
-
-            // 4. Conversion et regroupement
-            Map<String, List<RemarkDTO>> groupedRemarks = validatedRemarks.stream()
-                    .map(this::convertToDto)
+            // 3. Conversion en DTO et regroupement
+            Map<String, List<DocumentReviewDTO>> groupedReviews = reviews.stream()
+                    .map(this::convertToDTO)
                     .collect(Collectors.groupingBy(
-                            dto -> "GENERAL", // Ou un autre critère
+                            dto -> dto.getReviewerNom() != null ? dto.getReviewerNom() : "UNKNOWN",
                             TreeMap::new,
                             Collectors.toList()
                     ));
 
-            // 5. Construction de la réponse
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", groupedRemarks);
-            response.put("count", validatedRemarks.size());
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", groupedReviews,
+                    "count", reviews.size()
+            ));
 
         } catch (Exception e) {
-            log.error("Erreur dans getValidatedRemarksGrouped", e);
             return ResponseEntity.internalServerError().body(Map.of(
                     "success", false,
-                    "error", "Erreur serveur: " + e.getMessage()
+                    "error", "Erreur serveur"
             ));
         }
+    }
+    private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
+        DocumentReviewDTO dto = new DocumentReviewDTO();
+        dto.setId(documentReview.getId());
+        dto.setContent(documentReview.getContent());
+        dto.setCreationDate(documentReview.getCreationDate());
+
+        if (documentReview.getReviewer() != null) {
+            dto.setReviewerId(documentReview.getReviewer().getId());
+            dto.setReviewerNom(documentReview.getReviewer().getNom());
+            dto.setReviewerPrenom(documentReview.getReviewer().getPrenom());
+        }
+
+        dto.setStatus(documentReview.getStatus());
+        dto.setResponse(documentReview.getResponse());
+
+        return dto;
     }
 }
