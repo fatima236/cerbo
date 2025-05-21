@@ -282,38 +282,48 @@ public class RemarkController {
         return dto;
     }
 
+
     private final ChatGptService chatGptService;
+
     @GetMapping("/validated-remarks-grouped")
     public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
             @PathVariable Long projectId) {
 
         try {
-            // 1. Récupérer les remarques finales incluses dans le rapport
-            List<DocumentReview> reviews = documentReviewRepository.findFinalRemarksForReport(projectId);
+            // 1. Récupérer le dernier rapport envoyé pour ce projet
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-            // 2. Grouper par document
+            if (project.getLatestReport() == null) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "data", Collections.emptyMap(),
+                        "count", 0
+                ));
+            }
+
+            // 2. Récupérer les remarques incluses dans ce rapport
+            List<DocumentReview> reviews = documentReviewRepository
+                    .findByReportId(project.getLatestReport().getId());
+
+            // 3. Grouper par document
             Map<Long, List<DocumentReview>> reviewsByDocument = reviews.stream()
                     .collect(Collectors.groupingBy(review -> review.getDocument().getId()));
 
-            // 3. Pour chaque document, générer une remarque synthétique
+            // 4. Pour chaque document, utiliser les remarques originales
             Map<String, List<DocumentReviewDTO>> groupedByDocumentType = new TreeMap<>();
 
             for (Map.Entry<Long, List<DocumentReview>> entry : reviewsByDocument.entrySet()) {
-                // Concaténer toutes les remarques du document
-                String allRemarksForDoc = entry.getValue().stream()
-                        .map(DocumentReview::getContent)
-                        .filter(content -> content != null && !content.trim().isEmpty())
-                        .collect(Collectors.joining("\n"));
-
-                // Générer la remarque synthétique
-                String syntheticRemark = !allRemarksForDoc.isEmpty()
-                        ? chatGptService.generateSyntheticRemark(allRemarksForDoc)
-                        : "Aucune remarque disponible";
-
-                // Créer le DTO avec la remarque synthétique
+                // Prendre simplement la première remarque (ou gérer différemment selon votre besoin)
                 DocumentReview firstReview = entry.getValue().get(0);
                 DocumentReviewDTO dto = convertToDTO(firstReview);
-                dto.setContent(syntheticRemark); // Remplacer par la version AI
+
+                // Vous pouvez aussi concaténer toutes les remarques si nécessaire:
+                // String allRemarks = entry.getValue().stream()
+                //         .map(DocumentReview::getContent)
+                //         .filter(content -> content != null && !content.trim().isEmpty())
+                //         .collect(Collectors.joining("\n"));
+                // dto.setContent(allRemarks);
 
                 // Grouper par type de document
                 String docType = firstReview.getDocument().getType().name();

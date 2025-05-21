@@ -67,4 +67,9 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
             "AND dr.finalized = true " +
             "AND dr.includedInReport = true")
     List<DocumentReview> findFinalRemarksForReport(@Param("projectId") Long projectId);
+
+
+
+    @Query("SELECT dr FROM DocumentReview dr WHERE dr.report.id = :reportId")
+    List<DocumentReview> findByReportId(@Param("reportId") Long reportId);
 }
