@@ -11,7 +11,10 @@ import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.ReportRepository;
 import com.example.cerbo.service.NotificationService;
+import com.example.cerbo.service.chatGptService.ChatGptService;
+import com.itextpdf.text.BaseColor;
 import com.lowagie.text.Document;
+import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfWriter;
@@ -19,6 +22,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.*;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +40,7 @@ public class ReportService {
     private final DocumentReviewRepository documentReviewRepository;
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
+    private final ChatGptService chatGptService;
 
     @Transactional
     public Report createReport(Long projectId, List<Long> reviewIds) {
@@ -67,15 +72,21 @@ public class ReportService {
             com.example.cerbo.entity.Document doc = entry.getKey();
             List<DocumentReview> docRemarks = entry.getValue();
 
-            String content = docRemarks.stream()
-                    .map(dr -> "- " + dr.getContent())
+//            String content = docRemarks.stream()
+//                    .map(dr -> "- " + dr.getContent())
+//                    .collect(Collectors.joining("\n"));
+
+            String prompt = docRemarks.stream()
+                    .map(DocumentReview::getContent)
                     .collect(Collectors.joining("\n"));
+
+            String syntheticContent = chatGptService.generateSyntheticRemark(prompt);
 
             DocumentReview synthetic = new DocumentReview();
             synthetic.setDocument(doc);
             synthetic.setProject(project);
             synthetic.setReport(report);
-            synthetic.setContent(content);
+            synthetic.setContent(syntheticContent);
             synthetic.setIncludedInReport(true);
             synthetic.setFinalized(true);
             synthetic.setFinal_submission(true);
@@ -147,27 +158,58 @@ public class ReportService {
         PdfWriter.getInstance(document, new FileOutputStream(path.toFile()));
         document.open();
 
+        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLUE);
+        Font remarkDocumentFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.LIGHT_GRAY);
+        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.black);
+        Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
+        Font redFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.RED);
 
-        document.add(new Paragraph("Rapport d'évaluation"));
-        document.add(new Paragraph("Projet : " + report.getProject().getTitle()));
-        document.add(new Paragraph("Date : " + report.getCreationDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        Project project = report.getProject();
+
+        document.add(new Paragraph("Rapport d’évaluation", titleFont));
         document.add(new Paragraph(" "));
-        document.add(new Paragraph("Remarques incluses :", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
+        document.add(new Paragraph("Projet : " + project.getTitle(), normalFont));
+        document.add(new Paragraph("Référence : " + project.getReference(), normalFont));
+        document.add(new Paragraph("Statut du projet : " + project.getStatus(), normalFont));
+        document.add(new Paragraph("Date de soumission : " + project.getSubmissionDate().format(dateTimeFormatter), normalFont));
 
+        if (project.getResponseDeadline() != null) {
+            document.add(new Paragraph("Date limite de réponse aux remarques : " +
+                    project.getResponseDeadline().format(dateTimeFormatter), redFont));
+        } else {
+            document.add(new Paragraph("Date limite de réponse aux remarques : Non définie", normalFont));
+        }
+
+        document.add(new Paragraph("Date du rapport : " + report.getCreationDate().format(dateFormatter), normalFont));
+        document.add(new Paragraph("Investigateur principal : " + project.getPrincipalInvestigator().getFullName(), normalFont));
+        document.add(new Paragraph(" "));
+
+        document.add(new Paragraph("Remarques incluses :", sectionFont));
         for (String docType : groupedReviews.keySet()) {
-            document.add(new Paragraph(docType, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
+            document.add(new Paragraph(docType, remarkDocumentFont));
             List<DocumentReview> docReviews = groupedReviews.get(docType);
-            int remarkNumber = 1;
+
             for (DocumentReview review : docReviews) {
-                document.add(new Paragraph("remarque " + remarkNumber + ": " + review.getContent()));
-                remarkNumber++;
+                document.add(new Paragraph( review.getContent(), normalFont));
             }
             document.add(new Paragraph(" "));
         }
 
+        document.add(new Paragraph(" ")); // ligne vide pour espacer
+
+        Font warningFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.RED);
+        document.add(new Paragraph(
+                "AVERTISSEMENT : Vous devez répondre à toutes les remarques disponibles dans votre compte. " +
+                        "Si vous ne répondez pas, le projet sera rejeté automatiquement.",
+                warningFont));
+
         document.close();
         return path;
     }
+
     @Transactional(readOnly = true)
     public Report getReportById(Long reportId) {
         return reportRepository.findById(reportId)

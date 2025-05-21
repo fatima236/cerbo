@@ -48,11 +48,13 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     Optional<DocumentReview> findByDocumentIdAndReviewerId(Long documentId, Long reviewerId);
 
-
-    @Query("SELECT  dr.id FROM DocumentReview dr " +
+    @Query("SELECT dr.id FROM DocumentReview dr " +
             "WHERE dr.project.id = :projectId " +
-            "AND dr.status = 'VALIDATED'"+
-            "AND dr.content <> '' ")
+            "AND dr.status = 'VALIDATED' " +
+            "AND dr.content <> ''")
     List<Long> documentReviewValidated(@Param("projectId") Long projectId);
+
+
+
 
 }
