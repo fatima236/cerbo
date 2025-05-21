@@ -287,23 +287,31 @@ public class RemarkController {
             @PathVariable Long projectId) {
 
         try {
-            // 1. Récupérer les DocumentReview validés avec les documents associés
-            List<DocumentReview> reviews = documentReviewRepository.findValidatedRemarksWithDocuments(projectId);
+            // 1. Récupérer les remarques finales incluses dans le rapport
+            List<DocumentReview> reviews = documentReviewRepository.findFinalRemarksForReport(projectId);
 
-            // 2. Grouper par type de document
-            Map<String, List<DocumentReviewDTO>> groupedByDocumentType = reviews.stream()
+            // 2. Grouper par document et ne garder qu'une seule remarque par document
+            Map<Long, DocumentReview> uniqueReviewsByDocument = reviews.stream()
+                    .collect(Collectors.toMap(
+                            review -> review.getDocument().getId(),
+                            review -> review,
+                            (existing, replacement) -> existing // Garder la première remarque en cas de doublon
+                    ));
+
+            // 3. Convertir en liste et grouper par type de document
+            Map<String, List<DocumentReviewDTO>> groupedByDocumentType = uniqueReviewsByDocument.values().stream()
                     .map(this::convertToDTO)
-                    .filter(dto -> dto.getDocumentType() != null) // Filtre les documents sans type
+                    .filter(dto -> dto.getDocumentType() != null)
                     .collect(Collectors.groupingBy(
-                            dto -> dto.getDocumentType().name(), // Utilise le type de document
-                            TreeMap::new, // Trie par ordre alphabétique
+                            dto -> dto.getDocumentType().name(),
+                            TreeMap::new,
                             Collectors.toList()
                     ));
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", groupedByDocumentType,
-                    "count", reviews.size()
+                    "count", uniqueReviewsByDocument.size()
             ));
 
         } catch (Exception e) {
