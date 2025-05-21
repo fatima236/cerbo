@@ -287,24 +287,21 @@ public class RemarkController {
             @PathVariable Long projectId) {
 
         try {
-            // 1. Utilisez la même méthode que le POST
-            List<Long> documentReviewIds = documentReviewRepository.documentReviewValidated(projectId);
+            // 1. Récupérer les DocumentReview validés avec les documents associés
+            List<DocumentReview> reviews = documentReviewRepository.findValidatedRemarksWithDocuments(projectId);
 
-            // 2. Récupérez les DocumentReview complets
-            List<DocumentReview> reviews = documentReviewRepository.findAllById(documentReviewIds);
-
-            // 3. Conversion en DTO et regroupement
-            Map<String, List<DocumentReviewDTO>> groupedReviews = reviews.stream()
+            // 2. Grouper par nom de document
+            Map<String, List<DocumentReviewDTO>> groupedByDocument = reviews.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.groupingBy(
-                            dto -> dto.getReviewerNom() != null ? dto.getReviewerNom() : "UNKNOWN",
+                            dto -> dto.getDocumentName() != null ? dto.getDocumentName() : "DOCUMENT_INCONNU",
                             TreeMap::new,
                             Collectors.toList()
                     ));
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "data", groupedReviews,
+                    "data", groupedByDocument,
                     "count", reviews.size()
             ));
 
@@ -327,6 +324,10 @@ public class RemarkController {
             dto.setReviewerPrenom(documentReview.getReviewer().getPrenom());
         }
 
+        // Ajout du nom du document
+        if (documentReview.getDocument() != null) {
+            dto.setDocumentName(documentReview.getDocument().getName());
+        }
         dto.setStatus(documentReview.getStatus());
         dto.setResponse(documentReview.getResponse());
 
