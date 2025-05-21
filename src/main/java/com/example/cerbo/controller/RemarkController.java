@@ -293,9 +293,9 @@ public class RemarkController {
             // 2. Grouper par type de document
             Map<String, List<DocumentReviewDTO>> groupedByDocumentType = reviews.stream()
                     .map(this::convertToDTO)
-                    .filter(dto -> dto.getDocumentType() != null) // Filtre les null
+                    .filter(dto -> dto.getDocumentType() != null) // Filtre les documents sans type
                     .collect(Collectors.groupingBy(
-                            dto -> dto.getDocumentType().name(), // Utilisez le type de document
+                            dto -> dto.getDocumentType().name(), // Utilise le type de document
                             TreeMap::new, // Trie par ordre alphabétique
                             Collectors.toList()
                     ));
@@ -327,7 +327,6 @@ public class RemarkController {
             dto.setReviewerId(documentReview.getReviewer().getId());
             dto.setReviewerNom(documentReview.getReviewer().getNom());
             dto.setReviewerPrenom(documentReview.getReviewer().getPrenom());
-            dto.setReviewerEmail(documentReview.getReviewer().getEmail());
         }
 
         // Informations du document
