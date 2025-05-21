@@ -54,6 +54,11 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
             "AND dr.content <> ''")
     List<Long> documentReviewValidated(@Param("projectId") Long projectId);
 
+    @Query("SELECT dr FROM DocumentReview dr " +
+            "JOIN FETCH dr.document d " +
+            "WHERE dr.project.id = :projectId " +
+            "AND dr.status = 'VALIDATED'")
+    List<DocumentReview> findValidatedRemarksWithDocuments(@Param("projectId") Long projectId);
 
 
 
