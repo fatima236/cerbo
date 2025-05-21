@@ -2,6 +2,7 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.Meeting;
 import com.example.cerbo.service.MeetingService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,7 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/meetings")
+@Slf4j
+@RequestMapping("/api/meeting")
 public class MeetingController {
 
     private final MeetingService meetingService;
@@ -108,11 +110,15 @@ public class MeetingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Meeting> getMeetingById(@PathVariable Long id) {
-        Meeting meeting = meetingService.getMeetingById(id);
-        if (meeting == null) {
+        try {
+            Meeting meeting = meetingService.getMeetingById(id);
+            return ResponseEntity.ok(meeting);
+        } catch (RuntimeException e) {
+            // Log l'erreur pour le débogage
+            log.error("Erreur lors de la récupération de la réunion avec l'ID: " + id, e);
+            // Renvoyer une réponse 404 au client
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(meeting);
     }
 
 

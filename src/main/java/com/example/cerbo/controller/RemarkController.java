@@ -16,6 +16,7 @@ import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.RemarkService;
+import com.example.cerbo.service.chatGptService.ChatGptService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -282,36 +283,57 @@ public class RemarkController {
     }
 
 
+    private final ChatGptService chatGptService;
+
     @GetMapping("/validated-remarks-grouped")
     public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
             @PathVariable Long projectId) {
 
         try {
-            // 1. Récupérer les remarques finales incluses dans le rapport
-            List<DocumentReview> reviews = documentReviewRepository.findFinalRemarksForReport(projectId);
+            // 1. Récupérer le dernier rapport envoyé pour ce projet
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-            // 2. Grouper par document et ne garder qu'une seule remarque par document
-            Map<Long, DocumentReview> uniqueReviewsByDocument = reviews.stream()
-                    .collect(Collectors.toMap(
-                            review -> review.getDocument().getId(),
-                            review -> review,
-                            (existing, replacement) -> existing // Garder la première remarque en cas de doublon
-                    ));
+            if (project.getLatestReport() == null) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "data", Collections.emptyMap(),
+                        "count", 0
+                ));
+            }
 
-            // 3. Convertir en liste et grouper par type de document
-            Map<String, List<DocumentReviewDTO>> groupedByDocumentType = uniqueReviewsByDocument.values().stream()
-                    .map(this::convertToDTO)
-                    .filter(dto -> dto.getDocumentType() != null)
-                    .collect(Collectors.groupingBy(
-                            dto -> dto.getDocumentType().name(),
-                            TreeMap::new,
-                            Collectors.toList()
-                    ));
+            // 2. Récupérer les remarques incluses dans ce rapport
+            List<DocumentReview> reviews = documentReviewRepository
+                    .findByReportId(project.getLatestReport().getId());
+
+            // 3. Grouper par document
+            Map<Long, List<DocumentReview>> reviewsByDocument = reviews.stream()
+                    .collect(Collectors.groupingBy(review -> review.getDocument().getId()));
+
+            // 4. Pour chaque document, utiliser les remarques originales
+            Map<String, List<DocumentReviewDTO>> groupedByDocumentType = new TreeMap<>();
+
+            for (Map.Entry<Long, List<DocumentReview>> entry : reviewsByDocument.entrySet()) {
+                // Prendre simplement la première remarque (ou gérer différemment selon votre besoin)
+                DocumentReview firstReview = entry.getValue().get(0);
+                DocumentReviewDTO dto = convertToDTO(firstReview);
+
+                // Vous pouvez aussi concaténer toutes les remarques si nécessaire:
+                // String allRemarks = entry.getValue().stream()
+                //         .map(DocumentReview::getContent)
+                //         .filter(content -> content != null && !content.trim().isEmpty())
+                //         .collect(Collectors.joining("\n"));
+                // dto.setContent(allRemarks);
+
+                // Grouper par type de document
+                String docType = firstReview.getDocument().getType().name();
+                groupedByDocumentType.computeIfAbsent(docType, k -> new ArrayList<>()).add(dto);
+            }
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", groupedByDocumentType,
-                    "count", uniqueReviewsByDocument.size()
+                    "count", reviewsByDocument.size()
             ));
 
         } catch (Exception e) {
