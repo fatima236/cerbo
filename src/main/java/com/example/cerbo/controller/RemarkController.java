@@ -16,6 +16,7 @@ import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.RemarkService;
+import com.example.cerbo.service.chatGptService.ChatGptService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -281,7 +282,7 @@ public class RemarkController {
         return dto;
     }
 
-
+    private final ChatGptService chatGptService;
     @GetMapping("/validated-remarks-grouped")
     public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
             @PathVariable Long projectId) {
@@ -290,28 +291,39 @@ public class RemarkController {
             // 1. Récupérer les remarques finales incluses dans le rapport
             List<DocumentReview> reviews = documentReviewRepository.findFinalRemarksForReport(projectId);
 
-            // 2. Grouper par document et ne garder qu'une seule remarque par document
-            Map<Long, DocumentReview> uniqueReviewsByDocument = reviews.stream()
-                    .collect(Collectors.toMap(
-                            review -> review.getDocument().getId(),
-                            review -> review,
-                            (existing, replacement) -> existing // Garder la première remarque en cas de doublon
-                    ));
+            // 2. Grouper par document
+            Map<Long, List<DocumentReview>> reviewsByDocument = reviews.stream()
+                    .collect(Collectors.groupingBy(review -> review.getDocument().getId()));
 
-            // 3. Convertir en liste et grouper par type de document
-            Map<String, List<DocumentReviewDTO>> groupedByDocumentType = uniqueReviewsByDocument.values().stream()
-                    .map(this::convertToDTO)
-                    .filter(dto -> dto.getDocumentType() != null)
-                    .collect(Collectors.groupingBy(
-                            dto -> dto.getDocumentType().name(),
-                            TreeMap::new,
-                            Collectors.toList()
-                    ));
+            // 3. Pour chaque document, générer une remarque synthétique
+            Map<String, List<DocumentReviewDTO>> groupedByDocumentType = new TreeMap<>();
+
+            for (Map.Entry<Long, List<DocumentReview>> entry : reviewsByDocument.entrySet()) {
+                // Concaténer toutes les remarques du document
+                String allRemarksForDoc = entry.getValue().stream()
+                        .map(DocumentReview::getContent)
+                        .filter(content -> content != null && !content.trim().isEmpty())
+                        .collect(Collectors.joining("\n"));
+
+                // Générer la remarque synthétique
+                String syntheticRemark = !allRemarksForDoc.isEmpty()
+                        ? chatGptService.generateSyntheticRemark(allRemarksForDoc)
+                        : "Aucune remarque disponible";
+
+                // Créer le DTO avec la remarque synthétique
+                DocumentReview firstReview = entry.getValue().get(0);
+                DocumentReviewDTO dto = convertToDTO(firstReview);
+                dto.setContent(syntheticRemark); // Remplacer par la version AI
+
+                // Grouper par type de document
+                String docType = firstReview.getDocument().getType().name();
+                groupedByDocumentType.computeIfAbsent(docType, k -> new ArrayList<>()).add(dto);
+            }
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", groupedByDocumentType,
-                    "count", uniqueReviewsByDocument.size()
+                    "count", reviewsByDocument.size()
             ));
 
         } catch (Exception e) {
