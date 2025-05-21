@@ -159,6 +159,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/adminsys/audit-logs").hasRole("ADMINSYS")
                         .requestMatchers("/api/adminsys/users").hasRole("ADMINSYS")
 
+                        // meetings
+                        .requestMatchers("/api/meetings/{meetingId}/agenda/**").hasRole("ADMIN")
+                        .requestMatchers("/api/meetings/{meetingId}/attendees/**").hasRole("ADMIN")
+                        .requestMatchers("/api/meetings/{meetingId}/attendance/**").hasAnyRole("ADMIN", "EVALUATEUR")
+
                         // Endpoints existants modifiés pour ADMINSYS
                         .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS")
                         .requestMatchers("/api/admin/audit-logs").hasAnyRole("ADMIN", "ADMINSYS")
