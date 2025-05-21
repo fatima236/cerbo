@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/meetings")
+@RequestMapping("/api/meeting")
 @RequiredArgsConstructor
 @Slf4j
 public class MeetingAttendanceController {
