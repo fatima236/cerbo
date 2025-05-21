@@ -118,9 +118,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/preview").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/projects/{projectId}/report/send").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/admin/projects/{projectId}/report/download").hasRole("INVESTIGATEUR")
-                        .requestMatchers(HttpMethod.GET, "api/admin/projects/${project.id}/report/validated-remarks-grouped").hasRole("INVESTIGATEUR")
-
 
                         .requestMatchers(HttpMethod.GET, "/api/projects/assigned-to-me").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents").hasAnyRole("ADMIN", "EVALUATEUR")
@@ -161,11 +158,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/adminsys/**").hasRole("ADMINSYS")
                         .requestMatchers("/api/adminsys/audit-logs").hasRole("ADMINSYS")
                         .requestMatchers("/api/adminsys/users").hasRole("ADMINSYS")
-
-                        // meetings
-                        .requestMatchers("/api/meetings/{meetingId}/agenda/**").hasRole("ADMIN")
-                        .requestMatchers("/api/meetings/{meetingId}/attendees/**").hasRole("ADMIN")
-                        .requestMatchers("/api/meetings/{meetingId}/attendance/**").hasAnyRole("ADMIN", "EVALUATEUR")
 
                         // Endpoints existants modifiés pour ADMINSYS
                         .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS")
