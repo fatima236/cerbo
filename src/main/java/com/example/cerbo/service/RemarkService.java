@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -37,5 +38,9 @@ public class RemarkService {
         remark.setAdminStatus(RemarkStatus.PENDING);
 
         return remarkRepository.save(remark);
+    }
+
+    public List<Remark> getValidatedRemarks(Long projectId) {
+        return remarkRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
     }
 }

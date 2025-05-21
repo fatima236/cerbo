@@ -278,53 +278,55 @@ public class RemarkController {
         return dto;
     }
     @GetMapping("/validated-remarks-grouped")
-    @PreAuthorize("hasRole('INVESTIGATEUR')")
+    @PreAuthorize("@projectSecurity.isProjectMember(#projectId, authentication)")
     public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
             @PathVariable Long projectId) {
 
         try {
-            // Validation
-            if (projectId == null) {
+            // 1. Validation du projectId
+            if (projectId == null || projectId <= 0) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "error", "ID projet requis"
+                        "error", "ID de projet invalide"
                 ));
             }
 
-            // Récupération des remarques validées
-            List<Remark> validatedRemarks = remarkRepository.findValidatedRemarksByProjectId(projectId);
-
-            if (validatedRemarks.isEmpty()) {
-                return ResponseEntity.ok(Map.of(
-                        "success", true,
-                        "message", "Aucune remarque validée disponible",
-                        "data", Collections.emptyMap(),
-                        "count", 0
+            // 2. Vérification de l'existence du projet
+            if (!projectRepository.existsById(projectId)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "success", false,
+                        "error", "Projet non trouvé"
                 ));
             }
 
-            // Conversion et regroupement
+            // 3. Récupération des remarques validées
+            List<Remark> validatedRemarks = remarkRepository.findByProjectIdAndAdminStatus(
+                    projectId,
+                    RemarkStatus.VALIDATED
+            );
+
+            // 4. Conversion et regroupement
             Map<String, List<RemarkDTO>> groupedRemarks = validatedRemarks.stream()
-                    .filter(remark -> remark != null && remark.getValidationStatus() == RemarkStatus.VALIDATED)
                     .map(this::convertToDto)
                     .collect(Collectors.groupingBy(
-                            dto -> dto.getDocumentType() != null ?
-                                    dto.getDocumentType().name() : "AUTRE",
+                            dto -> "GENERAL", // Ou un autre critère
                             TreeMap::new,
                             Collectors.toList()
                     ));
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", groupedRemarks,
-                    "count", validatedRemarks.size()
-            ));
+            // 5. Construction de la réponse
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", groupedRemarks);
+            response.put("count", validatedRemarks.size());
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erreur lors de la récupération des remarques: {}", e.getMessage());
+            log.error("Erreur dans getValidatedRemarksGrouped", e);
             return ResponseEntity.internalServerError().body(Map.of(
                     "success", false,
-                    "error", "Erreur serveur lors de la récupération des remarques"
+                    "error", "Erreur serveur: " + e.getMessage()
             ));
         }
     }
