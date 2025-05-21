@@ -54,7 +54,5 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
             "AND dr.status = 'VALIDATED'"+
             "AND dr.content <> '' ")
     List<Long> documentReviewValidated(@Param("projectId") Long projectId);
-    List<DocumentReview> findValidatedReviewsByProject(Long projectId);
-
 
 }

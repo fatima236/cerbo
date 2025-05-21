@@ -1,4 +1,5 @@
 package com.example.cerbo.entity;
+import com.example.cerbo.entity.enums.DocumentType;
 
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -54,6 +55,10 @@ public class Remark {
     @ManyToOne
     @JoinColumn(name = "validated_by")
     private User validatedBy;
+    @Column(name = "document_type")
+    private DocumentType documentType;
+    @Column(name = "validation_status")
+    private RemarkStatus validationStatus;
 
 
 

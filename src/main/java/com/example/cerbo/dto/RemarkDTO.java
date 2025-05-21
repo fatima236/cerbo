@@ -1,5 +1,6 @@
 package com.example.cerbo.dto;
 
+import com.example.cerbo.entity.enums.DocumentType;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -36,5 +37,7 @@ public class RemarkDTO {
     // Info document
     private Long documentId;
     private String documentName;
+    private DocumentType documentType;
+
 
 }

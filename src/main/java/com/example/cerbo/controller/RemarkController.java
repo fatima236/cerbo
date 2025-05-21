@@ -5,6 +5,7 @@ import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.Remark;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.ProjectStatus;
+import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.RemarkRepository;
@@ -16,7 +17,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jboss.logging.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,9 +30,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -272,5 +276,56 @@ public class RemarkController {
         dto.setHasResponseFile(remark.getResponseFilePath() != null);
 
         return dto;
+    }
+    @GetMapping("/validated-remarks-grouped")
+    @PreAuthorize("hasRole('INVESTIGATEUR')")
+    public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
+            @PathVariable Long projectId) {
+
+        try {
+            // Validation
+            if (projectId == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "error", "ID projet requis"
+                ));
+            }
+
+            // Récupération des remarques validées
+            List<Remark> validatedRemarks = remarkRepository.findValidatedRemarksByProjectId(projectId);
+
+            if (validatedRemarks.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Aucune remarque validée disponible",
+                        "data", Collections.emptyMap(),
+                        "count", 0
+                ));
+            }
+
+            // Conversion et regroupement
+            Map<String, List<RemarkDTO>> groupedRemarks = validatedRemarks.stream()
+                    .filter(remark -> remark != null && remark.getValidationStatus() == RemarkStatus.VALIDATED)
+                    .map(this::convertToDto)
+                    .collect(Collectors.groupingBy(
+                            dto -> dto.getDocumentType() != null ?
+                                    dto.getDocumentType().name() : "AUTRE",
+                            TreeMap::new,
+                            Collectors.toList()
+                    ));
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", groupedRemarks,
+                    "count", validatedRemarks.size()
+            ));
+
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des remarques: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "error", "Erreur serveur lors de la récupération des remarques"
+            ));
+        }
     }
 }

@@ -7,8 +7,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import com.example.cerbo.entity.*;
+import com.example.cerbo.entity.enums.DocumentType;
+import com.example.cerbo.repository.*;
 import com.example.cerbo.service.ProjectService;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
@@ -16,9 +19,6 @@ import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.entity.User;
-import com.example.cerbo.repository.DocumentRepository;
-import com.example.cerbo.repository.DocumentReviewRepository;
-import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.service.RemarkReportService;
 import com.example.cerbo.service.reportService.ReportService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,7 +37,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/projects/{projectId}/report")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
 public class RemarkReportController {
 
     private final RemarkReportService remarkReportService;
@@ -45,6 +45,7 @@ public class RemarkReportController {
     private final DocumentRepository documentRepository;
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportService reportService;
+    private final RemarkRepository remarkRepository;
 
     private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
         DocumentReviewDTO dto = new DocumentReviewDTO();
@@ -247,4 +248,5 @@ public class RemarkReportController {
                 .contentLength(Files.size(filePath))
                 .body(Files.readAllBytes(filePath));
     }
+
 }

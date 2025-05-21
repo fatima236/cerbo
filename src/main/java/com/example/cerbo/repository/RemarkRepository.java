@@ -1,5 +1,6 @@
 package com.example.cerbo.repository;
 
+import com.example.cerbo.dto.RemarkDTO;
 import com.example.cerbo.entity.Remark;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import jakarta.persistence.LockModeType;
@@ -36,4 +37,7 @@ public interface RemarkRepository extends JpaRepository<Remark, Long> {
     @Query("SELECT r FROM Remark r WHERE r.project.id = :projectId AND r.adminStatus = 'VALIDATED'")
     List<Remark> findValidatedRemarksForProject(@Param("projectId") Long projectId);
 
+    // Dans RemarkRepository.java
+    @Query("SELECT r FROM Remark r WHERE r.project.id = :projectId AND r.adminStatus = 'VALIDATED'")
+    List<Remark> findValidatedRemarksByProjectId(@Param("projectId") Long projectId);
 }
