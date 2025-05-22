@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/meeting/{meetingId}/attendees")
+@RequestMapping("/api/meeting")
 @RequiredArgsConstructor
 @Slf4j
 @PreAuthorize("hasRole('ADMIN')")
@@ -22,7 +22,7 @@ public class MeetingAttendeeController {
 
     private final MeetingAttendanceService meetingAttendanceService;
 
-    @GetMapping
+    @GetMapping("/{meetingId}/attendees")
     public ResponseEntity<?> getMeetingAttendees(@PathVariable Long meetingId) {
         try {
             List<MeetingAttendee> attendees = meetingAttendanceService.getMeetingAttendees(meetingId);
@@ -52,7 +52,7 @@ public class MeetingAttendeeController {
         }
     }
 
-    @PostMapping("/users/{userId}")
+    @PostMapping("/{meetingId}/attendees/users/{userId}")
     public ResponseEntity<?> addAttendee(
             @PathVariable Long meetingId,
             @PathVariable Long userId) {
@@ -76,7 +76,7 @@ public class MeetingAttendeeController {
         }
     }
 
-    @DeleteMapping("/users/{userId}")
+    @DeleteMapping("/{meetingId}/attendees/users/{userId}")
     public ResponseEntity<?> removeAttendee(
             @PathVariable Long meetingId,
             @PathVariable Long userId) {
@@ -100,7 +100,7 @@ public class MeetingAttendeeController {
         }
     }
 
-    @PostMapping("/update-from-agenda")
+    @PostMapping("/{meetingId}/attendees/update-from-agenda")
     public ResponseEntity<?> updateAttendeesFromAgenda(@PathVariable Long meetingId) {
         try {
             meetingAttendanceService.updateAttendeesFromAgenda(meetingId);
