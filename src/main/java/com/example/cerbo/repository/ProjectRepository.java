@@ -109,7 +109,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     @EntityGraph(attributePaths = {"principalInvestigator"})
     @Query("SELECT DISTINCT p FROM Project p JOIN p.reviewers r WHERE r.id = :reviewerId")
     List<Project> findByReviewerId(@Param("reviewerId") Long reviewerId);
-
+    
     // Récupérer un projet spécifique avec ses documents pour un évaluateur
     @EntityGraph(attributePaths = {"principalInvestigator", "documents"})
     @Query("SELECT p FROM Project p JOIN p.reviewers r WHERE p.id = :projectId AND r.id = :reviewerId")

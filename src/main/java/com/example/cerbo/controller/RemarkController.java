@@ -2,17 +2,12 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.DocumentReviewDTO;
 import com.example.cerbo.dto.RemarkDTO;
-import com.example.cerbo.entity.DocumentReview;
-import com.example.cerbo.entity.Project;
-import com.example.cerbo.entity.Remark;
-import com.example.cerbo.entity.User;
+import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.RemarkStatus;
+import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
-import com.example.cerbo.repository.DocumentReviewRepository;
-import com.example.cerbo.repository.ProjectRepository;
-import com.example.cerbo.repository.RemarkRepository;
-import com.example.cerbo.repository.UserRepository;
+import com.example.cerbo.repository.*;
 import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.RemarkService;
@@ -52,6 +47,7 @@ public class RemarkController {
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
     private final DocumentReviewRepository documentReviewRepository;
+    private final ReportRepository reportRepository;
     @GetMapping
     @PreAuthorize("@projectSecurity.isProjectMember(#projectId, authentication)")
     public ResponseEntity<List<RemarkDTO>> getProjectRemarks(@PathVariable Long projectId) {
@@ -132,7 +128,7 @@ public class RemarkController {
     @PostMapping(value = "/{remarkId}/response", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('INVESTIGATEUR') and @projectSecurity.isProjectMember(#projectId, authentication)")
     @Transactional // Ajout crucial
-    public ResponseEntity<RemarkDTO> respondToRemark(
+    public ResponseEntity<DocumentReview> respondToRemark(
             @PathVariable Long projectId,
             @PathVariable Long remarkId,
             @RequestParam(value = "response", required = false) String responseText,
@@ -156,7 +152,7 @@ public class RemarkController {
         }
 
         // [4] Récupération remarque avec verrou
-        Remark remark = remarkRepository.findByIdWithLock(remarkId)
+        DocumentReview remark = documentReviewRepository.findById(remarkId)
                 .orElseThrow(() -> new ResourceNotFoundException("Remarque non trouvée"));
 
         // [5] Vérification réponse existante
@@ -180,17 +176,17 @@ public class RemarkController {
         remark.setResponseDate(LocalDateTime.now());
         remark.setResponseFilePath(filePath);
 
-        Remark savedRemark = remarkRepository.save(remark);
+        DocumentReview savedRemark = documentReviewRepository.save(remark);
 
         // [8] Notifications (version robuste)
-        try {
-            notifyStakeholders(project, savedRemark, authentication.getName());
-        } catch (Exception e) {
-            log.error("Échec de notification", e);
-            // Ne pas bloquer malgré l'échec
-        }
+//        try {
+//            notifyStakeholders(project, savedRemark, authentication.getName());
+//        } catch (Exception e) {
+//            log.error("Échec de notification", e);
+//            // Ne pas bloquer malgré l'échec
+//        }
 
-        return ResponseEntity.ok(convertToDto(savedRemark));
+        return ResponseEntity.ok(savedRemark);
     }
 
 
@@ -286,7 +282,7 @@ public class RemarkController {
     private final ChatGptService chatGptService;
 
     @GetMapping("/validated-remarks-grouped")
-    public ResponseEntity<Map<String, Object>> getValidatedRemarksGrouped(
+    public ResponseEntity<Map<String, Object>> getVali6datedRemarksGrouped(
             @PathVariable Long projectId) {
 
         try {
@@ -372,17 +368,42 @@ public class RemarkController {
 
 
 
+    @PutMapping("/sendResponses")
+    public ResponseEntity<?> sendResponses(@PathVariable("projectId") Long projectId) {
+        // Récupérer le projet
+        Project project = projectRepository.findById(projectId).orElse(null);
 
+        if (project == null) {
+            return ResponseEntity.notFound().build(); // 404 si le projet n'existe pas
+        }
 
+        // Modifier le rapport le plus récent
+        Report latestReport = project.getLatestReport();
+        if (latestReport == null) {
+            return ResponseEntity.badRequest().body("Le projet n'a pas de rapport associé.");
+        }
 
+        latestReport.setResponsed(true);
+        latestReport.setStatus(ReportStatus.RESPONDED);
 
+        // Sauvegarder les modifications
+        reportRepository.save(latestReport); // Assure-toi que reportRepository est injecté
 
-
-
-
-
-
-
+        // Retourner une réponse OK
+        return ResponseEntity.ok("Réponses envoyées avec succès.");
+    }
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
