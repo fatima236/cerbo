@@ -41,11 +41,4 @@ public class Training {
 
     private String organizer;
 
-    @OneToMany(mappedBy = "training", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Document> documents = new ArrayList<>();
-
-    public void addDocument(Document document) {
-        documents.add(document);
-        document.setTraining(this);
-    }
 }

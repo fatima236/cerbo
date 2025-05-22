@@ -1,5 +1,6 @@
 package com.example.cerbo.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class MeetingAttendee {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "meeting_id", nullable = false)
+    @JsonBackReference("meeting-attendees")
     private Meeting meeting;
 
     @ManyToOne(fetch = FetchType.LAZY)

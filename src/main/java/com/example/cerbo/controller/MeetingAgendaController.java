@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/meeting/{meetingId}/agenda")
+@RequestMapping("/api/meeting")
 @RequiredArgsConstructor
 @Slf4j
 @PreAuthorize("hasRole('ADMIN')")
@@ -20,7 +20,7 @@ public class MeetingAgendaController {
 
     private final MeetingService meetingService;
 
-    @GetMapping
+    @GetMapping("/{meetingId}/agenda")
     public ResponseEntity<List<Project>> getAgenda(@PathVariable Long meetingId) {
         try {
             List<Project> projects = meetingService.getAgendaProjects(meetingId);
@@ -31,7 +31,7 @@ public class MeetingAgendaController {
         }
     }
 
-    @PostMapping("/projects/{projectId}")
+    @PostMapping("/{meetingId}/agenda/projects/{projectId}")
     public ResponseEntity<?> addProjectToAgenda(
             @PathVariable Long meetingId,
             @PathVariable Long projectId) {
@@ -55,7 +55,7 @@ public class MeetingAgendaController {
         }
     }
 
-    @DeleteMapping("/projects/{projectId}")
+    @DeleteMapping("/{meetingId}/agenda/projects/{projectId}")
     public ResponseEntity<?> removeProjectFromAgenda(
             @PathVariable Long meetingId,
             @PathVariable Long projectId) {
@@ -79,7 +79,7 @@ public class MeetingAgendaController {
         }
     }
 
-    @PutMapping("/reorder")
+    @PutMapping("/{meetingId}/agenda/reorder")
     public ResponseEntity<?> reorderAgenda(
             @PathVariable Long meetingId,
             @RequestBody List<Long> projectIds) {
@@ -103,7 +103,7 @@ public class MeetingAgendaController {
         }
     }
 
-    @GetMapping("/count")
+    @GetMapping("/{meetingId}/agenda/count")
     public ResponseEntity<Map<String, Object>> getAgendaCount(@PathVariable Long meetingId) {
         try {
             long count = meetingService.getAgendaProjects(meetingId).size();

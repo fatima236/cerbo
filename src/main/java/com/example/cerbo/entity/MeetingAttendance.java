@@ -1,5 +1,6 @@
 package com.example.cerbo.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -12,6 +13,7 @@ public class MeetingAttendance {
 
     @ManyToOne
     @JoinColumn(name = "meeting_id", nullable = false)
+    @JsonBackReference("meeting-attendances")
     private Meeting meeting;
 
     @ManyToOne
@@ -21,5 +23,4 @@ public class MeetingAttendance {
     private boolean present;
     private String justification;
     private boolean justified = false; // Nouveau champ
-
 }
