@@ -1,12 +1,14 @@
 package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.DocumentReviewDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.*;
 import java.io.IOException;
 import java.nio.file.Path;
 
 import com.example.cerbo.entity.*;
+import com.example.cerbo.dto.RemarkResponseDTO;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.repository.*;
 import com.example.cerbo.service.ProjectService;
@@ -26,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.example.cerbo.repository.DocumentReviewRepository;
 import org.springframework.web.bind.annotation.*;
+import com.example.cerbo.entity.enums.ReportStatus;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,6 +49,7 @@ public class RemarkReportController {
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportService reportService;
     private final RemarkRepository remarkRepository;
+    private final ReportRepository reportRepository;
 
     private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
         DocumentReviewDTO dto = new DocumentReviewDTO();
@@ -248,5 +252,101 @@ public class RemarkReportController {
                 .contentLength(Files.size(filePath))
                 .body(Files.readAllBytes(filePath));
     }
+
+
+
+
+        @PostMapping("/submit-all-responses")
+        public ResponseEntity<?> submitAllResponses(
+                @PathVariable Long projectId,
+                @RequestParam Map<String, String> textResponses,
+                @RequestParam Map<String, MultipartFile> fileResponses) {
+
+            try {
+                // Trouver le dernier rapport envoyé pour ce projet
+                Report report = reportRepository.findTopByProjectIdAndStatusOrderByCreatedAtDesc(projectId, ReportStatus.SENT)
+                        .orElseThrow(() -> new ResourceNotFoundException("Aucun rapport envoyé trouvé pour ce projet"));
+
+                // Mettre à jour les réponses pour chaque remarque
+                for (Map.Entry<String, String> entry : textResponses.entrySet()) {
+                    Long remarkId = Long.parseLong(entry.getKey());
+                    String responseText = entry.getValue();
+                    MultipartFile responseFile = fileResponses.get(entry.getKey());
+
+                    DocumentReview review = documentReviewRepository.findById(remarkId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Remarque non trouvée: " + remarkId));
+
+                    if (responseText != null && !responseText.isEmpty()) {
+                        review.setResponse(responseText);
+                    }
+
+                    if (responseFile != null && !responseFile.isEmpty()) {
+                        // Ici vous devriez stocker le fichier et sauvegarder le chemin
+                        // Pour l'exemple, nous stockons juste le nom du fichier
+                        review.setResponseFilePath(responseFile.getOriginalFilename());
+                    }
+
+                    review.setResponseDate(LocalDateTime.now());
+                    documentReviewRepository.save(review);
+                }
+
+                // Mettre à jour le rapport
+                report.setResponsed(true);
+                report.setResponseDate(LocalDateTime.now());
+                report.setStatus(ReportStatus.RESPONDED);
+                reportRepository.save(report);
+
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "message", "Toutes les réponses ont été enregistrées avec succès"
+                ));
+
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "error", e.getMessage()
+                ));
+            }
+        }
+
+
+
+        @PostMapping("/{remarkId}/response")
+        public ResponseEntity<?> submitResponseToRemark(
+                @PathVariable Long projectId,
+                @PathVariable Long remarkId,
+                @RequestParam(required = false) String responseText,
+                @RequestParam(required = false) MultipartFile file) {
+
+            try {
+                DocumentReview review = documentReviewRepository.findById(remarkId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Remarque non trouvée"));
+
+                if (responseText != null && !responseText.isEmpty()) {
+                    review.setResponse(responseText);
+                }
+
+                if (file != null && !file.isEmpty()) {
+                    // Ici vous devriez stocker le fichier et sauvegarder le chemin
+                    // Pour l'exemple, nous stockons juste le nom du fichier
+                    review.setResponseFilePath(file.getOriginalFilename());
+                }
+
+                review.setResponseDate(LocalDateTime.now());
+                documentReviewRepository.save(review);
+
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "message", "Réponse enregistrée avec succès"
+                ));
+
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "error", e.getMessage()
+                ));
+            }
+        }
+
 
 }
