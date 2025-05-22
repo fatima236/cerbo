@@ -38,7 +38,8 @@ public class ProjectSubmissionDTO {
 
     private String fundingSource;
     private String fundingProgram;
-
+    @NotBlank(message = "La description des données est obligatoire")
+    private String dataDescription;
     private String projectDescription;
     private String ethicalConsiderations;
 

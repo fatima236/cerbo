@@ -72,4 +72,6 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     @Query("SELECT dr FROM DocumentReview dr WHERE dr.report.id = :reportId")
     List<DocumentReview> findByReportId(@Param("reportId") Long reportId);
+
+
 }

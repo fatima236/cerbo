@@ -46,6 +46,7 @@ public class ProjectService {
         // Construction du projet SANS documents pour l'instant
         Project project = Project.builder()
                 .title(submissionDTO.getTitle())
+                .dataDescription(submissionDTO.getDataDescription())
                 .studyDuration(submissionDTO.getStudyDuration())
                 .targetPopulation(submissionDTO.getTargetPopulation())
                 .consentType(submissionDTO.getConsentType())

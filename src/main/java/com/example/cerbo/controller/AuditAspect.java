@@ -140,7 +140,7 @@ public class AuditAspect {
             log.setUserId(event.userId);
             log.setIpAddress(event.ipAddress);
             log.setMethodName(event.methodName);
-            log.setDetails(event.details);
+
 
             auditLogRepository.save(log);
         }
