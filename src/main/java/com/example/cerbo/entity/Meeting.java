@@ -2,6 +2,8 @@ package com.example.cerbo.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -30,11 +32,17 @@ public class Meeting {
 
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<MeetingProject> agendaItems = new ArrayList<>();
 
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<MeetingAttendee> attendees = new ArrayList<>();
 
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<MeetingAttendance> attendances = new ArrayList<>();
 }

@@ -138,6 +138,12 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itext7-core</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+
         <!-- Ajout de Spring Security Core -->
 
 

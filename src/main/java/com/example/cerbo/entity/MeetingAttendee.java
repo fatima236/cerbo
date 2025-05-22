@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.EqualsAndHashCode;
 
 @Entity
 @Table(name = "meeting_attendees", uniqueConstraints = {
@@ -21,10 +23,14 @@ public class MeetingAttendee {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "meeting_id", nullable = false)
     @JsonBackReference("meeting-attendees")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Meeting meeting;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @Column(name = "added_manually")
@@ -32,5 +38,7 @@ public class MeetingAttendee {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "related_project_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Project relatedProject;
 }
