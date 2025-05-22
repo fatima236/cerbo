@@ -69,5 +69,15 @@ public class FileStorageService {
         return Files.readAllBytes(filePath);
     }
 
+    public boolean deleteFile(String filename) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(filename).normalize();
+            return Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Impossible de supprimer le fichier: " + filename, e);
+        }
+    }
+
+
 
 }

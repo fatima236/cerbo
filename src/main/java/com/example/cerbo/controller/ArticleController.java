@@ -6,6 +6,7 @@ import com.example.cerbo.entity.Event;
 import com.example.cerbo.entity.Training;
 import com.example.cerbo.repository.ArticleRepository;
 import com.example.cerbo.repository.DocumentRepository;
+import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.articleService.ArticleService;
 import com.example.cerbo.service.documentService.DocumentService;
 import jakarta.validation.Valid;
@@ -25,19 +26,18 @@ import java.util.Optional;
 @AllArgsConstructor
 public class ArticleController {
 
+    private final FileStorageService fileStorageService;
     ArticleRepository articleRepository;
     ArticleService articleService;
     DocumentService documentService;
     DocumentRepository documentRepository;
 
+
+
     @GetMapping
     public ResponseEntity<List<Article>> getAllArticles() {
         List<Article> articles = articleRepository.findAll();
-        articles.forEach(article -> {
-            article.getDocuments().forEach(document -> {
-                document.setArticle(null);
-            });
-        });
+
         return ResponseEntity.ok(articles);
     }
 
@@ -45,25 +45,37 @@ public class ArticleController {
     public ResponseEntity<Article> getArticleById(@PathVariable Long articleId) {
 
         Article article = articleRepository.findById(articleId).orElse(null);
-        article.getDocuments().forEach(document -> {
-            document.setArticle(null);  // Éliminer la référence à l'événement dans chaque document
-        });
+
 
         return ResponseEntity.ok(article);
     }
 
     @PostMapping("/addArticle")
-    public ResponseEntity<Article> addEvent(@Valid @RequestBody Article article) {
-        return ResponseEntity.ok(articleRepository.save(article));
+    public ResponseEntity<Article> addArticle(
+            @RequestParam("title") String title,
+            @RequestParam("content") String content,
+            @RequestParam("summary") String summary,
+            @RequestParam("publicationDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime publicationDate,
+            @RequestParam("category") String category,
+            @RequestParam("text") String text,
+            @RequestParam("author") String author,
+            @RequestParam("file") MultipartFile file){
+
+    Article savedArticle = articleService.addArticle(title,content,summary,publicationDate,category,text,author,file);
+
+        return ResponseEntity.ok(savedArticle);
     }
 
     @DeleteMapping("/deleteArticle/{id}")
-    public ResponseEntity<Void> deleteArticle(@PathVariable("id") Long eventId) {
-        if (!articleRepository.existsById(eventId)) {
+    public ResponseEntity<Void> deleteArticle(@PathVariable("id") Long articleId) {
+        Article article = articleRepository.findById(articleId).orElse(null);
+
+        if (article == null) {
             return ResponseEntity.notFound().build();
         }
+        fileStorageService.deleteFile(article.getFilename());
+        articleService.deleteArticleById(articleId);
 
-        articleService.deleteArticleById(eventId);
         return ResponseEntity.noContent().build();
     }
 
@@ -93,13 +105,9 @@ public class ArticleController {
             existingArticle.setAuthor(author);
 
             if (image != null && !image.isEmpty()) {
-                if(documentRepository.getFirsByArticle(existingArticle)==null){
-                    documentService.uploadFile(image,null,null,existingArticle.getId(),null);
-                }
-                else{
-                    Document doc = documentRepository.getFirsByArticle(existingArticle);
-                    documentService.updateDocument(doc.getId(), image);
-                }
+                String fileName = fileStorageService.storeFile(image);
+                fileStorageService.deleteFile(existingArticle.getFilename());
+                existingArticle.setFilename(fileName);
             }
 
             Article updatedArticle = articleRepository.save(existingArticle);
