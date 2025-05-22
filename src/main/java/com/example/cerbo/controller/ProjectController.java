@@ -201,6 +201,8 @@ public class ProjectController {
             response.put("fundingSource", project.getFundingSource());
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getLatestReportStatus());
+            response.put("projectDescription", project.getProjectDescription());
+            response.put("ethicalConsiderations", project.getEthicalConsiderations());
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
                 Report lastReport = reports.get(reports.size() - 1);
@@ -574,6 +576,8 @@ public class ProjectController {
                         projectMap.put("sampling", p.getSampling());
                         projectMap.put("sampleType", p.getSampleType());
                         projectMap.put("sampleQuantity", p.getSampleQuantity());
+                        projectMap.put("projectDescription", p.getProjectDescription());
+                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());
 
                         // Documents de base
                         projectMap.put("documents", p.getDocuments().stream()
@@ -669,6 +673,8 @@ public class ProjectController {
                 projectMap.put("sampling", project.getSampling());
                 projectMap.put("sampleType", project.getSampleType());
                 projectMap.put("sampleQuantity", project.getSampleQuantity());
+                projectMap.put("projectDescription", project.getProjectDescription());
+                projectMap.put("ethicalConsiderations", project.getEthicalConsiderations());
 
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());

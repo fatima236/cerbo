@@ -156,39 +156,39 @@ public class MeetingController {
         }
     }
 
-    // ✅ NOUVEAU ENDPOINT pour récupérer les projets d'agenda d'une réunion
-    @GetMapping("/{id}/agenda")
-    public ResponseEntity<List<MeetingProjectDTO>> getMeetingAgenda(@PathVariable Long id) {
-        try {
-            Meeting meeting = meetingService.getMeetingById(id);
-            if (meeting == null) {
-                return ResponseEntity.notFound().build();
-            }
+//    // ✅ NOUVEAU ENDPOINT pour récupérer les projets d'agenda d'une réunion
+//    @GetMapping("/{id}/agenda")
+//    public ResponseEntity<List<MeetingProjectDTO>> getMeetingAgenda(@PathVariable Long id) {
+//        try {
+//            Meeting meeting = meetingService.getMeetingById(id);
+//            if (meeting == null) {
+//                return ResponseEntity.notFound().build();
+//            }
+//
+//            List<MeetingProjectDTO> agendaDTO = MeetingProjectDTO.fromEntityList(meeting.getAgendaItems());
+//
+//            return ResponseEntity.ok(agendaDTO);
+//        } catch (Exception e) {
+//            log.error("Erreur lors de la récupération de l'agenda pour la réunion ID {}: {}", id, e.getMessage());
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
 
-            List<MeetingProjectDTO> agendaDTO = MeetingProjectDTO.fromEntityList(meeting.getAgendaItems());
-
-            return ResponseEntity.ok(agendaDTO);
-        } catch (Exception e) {
-            log.error("Erreur lors de la récupération de l'agenda pour la réunion ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    // ✅ NOUVEAU ENDPOINT pour récupérer les participants d'une réunion
-    @GetMapping("/{id}/attendees")
-    public ResponseEntity<List<MeetingAttendeeDTO>> getMeetingAttendees(@PathVariable Long id) {
-        try {
-            Meeting meeting = meetingService.getMeetingById(id);
-            if (meeting == null) {
-                return ResponseEntity.notFound().build();
-            }
-
-            List<MeetingAttendeeDTO> attendeesDTO = MeetingAttendeeDTO.fromEntityList(meeting.getAttendees());
-
-            return ResponseEntity.ok(attendeesDTO);
-        } catch (Exception e) {
-            log.error("Erreur lors de la récupération des participants pour la réunion ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+//    // ✅ NOUVEAU ENDPOINT pour récupérer les participants d'une réunion
+//    @GetMapping("/{id}/attendees")
+//    public ResponseEntity<List<MeetingAttendeeDTO>> getMeetingAttendees(@PathVariable Long id) {
+//        try {
+//            Meeting meeting = meetingService.getMeetingById(id);
+//            if (meeting == null) {
+//                return ResponseEntity.notFound().build();
+//            }
+//
+//            List<MeetingAttendeeDTO> attendeesDTO = MeetingAttendeeDTO.fromEntityList(meeting.getAttendees());
+//
+//            return ResponseEntity.ok(attendeesDTO);
+//        } catch (Exception e) {
+//            log.error("Erreur lors de la récupération des participants pour la réunion ID {}: {}", id, e.getMessage());
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
 }
