@@ -35,18 +35,10 @@ public class Event {
 
     private String type; // Conference, Seminar, Webinar, etc.
 
-    private Integer numberOfSeats;
-
-    private Boolean registrationRequired = false;
 
     private String organizer;
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Document> documents = new ArrayList<>();
+    private String filename;
 
-    public void addDocument(Document document) {
-        documents.add(document);
-        document.setEvent(this);
-    }
 
 }

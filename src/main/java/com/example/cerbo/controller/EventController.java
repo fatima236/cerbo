@@ -5,6 +5,7 @@ import com.example.cerbo.entity.Event;
 import com.example.cerbo.entity.Training;
 import com.example.cerbo.repository.DocumentRepository;
 import com.example.cerbo.repository.EventRepository;
+import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.documentService.DocumentService;
 import com.example.cerbo.service.eventService.EventService;
 import jakarta.validation.Valid;
@@ -30,15 +31,12 @@ public class EventController {
     private final EventService eventService;
     private final DocumentService documentService;
     private final DocumentRepository documentRepository;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public ResponseEntity<List<Event>> getAllEvents() {
         List<Event> events = eventRepository.findAll();
-        events.forEach(event -> {
-            event.getDocuments().forEach(document -> {
-                document.setEvent(null);  // Éliminer la référence à l'événement dans chaque document
-            });
-        });
+
         return ResponseEntity.ok(events);
     }
 
@@ -46,25 +44,44 @@ public class EventController {
     public ResponseEntity<Event> getEventById(@PathVariable Long eventId) {
 
         Event event = eventRepository.findById(eventId).orElse(null);
-        event.getDocuments().forEach(document -> {
-            document.setEvent(null);  // Éliminer la référence à l'événement dans chaque document
-        });
 
         return ResponseEntity.ok(event);
     }
 
     @PostMapping("/addEvent")
-    public ResponseEntity<Event> addEvent(@Valid @RequestBody Event event) {
+    public ResponseEntity<Event> addEvent(@RequestParam("title") String title,
+                                          @RequestParam("description") String description,
+                                          @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+                                          @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+                                          @RequestParam("location") String location,
+                                          @RequestParam("type") String type,
+                                          @RequestParam("organizer") String organizer,
+                                          @RequestParam("file") MultipartFile file){
+        Event event = new Event();
+        event.setTitle(title);
+        event.setDescription(description);
+        event.setStartDate(startDate);
+        event.setEndDate(endDate);
+        event.setLocation(location);
+        event.setType(type);
+        event.setOrganizer(organizer);
+
+        String filename = fileStorageService.storeFile(file);
+        event.setFilename(filename);
+
         return ResponseEntity.ok(eventRepository.save(event));
+
     }
 
     @DeleteMapping("/deleteEvent/{id}")
     public ResponseEntity<Void> deleteTraining(@PathVariable("id") Long eventId) {
-        if (!eventRepository.existsById(eventId)) {
+        Event event = eventRepository.findById(eventId).orElse(null);
+        if (event == null) {
             return ResponseEntity.notFound().build();
         }
+        fileStorageService.deleteFile(event.getFilename());
+        eventRepository.delete(event);
 
-        eventService.deleteEventById(eventId);
         return ResponseEntity.noContent().build();
     }
 
@@ -76,8 +93,6 @@ public class EventController {
                                                 @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
                                                 @RequestParam("location") String location,
                                                 @RequestParam("type") String type,
-                                                @RequestParam("availableSeats") int availableSeats,
-                                                @RequestParam("registrationRequired") boolean registrationRequired,
                                                 @RequestParam("organizer") String organizer,
                                                 @RequestParam(value = "image", required = false) MultipartFile image) {
 
@@ -92,18 +107,13 @@ public class EventController {
             existingEvent.setEndDate(endDate);
             existingEvent.setLocation(location);
             existingEvent.setType(type);
-            existingEvent.setNumberOfSeats(availableSeats);
-            existingEvent.setRegistrationRequired(registrationRequired);
             existingEvent.setOrganizer(organizer);
 
             if (image != null && !image.isEmpty()) {
-                if(documentRepository.getFirstByEvent(existingEvent)==null){
-                    documentService.uploadFile(image,null,existingEvent.getId(),null,null);
-                }
-                else {
-                    Document doc = documentRepository.getFirstByEvent(existingEvent);
-                    documentService.updateDocument(doc.getId(), image);
-                }
+                fileStorageService.deleteFile(existingEvent.getFilename());
+                String filename = fileStorageService.storeFile(image);
+                existingEvent.setFilename(filename);
+
             }
 
             Event updatedEvent = eventRepository.save(existingEvent);

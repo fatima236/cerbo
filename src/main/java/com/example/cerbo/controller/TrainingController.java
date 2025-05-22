@@ -24,11 +24,7 @@ public class TrainingController {
     @GetMapping
     public ResponseEntity<List<Training>> getAllTrainings() {
         List<Training> trainings = trainingRepository.findAll();
-        trainings.forEach(training -> {
-            training.getDocuments().forEach(document -> {
-                document.setTraining(null);
-            });
-        });
+
         return ResponseEntity.ok(trainings);
     }
 
@@ -81,6 +77,12 @@ public class TrainingController {
         trainingRepository.deleteById(trainingId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("OK");
+    }
+
 
 
 

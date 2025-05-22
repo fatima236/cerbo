@@ -39,7 +39,13 @@ public class Article {
 
     private String author;
 
-    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Document> documents = new ArrayList<>();
+    @Column(nullable = false)
+    private String filename;
+
+    @Column(nullable = false)
+    private String name="";
+
+    @Column(nullable = false)
+    private String path="";
 
 }
