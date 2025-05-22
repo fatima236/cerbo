@@ -82,6 +82,13 @@ public class MeetingService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Sauvegarde une réunion
+     */
+    public Meeting saveMeeting(Meeting meeting) {
+        return meetingRepository.save(meeting);
+    }
+
     @Loggable(actionType = "UPDATE", entityType = "MEETING")
     @Transactional
     public Meeting updateMeeting(Meeting meeting) {
