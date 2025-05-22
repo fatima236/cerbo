@@ -3,7 +3,6 @@ package com.example.cerbo.service.reportService;
 import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.Report;
-import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
@@ -12,12 +11,15 @@ import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.ReportRepository;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.chatGptService.ChatGptService;
-import com.itextpdf.text.BaseColor;
-import com.lowagie.text.Document;
-import com.lowagie.text.Font;
-import com.lowagie.text.FontFactory;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.PdfWriter;
+import com.itextpdf.forms.PdfAcroForm;
+import com.itextpdf.forms.fields.PdfFormField;
+
+
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -147,67 +149,105 @@ public class ReportService {
             Files.createDirectories(folder);
         }
 
-        Path path = folder.resolve(fileName);
+        Path templatePath = Path.of("src/main/resources/template/Rapport_template.pdf"); // modèle à préparer
+        Path outputPath = folder.resolve(fileName);
 
-        List<DocumentReview> reviews = documentReviewRepository.findByReportIdAndIncludedInReportTrue(report.getId());
+        try(
+                PdfReader reader = new PdfReader(templatePath.toFile());
+                PdfWriter writer = new PdfWriter(outputPath.toFile());
+                PdfDocument pdfDoc = new PdfDocument(reader, writer);
+                Document document = new Document(pdfDoc)
+                ){
+            PdfAcroForm form = PdfAcroForm.getAcroForm(pdfDoc, true);
+            Map<String, PdfFormField> fields = form.getFormFields();
+            Project project = report.getProject();
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            fields.get("Text9").setValue("Oujda le "+report.getCreationDate().format(dateFormatter));
+            fields.get("Text2").setValue("A Monsieur/Madame le Pr."+project.getPrincipalInvestigator().getFullName());
+            fields.get("Text3").setValue("Le Comité d’Ethique pour la Recherche Biomédicale d’Oujda (CERBO) a été saisi le "+project.getSubmissionDate().format(dateFormatter)
+            +" d’une demande d’avis concernant votre projet de recherche intitulé <<"+project.getTitle()+">>.");
+            fields.get("Text4").setValue("Demande classée sous le N° d’ordre : "+project.getReference());
+            fields.get("Text8").setValue("Le comité s’est réuni le "+report.getCreationDate().format(dateFormatter)); // ou date de réunion réelle
 
-        Map<String, List<DocumentReview>> groupedReviews = reviews.stream()
-                .collect(Collectors.groupingBy(review -> review.getDocument().getType().toString()));
+            List<DocumentReview> reviews = documentReviewRepository
+                    .findByReportIdAndIncludedInReportTrue(report.getId());
 
-        Document document = new Document();
-        PdfWriter.getInstance(document, new FileOutputStream(path.toFile()));
-        document.open();
+            String remarks = reviews.stream()
+                    .map(r -> "- " + r.getContent())
+                    .collect(Collectors.joining("\n\n"));
 
-        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLUE);
-        Font remarkDocumentFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.LIGHT_GRAY);
-        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.black);
-        Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
-        Font redFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.RED);
+            fields.get("Text7").setValue(remarks);
 
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            form.flattenFields();
 
-        Project project = report.getProject();
+            document.close();       // si tu utilises `Document`
+            pdfDoc.close();         // dans tous les cas
 
-        document.add(new Paragraph("Rapport d’évaluation", titleFont));
-        document.add(new Paragraph(" "));
-        document.add(new Paragraph("Projet : " + project.getTitle(), normalFont));
-        document.add(new Paragraph("Référence : " + project.getReference(), normalFont));
-        document.add(new Paragraph("Statut du projet : " + project.getStatus(), normalFont));
-        document.add(new Paragraph("Date de soumission : " + project.getSubmissionDate().format(dateTimeFormatter), normalFont));
 
-        if (project.getResponseDeadline() != null) {
-            document.add(new Paragraph("Date limite de réponse aux remarques : " +
-                    project.getResponseDeadline().format(dateTimeFormatter), redFont));
-        } else {
-            document.add(new Paragraph("Date limite de réponse aux remarques : Non définie", normalFont));
+            return outputPath;
+
+
         }
 
-        document.add(new Paragraph("Date du rapport : " + report.getCreationDate().format(dateFormatter), normalFont));
-        document.add(new Paragraph("Investigateur principal : " + project.getPrincipalInvestigator().getFullName(), normalFont));
-        document.add(new Paragraph(" "));
-
-        document.add(new Paragraph("Remarques incluses :", sectionFont));
-        for (String docType : groupedReviews.keySet()) {
-            document.add(new Paragraph(docType, remarkDocumentFont));
-            List<DocumentReview> docReviews = groupedReviews.get(docType);
-
-            for (DocumentReview review : docReviews) {
-                document.add(new Paragraph( review.getContent(), normalFont));
-            }
-            document.add(new Paragraph(" "));
-        }
-
-        document.add(new Paragraph(" ")); // ligne vide pour espacer
-
-        Font warningFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.RED);
-        document.add(new Paragraph(
-                "AVERTISSEMENT : Vous devez répondre à toutes les remarques disponibles dans votre compte. " +
-                        "Si vous ne répondez pas, le projet sera rejeté automatiquement.",
-                warningFont));
-
-        document.close();
-        return path;
+//        List<DocumentReview> reviews = documentReviewRepository.findByReportIdAndIncludedInReportTrue(report.getId());
+//
+//        Map<String, List<DocumentReview>> groupedReviews = reviews.stream()
+//                .collect(Collectors.groupingBy(review -> review.getDocument().getType().toString()));
+//
+//        Document document = new Document();
+//        PdfWriter.getInstance(document, new FileOutputStream(outputPath.toFile()));
+//        document.open();
+//
+//        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLUE);
+//        Font remarkDocumentFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.LIGHT_GRAY);
+//        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.black);
+//        Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
+//        Font redFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.RED);
+//
+//        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+//        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+//
+//        Project project = report.getProject();
+//
+//        document.add(new Paragraph("Rapport d’évaluation", titleFont));
+//        document.add(new Paragraph(" "));
+//        document.add(new Paragraph("Projet : " + project.getTitle(), normalFont));
+//        document.add(new Paragraph("Référence : " + project.getReference(), normalFont));
+//        document.add(new Paragraph("Statut du projet : " + project.getStatus(), normalFont));
+//        document.add(new Paragraph("Date de soumission : " + project.getSubmissionDate().format(dateTimeFormatter), normalFont));
+//
+//        if (project.getResponseDeadline() != null) {
+//            document.add(new Paragraph("Date limite de réponse aux remarques : " +
+//                    project.getResponseDeadline().format(dateTimeFormatter), redFont));
+//        } else {
+//            document.add(new Paragraph("Date limite de réponse aux remarques : Non définie", normalFont));
+//        }
+//
+//        document.add(new Paragraph("Date du rapport : " + report.getCreationDate().format(dateFormatter), normalFont));
+//        document.add(new Paragraph("Investigateur principal : " + project.getPrincipalInvestigator().getFullName(), normalFont));
+//        document.add(new Paragraph(" "));
+//
+//        document.add(new Paragraph("Remarques incluses :", sectionFont));
+//        for (String docType : groupedReviews.keySet()) {
+//            document.add(new Paragraph(docType, remarkDocumentFont));
+//            List<DocumentReview> docReviews = groupedReviews.get(docType);
+//
+//            for (DocumentReview review : docReviews) {
+//                document.add(new Paragraph( review.getContent(), normalFont));
+//            }
+//            document.add(new Paragraph(" "));
+//        }
+//
+//        document.add(new Paragraph(" ")); // ligne vide pour espacer
+//
+//        Font warningFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.RED);
+//        document.add(new Paragraph(
+//                "AVERTISSEMENT : Vous devez répondre à toutes les remarques disponibles dans votre compte. " +
+//                        "Si vous ne répondez pas, le projet sera rejeté automatiquement.",
+//                warningFont));
+//
+//        document.close();
+//        return path;
     }
 
     @Transactional(readOnly = true)
