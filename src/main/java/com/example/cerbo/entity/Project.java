@@ -72,7 +72,8 @@ public class Project {
     private String fundingSource;
     private String fundingProgram;
 
-
+    @Column(nullable = false) // Rend ce champ obligatoire
+    private String dataDescription; // Nouveau champ pour la description des données
     @Column(columnDefinition = "TEXT")
     private String projectDescription;
 
