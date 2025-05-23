@@ -5,6 +5,7 @@ import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.*;
 import com.example.cerbo.service.NotificationService;
+import com.example.cerbo.service.documentReview.DocumentReviewService;
 import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,7 @@ public class ProjectController {
     private final NotificationService notificationService;
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportRepository reportRepository;
+    private final DocumentReviewService documentReviewService;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -577,9 +579,20 @@ public class ProjectController {
                         projectMap.put("sampleType", p.getSampleType());
                         projectMap.put("sampleQuantity", p.getSampleQuantity());
                         projectMap.put("projectDescription", p.getProjectDescription());
-                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());
+                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());if (p.getLatestReport() != null) {
+                            projectMap.put("reportStatus", p.getLatestReport().getStatus());
+                            projectMap.put("responsed", p.getLatestReport().getResponsed());
+                        } else {
+                            projectMap.put("reportStatus", null); // ou une valeur par défaut comme "Non défini"
+                            projectMap.put("responsed", null); // ou false / "Non répondu"
+                        }
+                        Boolean allRemarksResponsed = false;
+                        if(p.getLatestReport() != null) {
+                            allRemarksResponsed = documentReviewService.allReviewsResponsed(p.getLatestReport().getId());
+                        }
+                        projectMap.put("allRemarksResponsed", allRemarksResponsed );
 
-                        // Documents de base
+
                         projectMap.put("documents", p.getDocuments().stream()
                                 .map(d -> Map.of(
                                         "name", d.getName(),
