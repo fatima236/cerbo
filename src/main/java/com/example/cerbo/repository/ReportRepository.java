@@ -13,4 +13,5 @@ public interface ReportRepository extends JpaRepository<Report,Long> {
             Long projectId,
             ReportStatus status
     );
+    List<Report> findByProjectIdOrderByCreationDateDesc(Long projectId);
 }
