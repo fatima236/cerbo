@@ -177,6 +177,11 @@ public class RemarkController {
         remark.setResponseFilePath(filePath);
 
         DocumentReview savedRemark = documentReviewRepository.save(remark);
+        notificationService.sendNotification(
+                userRepository.findByRolesContaining("ADMIN"),
+                "Réponses soumises par l'investigateur",
+                "Les réponses pour le projet \"" + project.getTitle() + "\" ont été soumises."
+        );
 
         // [8] Notifications (version robuste)
 //        try {

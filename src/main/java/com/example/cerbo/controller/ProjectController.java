@@ -3,14 +3,12 @@ package com.example.cerbo.controller;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
-import com.example.cerbo.repository.DocumentReviewRepository;
+import com.example.cerbo.repository.*;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.core.io.Resource;
-import com.example.cerbo.repository.DocumentRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
-import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.ProjectService;
 import com.example.cerbo.service.FileStorageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -18,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.common.util.internal.logging.InternalLogger;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,11 +29,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.entity.User;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -53,6 +52,7 @@ public class ProjectController {
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
     private final DocumentReviewRepository documentReviewRepository;
+    private final ReportRepository reportRepository;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -810,4 +810,52 @@ public class ProjectController {
 
 
 
-}
+
+        private final String REPORTS_DIRECTORY = "uploads/reports";
+
+
+
+        @GetMapping("/{projectId}/full-report")
+        public ResponseEntity<Resource> downloadFullReport(@PathVariable Long projectId) {
+            try {
+                // 1. Trouver le rapport le plus récent pour ce projet
+                List<Report> reports = reportRepository.findByProjectIdOrderByCreationDateDesc(projectId);
+
+                if (reports.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+
+                Report report = reports.get(0);
+
+                // 2. Construire le chemin complet du fichier
+                Path filePath = Paths.get(REPORTS_DIRECTORY, report.getFileName()).normalize();
+                Resource resource = new UrlResource(filePath.toUri());
+
+                // 3. Vérifier que le fichier existe et est accessible
+                if (!resource.exists() || !resource.isReadable()) {
+                    return ResponseEntity.notFound().build();
+                }
+
+                // 4. Préparer la réponse avec les headers appropriés
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_PDF)
+                        .header(
+                                HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + report.getFileName() + "\""
+                        )
+                        .body(resource);
+
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError().build();
+            }
+        }
+
+
+
+
+
+
+    }
+
+
+
