@@ -570,17 +570,35 @@ public class ProjectController {
                         projectMap.put("title", p.getTitle());
                         projectMap.put("status", p.getStatus().toString());
                         projectMap.put("submissionDate", p.getSubmissionDate());
-                        projectMap.put("reference", p.getReference());
+                        projectMap.put("reference", p.getReference());User investigator = p.getPrincipalInvestigator();
+                        if (p.getConsentType() != null &&
+                                (p.getConsentType().equalsIgnoreCase("différé") ||
+                                        p.getConsentType().equalsIgnoreCase("Dérogation"))) {
+                            projectMap.put("motivationLetter", p.getMotivationLetterPath());
+                        }
+                        if (investigator != null) {
+                            projectMap.put("principalInvestigatorCivilite", investigator.getCivilite());
+                            projectMap.put("principalInvestigatorName", investigator.getFullName());
+                            projectMap.put("principalInvestigatorEmail", investigator.getEmail());
+                            projectMap.put("principalInvestigatorAffiliation", investigator.getAffiliation());
+                            projectMap.put("principalInvestigatorLaboratory", investigator.getLaboratoire());
+                            projectMap.put("principalInvestigatorTitre", investigator.getTitre());
+                        }
 
                         projectMap.put("studyDuration", p.getStudyDuration());
                         projectMap.put("targetPopulation", p.getTargetPopulation());
                         projectMap.put("consentType", p.getConsentType());
                         projectMap.put("fundingSource", p.getFundingSource());
                         projectMap.put("fundingProgram", p.getFundingProgram());
-                        projectMap.put("sampling", p.getSampling());
+                        projectMap.put("sampling", p.getSampling() != null ?
+                                (p.getSampling() ? "Oui" : "Non") : "Non spécifié");
                         projectMap.put("sampleType", p.getSampleType());
                         projectMap.put("sampleQuantity", p.getSampleQuantity());
+                        projectMap.put("fundingSource", p.getFundingSource());
+                        projectMap.put("fundingProgram", p.getFundingProgram());
                         projectMap.put("projectDescription", p.getProjectDescription());
+                        projectMap.put("dataDescription", p.getDataDescription());
+
                         projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());if (p.getLatestReport() != null) {
                             projectMap.put("reportStatus", p.getLatestReport().getStatus());
                             projectMap.put("responsed", p.getLatestReport().getResponsed());
