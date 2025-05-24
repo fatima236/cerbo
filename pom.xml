@@ -13,13 +13,6 @@
             <id>google-maven-repository</id>
             <url>https://maven.google.com</url>
         </repository>
-        <repository>
-            <id>itext-releases</id>
-            <url>https://repo.itextsupport.com/releases</url>
-        </repository>
-
-
-
     </repositories>
     <groupId>com.example</groupId>
     <artifactId>CERBO</artifactId>
@@ -39,7 +32,6 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-web</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-config</artifactId>
@@ -146,12 +138,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.itextpdf</groupId>
-            <artifactId>itext7-core</artifactId>
-            <version>7.2.5</version>
         </dependency>
 
         <!-- Ajout de Spring Security Core -->
