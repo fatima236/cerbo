@@ -234,6 +234,7 @@ public class ProjectController {
 
             // Documents
             List<Map<String, Object>> documents = project.getDocuments().stream()
+                    .distinct()
                     .map(doc -> {
                         Map<String, Object> docMap = new HashMap<>();
                         docMap.put("name", doc.getName());
@@ -245,7 +246,6 @@ public class ProjectController {
                     .collect(Collectors.toList());
             response.put("documents", documents);
 
-            // Évaluateurs
             List<Map<String, Object>> reviewers = project.getReviewers().stream()
                     .map(reviewer -> {
                         Map<String, Object> reviewerMap = new HashMap<>();

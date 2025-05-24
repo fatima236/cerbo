@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.Map;
 
 @Service
@@ -41,12 +42,13 @@ public class AvisFavorableService {
             Map<String, PdfFormField> fields = form.getFormFields();
 
             // Remplir les champs avec les NOMS SIMPLIFIÉS
-            setFieldIfExists(fields, "Reference", project.getReference());
-            setFieldIfExists(fields, "Intitule", project.getTitle());
-            setFieldIfExists(fields, "Investigateur", "Pr. " + project.getPrincipalInvestigator().getFullName());
-            setFieldIfExists(fields, "Promoteur", project.getFundingSource());
+            setFieldIfExists(fields, "dhFormfield-5699153895", LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            setFieldIfExists(fields, "dhFormfield-5699153788", project.getReference());
+            setFieldIfExists(fields, "dhFormfield-5699153789", project.getTitle());
+            setFieldIfExists(fields, "dhFormfield-5699153790", "Pr. " + project.getPrincipalInvestigator().getFullName());
+            setFieldIfExists(fields, "dhFormfield-5699153791", project.getFundingSource());
 
-            setFieldIfExists(fields, "Duree_Etude", project.getStudyDuration());
+            setFieldIfExists(fields, "dhFormfield-5699153793", project.getStudyDuration());
 
             form.flattenFields();
         } catch (Exception e) {
