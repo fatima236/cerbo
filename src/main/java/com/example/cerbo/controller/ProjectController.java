@@ -33,13 +33,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.cerbo.entity.User;
-
+import java.time.format.DateTimeFormatter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -60,7 +59,7 @@ public class ProjectController {
     private final DocumentReviewService documentReviewService;
     private final DocumentRepository documentRepository;
 
-    private final AvisFavorableService avisFavorableService;
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Project> submitProject(
             @RequestPart("projectData") String projectDataJson,
@@ -265,7 +264,7 @@ public class ProjectController {
                     "Project not found with id: " + id);
         }
     }
-
+    private final AvisFavorableService avisFavorableService;
     @PutMapping("/{id}/status")
     public ResponseEntity<Project> updateProjectStatus(
             @PathVariable Long id,
@@ -276,8 +275,10 @@ public class ProjectController {
 
             Project updatedProject = projectService.updateProjectStatus(id, status, comment);
 
+            // Si le statut est "Avis favorable", générer le document
             if ("Avis favorable".equals(status)) {
                 Path avisPath = avisFavorableService.generateAvisFavorable(updatedProject);
+                // Vous pouvez sauvegarder le chemin du fichier dans le projet si nécessaire
                 updatedProject.setAvisFavorablePath(avisPath.toString());
                 projectRepository.save(updatedProject);
             }
@@ -931,68 +932,67 @@ public class ProjectController {
 
 
 
-        private final String REPORTS_DIRECTORY = "uploads/reports";
+    private final String REPORTS_DIRECTORY = "uploads/reports";
 
 
 
-        @GetMapping("/{projectId}/full-report")
-        public ResponseEntity<Resource> downloadFullReport(@PathVariable Long projectId) {
-            try {
-                // 1. Trouver le rapport le plus récent pour ce projet
-                List<Report> reports = reportRepository.findByProjectIdOrderByCreationDateDesc(projectId);
+    @GetMapping("/{projectId}/full-report")
+    public ResponseEntity<Resource> downloadFullReport(@PathVariable Long projectId) {
+        try {
+            // 1. Trouver le rapport le plus récent pour ce projet
+            List<Report> reports = reportRepository.findByProjectIdOrderByCreationDateDesc(projectId);
 
-                if (reports.isEmpty()) {
-                    return ResponseEntity.notFound().build();
-                }
-
-                Report report = reports.get(0);
-
-                // 2. Construire le chemin complet du fichier
-                Path filePath = Paths.get(REPORTS_DIRECTORY, report.getFileName()).normalize();
-                Resource resource = new UrlResource(filePath.toUri());
-
-                // 3. Vérifier que le fichier existe et est accessible
-                if (!resource.exists() || !resource.isReadable()) {
-                    return ResponseEntity.notFound().build();
-                }
-
-                // 4. Préparer la réponse avec les headers appropriés
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_PDF)
-                        .header(
-                                HttpHeaders.CONTENT_DISPOSITION,
-                                "attachment; filename=\"" + report.getFileName() + "\""
-                        )
-                        .body(resource);
-
-            } catch (Exception e) {
-                return ResponseEntity.internalServerError().build();
-            }
-        }
-
-        @PutMapping("/{docId}/documents/replace")
-        public ResponseEntity<Document> replaceDoc(@PathVariable("docId") Long docId,
-                                                  @RequestBody MultipartFile file) {
-            Document document = documentRepository.findById(docId).get();
-            if (document == null) {
-                ResponseEntity.badRequest().body("Le document n'existe pas");
-            }
-            if(file.isEmpty()) {
+            if (reports.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            String filename = fileStorageService.updateFile(file,document);
-            document.setModificationDate(LocalDateTime.now());
-            document.setName(filename);
 
-            return  ResponseEntity.ok(documentRepository.save(document));
+            Report report = reports.get(0);
+
+            // 2. Construire le chemin complet du fichier
+            Path filePath = Paths.get(REPORTS_DIRECTORY, report.getFileName()).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            // 3. Vérifier que le fichier existe et est accessible
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // 4. Préparer la réponse avec les headers appropriés
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(
+                            HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + report.getFileName() + "\""
+                    )
+                    .body(resource);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
-
-
-
-
-
-
     }
 
+    @PutMapping("/{docId}/documents/replace")
+    public ResponseEntity<Document> replaceDoc(@PathVariable("docId") Long docId,
+                                               @RequestBody MultipartFile file) {
+        Document document = documentRepository.findById(docId).get();
+        if (document == null) {
+            ResponseEntity.badRequest().body("Le document n'existe pas");
+        }
+        if(file.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String filename = fileStorageService.updateFile(file,document);
+        document.setModificationDate(LocalDateTime.now());
+        document.setName(filename);
+
+        return  ResponseEntity.ok(documentRepository.save(document));
+    }
+
+
+
+
+
+
+}
 
 
