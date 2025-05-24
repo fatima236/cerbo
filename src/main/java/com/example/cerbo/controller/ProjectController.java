@@ -163,6 +163,7 @@ public class ProjectController {
                 projectMap.put("title", project.getTitle());
                 projectMap.put("status", project.getStatus());
                 projectMap.put("submissionDate", project.getSubmissionDate());
+                projectMap.put("reference", project.getReference());
 
                 if (project.getPrincipalInvestigator() != null) {
                     Map<String, Object> investigator = new HashMap<>();
@@ -217,8 +218,7 @@ public class ProjectController {
                 response.put("creationDateOfReport", null); // ou une valeur par défaut
             }
 
-            // Investigateur principal
-            // In ProjectController.java
+
             if (project.getPrincipalInvestigator() != null) {
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
@@ -425,6 +425,10 @@ public class ProjectController {
             List<User> evaluators = userRepository.findAllById(evaluatorIds);
             if (evaluators.isEmpty()) {
                 return ResponseEntity.badRequest().body("Aucun évaluateur valide fourni");
+            }
+
+            if(project.getLatestReport()!=null){
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Le projet a déjà été traité .");
             }
 
             // Vérifie les rôles
