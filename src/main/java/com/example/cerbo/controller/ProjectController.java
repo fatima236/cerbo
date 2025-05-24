@@ -2,6 +2,7 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
+import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.*;
 import com.example.cerbo.service.NotificationService;
@@ -55,6 +56,7 @@ public class ProjectController {
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportRepository reportRepository;
     private final DocumentReviewService documentReviewService;
+    private final DocumentRepository documentRepository;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -596,7 +598,10 @@ public class ProjectController {
                         projectMap.put("documents", p.getDocuments().stream()
                                 .map(d -> Map.of(
                                         "name", d.getName(),
-                                        "path", d.getPath()
+                                        "path", d.getPath(),
+                                        "id" ,d.getId(),
+                                        "type",d.getType(),
+                                        "canReplace",documentReviewRepository.existsByDocument_IdAndReport_Status(d.getId(), ReportStatus.SENT)
                                 ))
                                 .collect(Collectors.toList()));
 
@@ -861,6 +866,23 @@ public class ProjectController {
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().build();
             }
+        }
+
+        @PutMapping("/{docId}/documents/replace")
+        public ResponseEntity<Document> replaceDoc(@PathVariable("docId") Long docId,
+                                                  @RequestBody MultipartFile file) {
+            Document document = documentRepository.findById(docId).get();
+            if (document == null) {
+                ResponseEntity.badRequest().body("Le document n'existe pas");
+            }
+            if(file.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            String filename = fileStorageService.updateFile(file,document);
+            document.setModificationDate(LocalDateTime.now());
+            document.setName(filename);
+
+            return  ResponseEntity.ok(documentRepository.save(document));
         }
 
 
