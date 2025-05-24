@@ -30,7 +30,7 @@ public class AvisFavorableService {
             Files.createDirectories(folder);
         }
 
-        Path templatePath = Path.of("src/main/resources/template/avis_favorable_template.pdf");
+        Path templatePath = Path.of("src/main/resources/template/avis_favorable.pdf");
         Path outputPath = folder.resolve(fileName);
 
         try (PdfReader reader = new PdfReader(templatePath.toFile());
@@ -40,15 +40,13 @@ public class AvisFavorableService {
             PdfAcroForm form = PdfAcroForm.getAcroForm(pdfDoc, true);
             Map<String, PdfFormField> fields = form.getFormFields();
 
-            // Remplir les champs selon le template exact
+            // Remplir les champs avec les NOMS SIMPLIFIÉS
             setFieldIfExists(fields, "Reference", project.getReference());
-            setFieldIfExists(fields, "Intitulé", project.getTitle());
-            setFieldIfExists(fields, "Investigateur(rice) principal(e)", "Pr. " + project.getPrincipalInvestigator().getFullName());
-            setFieldIfExists(fields, "Promoteur", project.getFundingSource()); // ou autre champ selon votre modèle
-            // Dans AvisFavorableService.java
-            setFieldIfExists(fields, "Début de l'étude",
-                    project.getSubmissionDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-            setFieldIfExists(fields, "Durée de l'étude", project.getStudyDuration());
+            setFieldIfExists(fields, "Intitule", project.getTitle());
+            setFieldIfExists(fields, "Investigateur", "Pr. " + project.getPrincipalInvestigator().getFullName());
+            setFieldIfExists(fields, "Promoteur", project.getFundingSource());
+
+            setFieldIfExists(fields, "Duree_Etude", project.getStudyDuration());
 
             form.flattenFields();
         } catch (Exception e) {
