@@ -49,12 +49,6 @@ public class Project {
 
     private LocalDateTime decisionDate;
 
-    @Column(nullable = false)
-    private LocalDate reviewDeadline = LocalDate.now().plusDays(60);
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50) // Adjust length as needed
-    private EvaluationStatus evaluationStatus;
 
     @Enumerated(EnumType.STRING)
     private ProjectStatus status = ProjectStatus.SOUMIS; // Changé de EN_COURS à SOUMIS
@@ -77,30 +71,7 @@ public class Project {
     private Boolean opinionSent;
     private LocalDateTime opinionSentDate;
 
-    // Add getters and setters for these new fields
-    public String getAvisFavorablePath() {
-        return avisFavorablePath;
-    }
 
-    public void setAvisFavorablePath(String avisFavorablePath) {
-        this.avisFavorablePath = avisFavorablePath;
-    }
-
-    public Boolean getOpinionSent() {
-        return opinionSent;
-    }
-
-    public void setOpinionSent(Boolean opinionSent) {
-        this.opinionSent = opinionSent;
-    }
-
-    public LocalDateTime getOpinionSentDate() {
-        return opinionSentDate;
-    }
-
-    public void setOpinionSentDate(LocalDateTime opinionSentDate) {
-        this.opinionSentDate = opinionSentDate;
-    }
     @Transient
     private MultipartFile motivationLetterFile; // Pour la réception du fichier
 
@@ -155,9 +126,6 @@ public class Project {
             this.submissionDate = LocalDateTime.now();
         }
 
-        if (this.reviewDeadline == null) {
-            this.reviewDeadline = LocalDate.now().plusDays(60);
-        }
     }
 
 

@@ -95,9 +95,7 @@ public class DocumentReviewController {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-        if (project.getReviewDeadline() != null && project.getReviewDeadline().isBefore(LocalDate.now())) {
-            throw new BusinessException("La période d'évaluation est terminée");
-        }
+
 
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document non trouvé"));
