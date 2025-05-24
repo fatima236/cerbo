@@ -4,6 +4,7 @@ import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.*;
+import com.example.cerbo.service.AvisFavorableService;
 import com.example.cerbo.service.NotificationService;
 import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
@@ -36,6 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,7 +56,7 @@ public class ProjectController {
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportRepository reportRepository;
 
-
+    private final AvisFavorableService avisFavorableService;
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Project> submitProject(
             @RequestPart("projectData") String projectDataJson,
@@ -269,6 +271,13 @@ public class ProjectController {
             String comment = request.get("comment");
 
             Project updatedProject = projectService.updateProjectStatus(id, status, comment);
+
+            if ("Avis favorable".equals(status)) {
+                Path avisPath = avisFavorableService.generateAvisFavorable(updatedProject);
+                updatedProject.setAvisFavorablePath(avisPath.toString());
+                projectRepository.save(updatedProject);
+            }
+
             return ResponseEntity.ok(updatedProject);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -276,6 +285,81 @@ public class ProjectController {
         }
     }
 
+    @GetMapping("/{projectId}/avis-favorable/preview")
+    public ResponseEntity<Map<String, String>> previewAvisFavorable(@PathVariable Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        Map<String, String> previewData = Map.of(
+                "reference", project.getReference(),
+                "intitule", project.getTitle(),
+                "investigateur", "Pr. " + project.getPrincipalInvestigator().getFullName(),
+                "promoteur", "Admin",
+                "date_debut", project.getSubmissionDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                "duree_etude", project.getStudyDuration()
+        );
+
+        return ResponseEntity.ok(previewData);
+    }
+
+    @GetMapping("/{projectId}/avis-favorable/download")
+    public ResponseEntity<Resource> downloadAvisFavorable(@PathVariable Long projectId) {
+        try {
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            if (project.getAvisFavorablePath() == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Path filePath = Paths.get(project.getAvisFavorablePath());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(
+                            HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"avis_favorable_" + project.getReference() + ".pdf\""
+                    )
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{projectId}/avis-favorable/send")
+    public ResponseEntity<?> sendAvisFavorable(@PathVariable Long projectId) {
+        try {
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            // Generate the document if it doesn't exist
+            if (project.getAvisFavorablePath() == null) {
+                Path avisPath = avisFavorableService.generateAvisFavorable(project);
+                project.setAvisFavorablePath(avisPath.toString());
+            }
+
+            // Update project status
+            project.setStatus(ProjectStatus.AVIS_FAVORABLE);
+            project.setOpinionSent(true);
+            project.setOpinionSentDate(LocalDateTime.now());
+            projectRepository.save(project);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Avis favorable envoyé avec succès"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Erreur lors de l'envoi de l'avis favorable: " + e.getMessage()
+            ));
+        }
+    }
     // Récupérer tous les évaluateurs
     @GetMapping("/evaluators")
     public ResponseEntity<?> getAllEvaluators() {

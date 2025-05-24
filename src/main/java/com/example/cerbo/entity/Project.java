@@ -61,7 +61,7 @@ public class Project {
 
     private LocalDateTime evaluationSubmitDate;
     private LocalDateTime LastReportDate;
-
+    private String avisFavorablePath;
 
     private String studyDuration;
     private String targetPopulation;
@@ -71,7 +71,11 @@ public class Project {
     private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
+    @Column(name = "opinion_sent")
+    private Boolean opinionSent = false;
 
+    @Column(name = "opinion_sent_date")
+    private LocalDateTime opinionSentDate;
     @Column(nullable = false) // Rend ce champ obligatoire
     private String dataDescription; // Nouveau champ pour la description des données
     @Column(columnDefinition = "TEXT")
