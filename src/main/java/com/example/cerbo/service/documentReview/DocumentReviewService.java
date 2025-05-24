@@ -2,6 +2,7 @@ package com.example.cerbo.service.documentReview;
 
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.DocumentReview;
+import com.example.cerbo.entity.Report;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
@@ -104,6 +105,15 @@ public class DocumentReviewService {
         });
 
         documentReviewRepository.saveAll(reviews);
+    }
+
+    public Boolean allReviewsResponsed(Long reportId ){
+        List <DocumentReview> documentReviews = documentReviewRepository.findByReportIdAndIncludedInReportTrue(reportId);
+        Boolean allRemarksResponsed = documentReviews.stream().allMatch(
+                r->r.getResponse()!=null && !r.getResponse().isEmpty()
+        );
+
+        return allRemarksResponsed;
     }
 
 

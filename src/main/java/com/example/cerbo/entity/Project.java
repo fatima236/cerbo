@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -61,7 +62,7 @@ public class Project {
 
     private LocalDateTime evaluationSubmitDate;
     private LocalDateTime LastReportDate;
-    private String avisFavorablePath;
+
 
     private String studyDuration;
     private String targetPopulation;
@@ -71,11 +72,11 @@ public class Project {
     private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
-    @Column(name = "opinion_sent")
-    private Boolean opinionSent = false;
+    private String motivationLetterPath; // Chemin du fichier stocké
 
-    @Column(name = "opinion_sent_date")
-    private LocalDateTime opinionSentDate;
+    @Transient
+    private MultipartFile motivationLetterFile; // Pour la réception du fichier
+
     @Column(nullable = false) // Rend ce champ obligatoire
     private String dataDescription; // Nouveau champ pour la description des données
     @Column(columnDefinition = "TEXT")
