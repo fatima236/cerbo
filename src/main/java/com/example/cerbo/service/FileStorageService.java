@@ -1,5 +1,6 @@
 package com.example.cerbo.service;
 
+import com.example.cerbo.entity.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,6 +47,30 @@ public class FileStorageService {
             throw new RuntimeException("Échec du stockage: " + e.getMessage());
         }
     }
+
+    public String updateFile(MultipartFile file, Document document) {
+        try {
+            String oldFileName = document.getName(); // assure-toi que Document a bien cette méthode
+
+            if (oldFileName != null && !oldFileName.isEmpty()) {
+                deleteFile(oldFileName);
+            }
+
+            String fileName = oldFileName != null && !oldFileName.isEmpty()
+                    ? oldFileName
+                    : StringUtils.cleanPath(file.getOriginalFilename());
+
+            Path targetLocation = this.fileStorageLocation.resolve(fileName);
+
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            return fileName;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la mise à jour du fichier: " + e.getMessage(), e);
+        }
+    }
+
 
     public Resource loadFileAsResource(String filename) {
         try {

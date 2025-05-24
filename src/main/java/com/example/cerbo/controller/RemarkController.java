@@ -12,6 +12,7 @@ import com.example.cerbo.service.FileStorageService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.RemarkService;
 import com.example.cerbo.service.chatGptService.ChatGptService;
+import com.example.cerbo.service.documentReview.DocumentReviewService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,8 @@ public class RemarkController {
     private final FileStorageService fileStorageService;
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportRepository reportRepository;
+    private final DocumentReviewService documentReviewService;
+
     @GetMapping
     @PreAuthorize("@projectSecurity.isProjectMember(#projectId, authentication)")
     public ResponseEntity<List<RemarkDTO>> getProjectRemarks(@PathVariable Long projectId) {
@@ -125,71 +128,42 @@ public class RemarkController {
                 .collect(Collectors.toList()));
     }
 
-    @PostMapping(value = "/{remarkId}/response", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+
+
+    @PutMapping(value = "/{remarkId}/response")
     @PreAuthorize("hasRole('INVESTIGATEUR') and @projectSecurity.isProjectMember(#projectId, authentication)")
     @Transactional // Ajout crucial
-    public ResponseEntity<DocumentReview> respondToRemark(
+    public ResponseEntity<DocumentReview> respondToRemarkEdit(
             @PathVariable Long projectId,
             @PathVariable Long remarkId,
             @RequestParam(value = "response", required = false) String responseText,
-            @RequestParam(value = "file", required = false) MultipartFile file,
             Authentication authentication) throws IOException {
 
-        // [1] Validation basique
-        if ((responseText == null || responseText.trim().isEmpty()) && (file == null || file.isEmpty())) {
+        if (responseText == null) {
             throw new IllegalArgumentException("Réponse textuelle ou fichier requis");
         }
 
-        // [2] Vérification projet
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
 
-        // [3] Vérification délai
         if (project.getResponseDeadline() != null && LocalDateTime.now().isAfter(project.getResponseDeadline())) {
             project.setStatus(ProjectStatus.REJETE);
             projectRepository.save(project);
             throw new RuntimeException("Délai de réponse expiré");
         }
 
-        // [4] Récupération remarque avec verrou
         DocumentReview remark = documentReviewRepository.findById(remarkId)
                 .orElseThrow(() -> new ResourceNotFoundException("Remarque non trouvée"));
 
-        // [5] Vérification réponse existante
-        if (remark.getResponse() != null) {
-            throw new IllegalStateException("Réponse déjà existante");
-        }
 
-        // [6] Traitement fichier
-        String filePath = null;
-        if (file != null && !file.isEmpty()) {
-            try {
-                if (file.getSize() > 10_000_000) throw new IllegalArgumentException("Fichier trop volumineux");
-                filePath = fileStorageService.storeFile(file);
-            } catch (Exception e) {
-                throw new RuntimeException("Échec du stockage du fichier", e);
-            }
-        }
 
-        // [7] Mise à jour
-        remark.setResponse(responseText != null ? responseText.trim() : null);
+
+        remark.setResponse(responseText);
         remark.setResponseDate(LocalDateTime.now());
-        remark.setResponseFilePath(filePath);
 
         DocumentReview savedRemark = documentReviewRepository.save(remark);
-        notificationService.sendNotification(
-                userRepository.findByRolesContaining("ADMIN"),
-                "Réponses soumises par l'investigateur",
-                "Les réponses pour le projet \"" + project.getTitle() + "\" ont été soumises."
-        );
 
-        // [8] Notifications (version robuste)
-//        try {
-//            notifyStakeholders(project, savedRemark, authentication.getName());
-//        } catch (Exception e) {
-//            log.error("Échec de notification", e);
-//            // Ne pas bloquer malgré l'échec
-//        }
+
 
         return ResponseEntity.ok(savedRemark);
     }
@@ -218,31 +192,7 @@ public class RemarkController {
                 .body(fileContent);
     }
 
-    private void notifyStakeholders(Project project, Remark remark, String responderEmail) {
-        // Notifier l'admin (vous devrez adapter cette partie selon votre modèle)
-        User admin = getAdminUser(); // Méthode à implémenter selon votre logique
-        if (admin != null) {
-            notificationService.createNotification(
-                    admin.getEmail(),
-                    "Nouvelle réponse reçue pour le projet: " + project.getTitle()
-            );
-        }
 
-        // Notifier l'évaluateur
-        if (remark.getReviewer() != null && !remark.getReviewer().getEmail().equals(responderEmail)) {
-            notificationService.createNotification(
-                    remark.getReviewer().getEmail(),
-                    "Votre remarque a reçu une réponse - Projet: " + project.getTitle()
-            );
-        }
-    }
-
-    private User getAdminUser() {
-        // Implémentez cette méthode pour récupérer un admin
-        return userRepository.findByRolesContaining("ADMIN").stream()
-                .findFirst()
-                .orElse(null);
-    }
 
     private String determineContentType(String filePath) {
         String extension = filePath.substring(filePath.lastIndexOf('.') + 1).toLowerCase();
@@ -388,13 +338,20 @@ public class RemarkController {
             return ResponseEntity.badRequest().body("Le projet n'a pas de rapport associé.");
         }
 
+
+        if(!documentReviewService.allReviewsResponsed(latestReport.getId())) {
+            return ResponseEntity.badRequest().body("il faut repondre a tout les repondes de rapport.");
+        }
+
         latestReport.setResponsed(true);
         latestReport.setStatus(ReportStatus.RESPONDED);
 
-        // Sauvegarder les modifications
-        reportRepository.save(latestReport); // Assure-toi que reportRepository est injecté
+        reportRepository.save(latestReport);
 
-        // Retourner une réponse OK
+        notificationService.sendNotification(userRepository.findByRolesName("ADMIN"),"Nouvelle réponse à un rapport de projet",
+                "L’investigateur " + project.getPrincipalInvestigator().getFullName() + " a répondu au rapport du projet \"" + project.getTitle() + "\".");
+
+
         return ResponseEntity.ok("Réponses envoyées avec succès.");
     }
 

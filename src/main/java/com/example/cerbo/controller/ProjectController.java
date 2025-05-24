@@ -2,9 +2,11 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
+import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.*;
 import com.example.cerbo.service.NotificationService;
+import com.example.cerbo.service.documentReview.DocumentReviewService;
 import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +55,8 @@ public class ProjectController {
     private final NotificationService notificationService;
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportRepository reportRepository;
+    private final DocumentReviewService documentReviewService;
+    private final DocumentRepository documentRepository;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -567,40 +571,37 @@ public class ProjectController {
                         projectMap.put("status", p.getStatus().toString());
                         projectMap.put("submissionDate", p.getSubmissionDate());
                         projectMap.put("reference", p.getReference());
-                        User investigator = p.getPrincipalInvestigator();
-                        if (p.getConsentType() != null &&
-                                (p.getConsentType().equalsIgnoreCase("différé") ||
-                                        p.getConsentType().equalsIgnoreCase("Dérogation"))) {
-                            projectMap.put("motivationLetter", p.getMotivationLetterPath());
-                        }
-                        if (investigator != null) {
-                            projectMap.put("principalInvestigatorCivilite", investigator.getCivilite());
-                            projectMap.put("principalInvestigatorName", investigator.getFullName());
-                            projectMap.put("principalInvestigatorEmail", investigator.getEmail());
-                            projectMap.put("principalInvestigatorAffiliation", investigator.getAffiliation());
-                            projectMap.put("principalInvestigatorLaboratory", investigator.getLaboratoire());
-                            projectMap.put("principalInvestigatorTitre", investigator.getTitre());
-                        }
 
                         projectMap.put("studyDuration", p.getStudyDuration());
                         projectMap.put("targetPopulation", p.getTargetPopulation());
                         projectMap.put("consentType", p.getConsentType());
-                        projectMap.put("sampling", p.getSampling() != null ?
-                                (p.getSampling() ? "Oui" : "Non") : "Non spécifié");
-                        projectMap.put("sampleType", p.getSampleType());
-                        projectMap.put("sampleQuantity", p.getSampleQuantity());
                         projectMap.put("fundingSource", p.getFundingSource());
                         projectMap.put("fundingProgram", p.getFundingProgram());
+                        projectMap.put("sampling", p.getSampling());
+                        projectMap.put("sampleType", p.getSampleType());
+                        projectMap.put("sampleQuantity", p.getSampleQuantity());
                         projectMap.put("projectDescription", p.getProjectDescription());
-                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());
-                        projectMap.put("dataDescription", p.getDataDescription());
+                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());if (p.getLatestReport() != null) {
+                            projectMap.put("reportStatus", p.getLatestReport().getStatus());
+                            projectMap.put("responsed", p.getLatestReport().getResponsed());
+                        } else {
+                            projectMap.put("reportStatus", null); // ou une valeur par défaut comme "Non défini"
+                            projectMap.put("responsed", null); // ou false / "Non répondu"
+                        }
+                        Boolean allRemarksResponsed = false;
+                        if(p.getLatestReport() != null) {
+                            allRemarksResponsed = documentReviewService.allReviewsResponsed(p.getLatestReport().getId());
+                        }
+                        projectMap.put("allRemarksResponsed", allRemarksResponsed );
 
-                        // Documents de base
+
                         projectMap.put("documents", p.getDocuments().stream()
                                 .map(d -> Map.of(
                                         "name", d.getName(),
                                         "path", d.getPath(),
-                                        "type", d.getType()
+                                        "id" ,d.getId(),
+                                        "type",d.getType(),
+                                        "canReplace",documentReviewRepository.existsByDocument_IdAndReport_Status(d.getId(), ReportStatus.SENT)
                                 ))
                                 .collect(Collectors.toList()));
 
@@ -865,6 +866,23 @@ public class ProjectController {
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().build();
             }
+        }
+
+        @PutMapping("/{docId}/documents/replace")
+        public ResponseEntity<Document> replaceDoc(@PathVariable("docId") Long docId,
+                                                  @RequestBody MultipartFile file) {
+            Document document = documentRepository.findById(docId).get();
+            if (document == null) {
+                ResponseEntity.badRequest().body("Le document n'existe pas");
+            }
+            if(file.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            String filename = fileStorageService.updateFile(file,document);
+            document.setModificationDate(LocalDateTime.now());
+            document.setName(filename);
+
+            return  ResponseEntity.ok(documentRepository.save(document));
         }
 
 

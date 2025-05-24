@@ -189,65 +189,7 @@ public class ReportService {
 
         }
 
-//        List<DocumentReview> reviews = documentReviewRepository.findByReportIdAndIncludedInReportTrue(report.getId());
-//
-//        Map<String, List<DocumentReview>> groupedReviews = reviews.stream()
-//                .collect(Collectors.groupingBy(review -> review.getDocument().getType().toString()));
-//
-//        Document document = new Document();
-//        PdfWriter.getInstance(document, new FileOutputStream(outputPath.toFile()));
-//        document.open();
-//
-//        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLUE);
-//        Font remarkDocumentFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.LIGHT_GRAY);
-//        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.black);
-//        Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
-//        Font redFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.RED);
-//
-//        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-//        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-//
-//        Project project = report.getProject();
-//
-//        document.add(new Paragraph("Rapport d’évaluation", titleFont));
-//        document.add(new Paragraph(" "));
-//        document.add(new Paragraph("Projet : " + project.getTitle(), normalFont));
-//        document.add(new Paragraph("Référence : " + project.getReference(), normalFont));
-//        document.add(new Paragraph("Statut du projet : " + project.getStatus(), normalFont));
-//        document.add(new Paragraph("Date de soumission : " + project.getSubmissionDate().format(dateTimeFormatter), normalFont));
-//
-//        if (project.getResponseDeadline() != null) {
-//            document.add(new Paragraph("Date limite de réponse aux remarques : " +
-//                    project.getResponseDeadline().format(dateTimeFormatter), redFont));
-//        } else {
-//            document.add(new Paragraph("Date limite de réponse aux remarques : Non définie", normalFont));
-//        }
-//
-//        document.add(new Paragraph("Date du rapport : " + report.getCreationDate().format(dateFormatter), normalFont));
-//        document.add(new Paragraph("Investigateur principal : " + project.getPrincipalInvestigator().getFullName(), normalFont));
-//        document.add(new Paragraph(" "));
-//
-//        document.add(new Paragraph("Remarques incluses :", sectionFont));
-//        for (String docType : groupedReviews.keySet()) {
-//            document.add(new Paragraph(docType, remarkDocumentFont));
-//            List<DocumentReview> docReviews = groupedReviews.get(docType);
-//
-//            for (DocumentReview review : docReviews) {
-//                document.add(new Paragraph( review.getContent(), normalFont));
-//            }
-//            document.add(new Paragraph(" "));
-//        }
-//
-//        document.add(new Paragraph(" ")); // ligne vide pour espacer
-//
-//        Font warningFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.RED);
-//        document.add(new Paragraph(
-//                "AVERTISSEMENT : Vous devez répondre à toutes les remarques disponibles dans votre compte. " +
-//                        "Si vous ne répondez pas, le projet sera rejeté automatiquement.",
-//                warningFont));
-//
-//        document.close();
-//        return path;
+
     }
 
     @Transactional(readOnly = true)
