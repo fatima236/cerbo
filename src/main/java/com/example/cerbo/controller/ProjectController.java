@@ -2,9 +2,12 @@ package com.example.cerbo.controller;
 
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
+import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.*;
+import com.example.cerbo.service.AvisFavorableService;
 import com.example.cerbo.service.NotificationService;
+import com.example.cerbo.service.documentReview.DocumentReviewService;
 import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +33,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.cerbo.entity.User;
-
+import java.time.format.DateTimeFormatter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,6 +56,8 @@ public class ProjectController {
     private final NotificationService notificationService;
     private final DocumentReviewRepository documentReviewRepository;
     private final ReportRepository reportRepository;
+    private final DocumentReviewService documentReviewService;
+    private final DocumentRepository documentRepository;
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -158,6 +163,7 @@ public class ProjectController {
                 projectMap.put("title", project.getTitle());
                 projectMap.put("status", project.getStatus());
                 projectMap.put("submissionDate", project.getSubmissionDate());
+                projectMap.put("reference", project.getReference());
 
                 if (project.getPrincipalInvestigator() != null) {
                     Map<String, Object> investigator = new HashMap<>();
@@ -212,8 +218,7 @@ public class ProjectController {
                 response.put("creationDateOfReport", null); // ou une valeur par défaut
             }
 
-            // Investigateur principal
-            // In ProjectController.java
+
             if (project.getPrincipalInvestigator() != null) {
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
@@ -229,6 +234,7 @@ public class ProjectController {
 
             // Documents
             List<Map<String, Object>> documents = project.getDocuments().stream()
+                    .distinct()
                     .map(doc -> {
                         Map<String, Object> docMap = new HashMap<>();
                         docMap.put("name", doc.getName());
@@ -240,7 +246,6 @@ public class ProjectController {
                     .collect(Collectors.toList());
             response.put("documents", documents);
 
-            // Évaluateurs
             List<Map<String, Object>> reviewers = project.getReviewers().stream()
                     .map(reviewer -> {
                         Map<String, Object> reviewerMap = new HashMap<>();
@@ -259,7 +264,7 @@ public class ProjectController {
                     "Project not found with id: " + id);
         }
     }
-
+    private final AvisFavorableService avisFavorableService;
     @PutMapping("/{id}/status")
     public ResponseEntity<Project> updateProjectStatus(
             @PathVariable Long id,
@@ -269,6 +274,15 @@ public class ProjectController {
             String comment = request.get("comment");
 
             Project updatedProject = projectService.updateProjectStatus(id, status, comment);
+
+            // Si le statut est "Avis favorable", générer le document
+            if ("Avis favorable".equals(status)) {
+                Path avisPath = avisFavorableService.generateAvisFavorable(updatedProject);
+                // Vous pouvez sauvegarder le chemin du fichier dans le projet si nécessaire
+                updatedProject.setAvisFavorablePath(avisPath.toString());
+                projectRepository.save(updatedProject);
+            }
+
             return ResponseEntity.ok(updatedProject);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -276,6 +290,81 @@ public class ProjectController {
         }
     }
 
+    @GetMapping("/{projectId}/avis-favorable/preview")
+    public ResponseEntity<Map<String, String>> previewAvisFavorable(@PathVariable Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        Map<String, String> previewData = Map.of(
+                "reference", project.getReference(),
+                "intitule", project.getTitle(),
+                "investigateur", "Pr. " + project.getPrincipalInvestigator().getFullName(),
+                "promoteur", "Admin",
+                "date_debut", project.getSubmissionDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                "duree_etude", project.getStudyDuration()
+        );
+
+        return ResponseEntity.ok(previewData);
+    }
+
+    @GetMapping("/{projectId}/avis-favorable/download")
+    public ResponseEntity<Resource> downloadAvisFavorable(@PathVariable Long projectId) {
+        try {
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            if (project.getAvisFavorablePath() == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Path filePath = Paths.get(project.getAvisFavorablePath());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(
+                            HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"avis_favorable_" + project.getReference() + ".pdf\""
+                    )
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{projectId}/avis-favorable/send")
+    public ResponseEntity<?> sendAvisFavorable(@PathVariable Long projectId) {
+        try {
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            // Generate the document if it doesn't exist
+            if (project.getAvisFavorablePath() == null) {
+                Path avisPath = avisFavorableService.generateAvisFavorable(project);
+                project.setAvisFavorablePath(avisPath.toString());
+            }
+
+            // Update project status
+            project.setStatus(ProjectStatus.AVIS_FAVORABLE);
+            project.setOpinionSent(true);
+            project.setOpinionSentDate(LocalDateTime.now());
+            projectRepository.save(project);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Avis favorable envoyé avec succès"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Erreur lors de l'envoi de l'avis favorable: " + e.getMessage()
+            ));
+        }
+    }
     // Récupérer tous les évaluateurs
     @GetMapping("/evaluators")
     public ResponseEntity<?> getAllEvaluators() {
@@ -336,6 +425,10 @@ public class ProjectController {
             List<User> evaluators = userRepository.findAllById(evaluatorIds);
             if (evaluators.isEmpty()) {
                 return ResponseEntity.badRequest().body("Aucun évaluateur valide fourni");
+            }
+
+            if(project.getLatestReport()!=null){
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Le projet a déjà été traité .");
             }
 
             // Vérifie les rôles
@@ -566,24 +659,56 @@ public class ProjectController {
                         projectMap.put("title", p.getTitle());
                         projectMap.put("status", p.getStatus().toString());
                         projectMap.put("submissionDate", p.getSubmissionDate());
-                        projectMap.put("reference", p.getReference());
+                        projectMap.put("reference", p.getReference());User investigator = p.getPrincipalInvestigator();
+                        if (p.getConsentType() != null &&
+                                (p.getConsentType().equalsIgnoreCase("différé") ||
+                                        p.getConsentType().equalsIgnoreCase("Dérogation"))) {
+                            projectMap.put("motivationLetter", p.getMotivationLetterPath());
+                        }
+                        if (investigator != null) {
+                            projectMap.put("principalInvestigatorCivilite", investigator.getCivilite());
+                            projectMap.put("principalInvestigatorName", investigator.getFullName());
+                            projectMap.put("principalInvestigatorEmail", investigator.getEmail());
+                            projectMap.put("principalInvestigatorAffiliation", investigator.getAffiliation());
+                            projectMap.put("principalInvestigatorLaboratory", investigator.getLaboratoire());
+                            projectMap.put("principalInvestigatorTitre", investigator.getTitre());
+                        }
 
                         projectMap.put("studyDuration", p.getStudyDuration());
                         projectMap.put("targetPopulation", p.getTargetPopulation());
                         projectMap.put("consentType", p.getConsentType());
                         projectMap.put("fundingSource", p.getFundingSource());
                         projectMap.put("fundingProgram", p.getFundingProgram());
-                        projectMap.put("sampling", p.getSampling());
+                        projectMap.put("sampling", p.getSampling() != null ?
+                                (p.getSampling() ? "Oui" : "Non") : "Non spécifié");
                         projectMap.put("sampleType", p.getSampleType());
                         projectMap.put("sampleQuantity", p.getSampleQuantity());
+                        projectMap.put("fundingSource", p.getFundingSource());
+                        projectMap.put("fundingProgram", p.getFundingProgram());
                         projectMap.put("projectDescription", p.getProjectDescription());
-                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());
+                        projectMap.put("dataDescription", p.getDataDescription());
 
-                        // Documents de base
+                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());if (p.getLatestReport() != null) {
+                            projectMap.put("reportStatus", p.getLatestReport().getStatus());
+                            projectMap.put("responsed", p.getLatestReport().getResponsed());
+                        } else {
+                            projectMap.put("reportStatus", null); // ou une valeur par défaut comme "Non défini"
+                            projectMap.put("responsed", null); // ou false / "Non répondu"
+                        }
+                        Boolean allRemarksResponsed = false;
+                        if(p.getLatestReport() != null) {
+                            allRemarksResponsed = documentReviewService.allReviewsResponsed(p.getLatestReport().getId());
+                        }
+                        projectMap.put("allRemarksResponsed", allRemarksResponsed );
+
+
                         projectMap.put("documents", p.getDocuments().stream()
                                 .map(d -> Map.of(
                                         "name", d.getName(),
-                                        "path", d.getPath()
+                                        "path", d.getPath(),
+                                        "id" ,d.getId(),
+                                        "type",d.getType(),
+                                        "canReplace",documentReviewRepository.existsByDocument_IdAndReport_Status(d.getId(), ReportStatus.SENT)
                                 ))
                                 .collect(Collectors.toList()));
 
@@ -811,51 +936,67 @@ public class ProjectController {
 
 
 
-        private final String REPORTS_DIRECTORY = "uploads/reports";
+    private final String REPORTS_DIRECTORY = "uploads/reports";
 
 
 
-        @GetMapping("/{projectId}/full-report")
-        public ResponseEntity<Resource> downloadFullReport(@PathVariable Long projectId) {
-            try {
-                // 1. Trouver le rapport le plus récent pour ce projet
-                List<Report> reports = reportRepository.findByProjectIdOrderByCreationDateDesc(projectId);
+    @GetMapping("/{projectId}/full-report")
+    public ResponseEntity<Resource> downloadFullReport(@PathVariable Long projectId) {
+        try {
+            // 1. Trouver le rapport le plus récent pour ce projet
+            List<Report> reports = reportRepository.findByProjectIdOrderByCreationDateDesc(projectId);
 
-                if (reports.isEmpty()) {
-                    return ResponseEntity.notFound().build();
-                }
-
-                Report report = reports.get(0);
-
-                // 2. Construire le chemin complet du fichier
-                Path filePath = Paths.get(REPORTS_DIRECTORY, report.getFileName()).normalize();
-                Resource resource = new UrlResource(filePath.toUri());
-
-                // 3. Vérifier que le fichier existe et est accessible
-                if (!resource.exists() || !resource.isReadable()) {
-                    return ResponseEntity.notFound().build();
-                }
-
-                // 4. Préparer la réponse avec les headers appropriés
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_PDF)
-                        .header(
-                                HttpHeaders.CONTENT_DISPOSITION,
-                                "attachment; filename=\"" + report.getFileName() + "\""
-                        )
-                        .body(resource);
-
-            } catch (Exception e) {
-                return ResponseEntity.internalServerError().build();
+            if (reports.isEmpty()) {
+                return ResponseEntity.notFound().build();
             }
+
+            Report report = reports.get(0);
+
+            // 2. Construire le chemin complet du fichier
+            Path filePath = Paths.get(REPORTS_DIRECTORY, report.getFileName()).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            // 3. Vérifier que le fichier existe et est accessible
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // 4. Préparer la réponse avec les headers appropriés
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(
+                            HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + report.getFileName() + "\""
+                    )
+                    .body(resource);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
-
-
-
-
-
-
     }
 
+    @PutMapping("/{docId}/documents/replace")
+    public ResponseEntity<Document> replaceDoc(@PathVariable("docId") Long docId,
+                                               @RequestBody MultipartFile file) {
+        Document document = documentRepository.findById(docId).get();
+        if (document == null) {
+            ResponseEntity.badRequest().body("Le document n'existe pas");
+        }
+        if(file.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String filename = fileStorageService.updateFile(file,document);
+        document.setModificationDate(LocalDateTime.now());
+        document.setName(filename);
+
+        return  ResponseEntity.ok(documentRepository.save(document));
+    }
+
+
+
+
+
+
+}
 
 

@@ -35,6 +35,7 @@ public class Article {
 
     private String category;
 
+    @Lob
     private String text;
 
     private String author;

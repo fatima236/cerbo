@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -48,12 +49,6 @@ public class Project {
 
     private LocalDateTime decisionDate;
 
-    @Column(nullable = false)
-    private LocalDate reviewDeadline = LocalDate.now().plusDays(60);
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50) // Adjust length as needed
-    private EvaluationStatus evaluationStatus;
 
     @Enumerated(EnumType.STRING)
     private ProjectStatus status = ProjectStatus.SOUMIS; // Changé de EN_COURS à SOUMIS
@@ -71,6 +66,14 @@ public class Project {
     private String sampleQuantity; // Changé de Integer à String pour plus de flexibilité
     private String fundingSource;
     private String fundingProgram;
+    private String motivationLetterPath; // Chemin du fichier stocké
+    private String avisFavorablePath;
+    private Boolean opinionSent;
+    private LocalDateTime opinionSentDate;
+
+
+    @Transient
+    private MultipartFile motivationLetterFile; // Pour la réception du fichier
 
     @Column(nullable = false) // Rend ce champ obligatoire
     private String dataDescription; // Nouveau champ pour la description des données
@@ -123,9 +126,6 @@ public class Project {
             this.submissionDate = LocalDateTime.now();
         }
 
-        if (this.reviewDeadline == null) {
-            this.reviewDeadline = LocalDate.now().plusDays(60);
-        }
     }
 
 

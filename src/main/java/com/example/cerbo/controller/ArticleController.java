@@ -41,6 +41,13 @@ public class ArticleController {
         return ResponseEntity.ok(articles);
     }
 
+    @GetMapping("/lastArticles")
+    public ResponseEntity<List<Article>> lastArticles() {
+        List<Article> articles = articleRepository.findTop4ByOrderByPublicationDateDesc();
+
+        return ResponseEntity.ok(articles);
+    }
+
     @GetMapping("/article/{articleId}")
     public ResponseEntity<Article> getArticleById(@PathVariable Long articleId) {
 

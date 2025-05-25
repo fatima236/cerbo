@@ -5,6 +5,7 @@ import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import jakarta.persistence.Entity;
+import com.example.cerbo.entity.enums.ReportStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -73,6 +74,12 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
     @Query("SELECT dr FROM DocumentReview dr WHERE dr.report.id = :reportId")
     List<DocumentReview> findByReportId(@Param("reportId") Long reportId);
+
+    boolean existsByDocument_IdAndReport_Status(Long documentId, ReportStatus status);
+
+
+
+
 
     @Query("SELECT DISTINCT dr.reviewer FROM DocumentReview dr " +
             "WHERE dr.final_submission = true " +

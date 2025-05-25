@@ -1,6 +1,7 @@
 package com.example.cerbo.controller;
 
 import com.example.cerbo.dto.DocumentReviewDTO;
+import com.example.cerbo.service.NotificationService;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.*;
@@ -50,6 +51,7 @@ public class RemarkReportController {
     private final ReportService reportService;
     private final RemarkRepository remarkRepository;
     private final ReportRepository reportRepository;
+    private final NotificationService notificationService;
 
     private DocumentReviewDTO convertToDTO(DocumentReview documentReview) {
         DocumentReviewDTO dto = new DocumentReviewDTO();
@@ -67,10 +69,10 @@ public class RemarkReportController {
 
         }
 
-//        if (documentReview.getReport().getProject() != null) {
-//            dto.setProjectId(documentReview.getReport().getProject().getId());
-//            dto.setProjectTitle(documentReview.getReport().getProject().getTitle());
-//        }
+        if (documentReview.getReport().getProject() != null) {
+              dto.setProjectId(documentReview.getReport().getProject().getId());
+              dto.setProjectTitle(documentReview.getReport().getProject().getTitle());
+       }
 
         dto.setDocumentName(documentReview.getReviewer().getFullName());
 
@@ -79,34 +81,6 @@ public class RemarkReportController {
         return dto;
     }
 
-
-//    private RemarkDTO convertToDto(Document document) {
-//        RemarkDTO dto = new RemarkDTO();
-//        dto.setId(document.getId());
-//        dto.setContent(document.getReviewRemark());
-//        dto.setCreationDate(document.getReviewDate());
-//        dto.setAdminStatus(document.getAdminStatus() != null ? document.getAdminStatus().toString() : null);
-//        dto.setValidationDate(document.getAdminValidationDate());
-//
-//        if (document.getReviewer() != null) {
-//            dto.setReviewerId(document.getReviewer().getId());
-//            dto.setReviewerName(document.getReviewer().getPrenom() + " " + document.getReviewer().getNom());
-//        }
-//
-//        dto.setResponse(document.getAdminResponse());
-//        dto.setResponseDate(document.getAdminResponseDate());
-//        dto.setHasResponseFile(document.getResponseFilePath() != null);
-//
-//        return dto;
-//    }
-
-//    @GetMapping("/preview")
-//    public ResponseEntity<List<RemarkDTO>> getRemarksForReport(@PathVariable Long projectId) {
-//        List<Document> documents = documentRepository.findByProjectIdAndAdminStatus(projectId, RemarkStatus.VALIDATED);
-//        return ResponseEntity.ok(documents.stream()
-//                .map(this::convertToDto)
-//                .collect(Collectors.toList()));
-//    }
 
     @PostMapping("/preview")
     public ResponseEntity<List<DocumentReviewDTO>> generateReportPreview(
@@ -125,6 +99,7 @@ public class RemarkReportController {
             Project project = projectRepository.findById(projectId).orElse(null);
             Report report = reportService.finalizeAndSendReport(project.getLatestReport().getId());
 
+
             return ResponseEntity.ok(report);
 
         }
@@ -135,50 +110,6 @@ public class RemarkReportController {
             ));
         }
     }
-
-//    @PostMapping("/send")
-//    public ResponseEntity<?> sendReportToInvestigator(@PathVariable Long projectId,
-//                                                      @RequestBody List<Long> documentReviewIds) {
-//        try {
-//            // Récupérer les DocumentReview qui répondent aux critères
-//            List<DocumentReview> validReviews = documentReviewRepository.findAllById(documentReviewIds).stream()
-//                    .filter(review -> review.getAdminEmail() != null)
-//                    .filter(review -> review.getAdminValidationDate() != null)
-//                    .filter(review -> review.getContent() != null && !review.getContent().isEmpty())
-//                    .collect(Collectors.toList());
-//
-//            if (validReviews.isEmpty()) {
-//                return ResponseEntity.badRequest().body(Map.of(
-//                        "success", false,
-//                        "message", "Aucune remarque valide sélectionnée (doit avoir admin_email, admin_validation_date et remark non vide)"
-//                ));
-//            }
-//
-//            // Extraire les IDs des documents associés
-//            List<Long> validDocumentIds = validReviews.stream()
-//                    .map(review -> review.getDocument().getId())
-//                    .distinct()
-//                    .collect(Collectors.toList());
-//            Project project = projectRepository.findById(projectId)
-//                    .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
-//
-//            // Appeler le service avec les documents valides
-//            Report report =remarkReportService.generateAndSendReportx(projectId);
-//
-//            return ResponseEntity.ok(Map.of(
-//                    "success", true,
-//                    "message", "Rapport généré avec succès",
-//                    "deadline", project.getResponseDeadline().format(DateTimeFormatter.ISO_DATE_TIME),
-//                    "documentsIncluded", validDocumentIds.size(),
-//                    "remarksIncluded", validReviews.size()
-//            ));
-//        } catch (Exception e) {
-//            return ResponseEntity.badRequest().body(Map.of(
-//                    "success", false,
-//                    "message", "Erreur lors de la génération du rapport: " + e.getMessage()
-//            ));
-//        }
-//    }
 
     @PostMapping("/genered")
     public ResponseEntity<Report> generedReport(@PathVariable Long projectId) {

@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.entity.Article;
 import com.example.cerbo.entity.Document;
 import com.example.cerbo.entity.Event;
 import com.example.cerbo.entity.Training;
@@ -36,6 +37,13 @@ public class EventController {
     @GetMapping
     public ResponseEntity<List<Event>> getAllEvents() {
         List<Event> events = eventRepository.findAll();
+
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/lastEvents")
+    public ResponseEntity<List<Event>> lastEvents() {
+        List<Event> events = eventRepository.findTop3ByOrderByStartDateDesc();
 
         return ResponseEntity.ok(events);
     }
