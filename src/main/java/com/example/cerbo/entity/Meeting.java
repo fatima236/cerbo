@@ -21,6 +21,9 @@ public class Meeting {
     private String month;
     private String status;
 
+    @Column(columnDefinition = "TEXT")
+    private String session;
+
     @Column(nullable = false)
     private int year;
 

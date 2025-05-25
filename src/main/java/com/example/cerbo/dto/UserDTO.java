@@ -11,4 +11,5 @@ public class UserDTO {
     private String firstName;
     private String lastName;
     private Set<String> roles;
+    private Long projectCount;
 }

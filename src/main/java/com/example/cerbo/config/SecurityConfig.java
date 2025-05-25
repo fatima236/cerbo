@@ -55,7 +55,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
         configuration.setAllowCredentials(true);
@@ -167,6 +167,21 @@ public class SecurityConfig {
                         .requestMatchers("/api/meeting/{meetingId}/agenda/**").hasRole("ADMIN")
                         .requestMatchers("/api/meeting/{meetingId}/attendees/**").hasRole("ADMIN")
                         .requestMatchers("/api/meeting/{meetingId}/attendance/**").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/session").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/pdf").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/present-members").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/project-decisions").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/response-decisions").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/document-reviews/final-examiners").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/attendees").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/api/meeting-minutes/{meetingId}/attendees").hasAnyRole("ADMIN", "EVALUATEUR")
+
+
+
+
+
+
 
                         // Endpoints existants modifiés pour ADMINSYS
                         .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS")

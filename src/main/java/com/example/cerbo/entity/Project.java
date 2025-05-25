@@ -182,10 +182,8 @@ public class Project {
         if (reports == null || reports.isEmpty()) {
             return null;
         }
-
         return reports.stream()
-                .sorted((r1, r2) -> r2.getCreationDate().compareTo(r1.getCreationDate()))
-                .findFirst()
+                .max(Comparator.comparing(Report::getCreationDate))
                 .orElse(null);
     }
 
@@ -194,5 +192,8 @@ public class Project {
         return latestReport != null ? latestReport.getStatus():null;
     }
 
+    @ManyToOne
+    @JoinColumn(name = "meeting_id")
+    private Meeting meeting;
 
 }

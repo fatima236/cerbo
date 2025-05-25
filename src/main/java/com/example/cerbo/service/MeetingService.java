@@ -739,32 +739,20 @@ public class MeetingService {
      */
     @Transactional
     public MeetingAttendance markAttendance(Long meetingId, Long evaluatorId, boolean present, String justification) {
-        try {
-            log.info("Marquage de présence - Réunion: {}, Évaluateur: {}, Présent: {}", meetingId, evaluatorId, present);
+        MeetingAttendance attendance = attendanceRepository
+                .findByMeetingIdAndEvaluatorId(meetingId, evaluatorId)
+                .orElseGet(() -> {
+                    MeetingAttendance newAttendance = new MeetingAttendance();
+                    newAttendance.setMeeting(meetingRepository.getReferenceById(meetingId));
+                    newAttendance.setEvaluator(userRepository.getReferenceById(evaluatorId));
+                    return newAttendance;
+                });
 
-            // Recherche ou création de l'entrée de présence
-            MeetingAttendance attendance = attendanceRepository.findByMeetingIdAndEvaluatorId(meetingId, evaluatorId)
-                    .orElseGet(() -> createNewAttendance(meetingId, evaluatorId));
+        // Enregistre l'ancien état dans l'historique avant de modifier
+        attendance.recordChange(present, justification, !present && justification != null && !justification.isEmpty());
 
-            // Mise à jour des informations de présence
-            attendance.setPresent(present);
-
-            // Gestion de la justification
-            boolean hasJustification = justification != null && !justification.trim().isEmpty();
-            attendance.setJustified(hasJustification);
-            attendance.setJustification(hasJustification ? justification.trim() : null);
-
-            MeetingAttendance savedAttendance = attendanceRepository.save(attendance);
-            log.info("Présence mise à jour avec succès pour l'évaluateur {} à la réunion {}", evaluatorId, meetingId);
-
-            return savedAttendance;
-        } catch (Exception e) {
-            log.error("Erreur lors du marquage de présence - Réunion: {}, Évaluateur: {}: {}",
-                    meetingId, evaluatorId, e.getMessage(), e);
-            throw new RuntimeException("Impossible de marquer la présence", e);
-        }
+        return attendanceRepository.save(attendance);
     }
-
     /**
      * Crée une nouvelle entrée de présence
      */

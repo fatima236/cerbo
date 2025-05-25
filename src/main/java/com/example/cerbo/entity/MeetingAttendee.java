@@ -41,4 +41,5 @@ public class MeetingAttendee {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Project relatedProject;
+
 }
