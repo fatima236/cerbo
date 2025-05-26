@@ -126,7 +126,9 @@ public class ReportService {
 
         notificationService.sendNotification(project.getPrincipalInvestigator(),
                 "Nouveau rapport disponible",
-                "Un nouveau rapport a été ajouté pour le projet \"" + project.getTitle() + "\". Veuillez consulter les remarques et y répondre."
+                "Un nouveau rapport a été ajouté pour le projet \"" + project.getTitle() + "\". Veuillez consulter les remarques et y répondre.",
+                "/investigateur/my-projects"
+
         );
 
         return reportRepository.save(report);

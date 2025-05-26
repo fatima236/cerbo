@@ -106,7 +106,11 @@ public class ProjectService {
         savedProject.setDocuments(documents);
 
 
-        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),"nouvel projet","nouvel projet de l'investigateur de l\'investigateur:"+principal.getNom()+" "+principal.getPrenom());
+        notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),
+                "nouvel projet",
+                "nouvel projet de l'investigateur de l\'investigateur:"+principal.getNom()+" "+principal.getPrenom(),
+                "/admin/projects/"+savedProject.getId()
+                );
 
         return projectRepository.save(savedProject);
     }
@@ -241,7 +245,8 @@ public class ProjectService {
                 notificationService.sendNotification(
                         investigator,
                         title,
-                        content
+                        content,
+                        "investigateur/my-projects"
                 );
             }
 
@@ -320,7 +325,8 @@ public class ProjectService {
         evaluators.forEach(evaluator -> {
             notificationService.createNotification(
                     evaluator.getEmail(),
-                    "Nouveau projet assigné: " + project.getTitle()
+                    "Nouveau projet assigné: " + project.getTitle(),
+                    "/evaluateur/dashboard"
             );
         });
 
@@ -347,7 +353,8 @@ public class ProjectService {
         // Envoyer notification
         notificationService.createNotification(
                 evaluator.getEmail(),
-                "Vous avez été retiré du projet: " + project.getTitle()
+                "Vous avez été retiré du projet: " + project.getTitle(),
+                "/evaluateur/dashboard"
         );
     }
 }

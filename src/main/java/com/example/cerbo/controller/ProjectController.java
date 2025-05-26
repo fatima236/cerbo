@@ -505,7 +505,11 @@ public class ProjectController {
 
             projectRepository.saveAndFlush(project); // Force l'écriture en base
 
-            notificationService.sendNotificationByIds(evaluatorIds, "Projet assigné", "Projet assigné : " + project.getTitle());
+            notificationService.sendNotificationByIds(evaluatorIds,
+                    "Projet assigné",
+                    "Projet assigné : " + project.getTitle(),
+                    "/evaluator/dashboard/"
+                    );
 
             return ResponseEntity.ok(Map.of(
                     "message", "Évaluateurs assignés avec succès",
@@ -548,7 +552,9 @@ public class ProjectController {
 
             notificationService.sendNotification(evaluator,
                     "Retrait du projet",
-                    "Vous avez été retiré du projet \"" + project.getTitle() + "\".");
+                    "Vous avez été retiré du projet \"" + project.getTitle() + "\".",
+                    "/evaluator/dashboard/"
+                    );
 
 
             return ResponseEntity.ok(Map.of(
@@ -964,7 +970,8 @@ public class ProjectController {
             notificationService.sendNotification(
                     userRepository.findByRolesContaining("ADMIN"),
                     "Évaluation complétée",
-                    "Le projet \"" + project.getTitle() + "\" a été évalué par " + evaluator.getNom() + "."
+                    "Le projet \"" + project.getTitle() + "\" a été évalué par " + evaluator.getNom() + ".",
+                    "/amin/projects/"+project.getId()
             );
 
             return ResponseEntity.ok(Map.of(
