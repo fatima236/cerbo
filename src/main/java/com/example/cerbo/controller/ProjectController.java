@@ -380,6 +380,11 @@ public class ProjectController {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
+            // Initialiser opinionSent si null
+            if (project.getOpinionSent() == null) {
+                project.setOpinionSent(false);
+            }
+
             // Vérifier si l'avis a déjà été envoyé
             if (project.isOpinionSent()) {
                 return ResponseEntity.badRequest().body(Map.of(
