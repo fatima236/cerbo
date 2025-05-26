@@ -136,16 +136,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/submission-status").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/investigator/reports/project/{projectId}").hasRole("INVESTIGATEUR")
 
-                        // Ajout des nouveaux endpoints pour l'avis favorable
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/{id}/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/projects/{id}/confirm-status").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/avis-favorable/preview").hasRole("ADMIN")
-
-
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/avis-favorable/download")
                         .hasAnyRole("ADMIN", "INVESTIGATEUR")
-                        .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/avis-favorable/send")
-                        .hasRole("ADMIN")
-                        // Articles
-                        .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/avis-favorable/send").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")
 

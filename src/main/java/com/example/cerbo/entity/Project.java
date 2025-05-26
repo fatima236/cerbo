@@ -63,7 +63,9 @@ public class Project {
     private LocalDateTime evaluationSubmitDate;
     private LocalDateTime LastReportDate;
 
-
+    private boolean reportSent;
+    private LocalDateTime reportSentDate;
+    private String reportPath;
     private String studyDuration;
     private String targetPopulation;
     private String consentType;
@@ -182,6 +184,14 @@ public class Project {
     public void addInvestigator(User investigator) {
         investigators.add(investigator);
     }
+    public boolean isOpinionSent() {
+        return opinionSent;
+    }
+
+    public void setOpinionSent(boolean opinionSent) {
+        this.opinionSent = opinionSent;
+    }
+
 
     /**
      * Vérifie si un utilisateur est impliqué dans ce projet

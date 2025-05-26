@@ -29,9 +29,12 @@ public class AvisFavorableService {
     public Path generateAvisFavorable(Project project) throws Exception {
         String fileName = "avis_favorable_" + project.getReference() + ".pdf";
         Path folder = Path.of("uploads/avis_favorable");
+
         // Récupérer un admin (le premier trouvé)
-        User admin = userRepository.findFirstByRolesContaining("ADMIN")
+        User admin = userRepository.findByRolesContaining("ADMIN").stream()
+                .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Aucun administrateur trouvé"));
+
         if (!Files.exists(folder)) {
             Files.createDirectories(folder);
         }
@@ -49,16 +52,18 @@ public class AvisFavorableService {
 
             // Nouveau code pour la date du jour
             String currentDate = LocalDateTime.now().format(DATE_FORMATTER);
-            setFieldIfExists(fields, "Text3", currentDate); // 🔵 Nom du champ à vérifier
+            setFieldIfExists(fields, "Text3", currentDate);
+
             // Remplir les champs avec les NOMS SIMPLIFIÉS
-            setFieldIfExists(fields, "dhFormfield-5699363529", project.getReference());
-            setFieldIfExists(fields, "dhFormfield-5699364360", project.getTitle());
+            setFieldIfExists(fields, "dhFormfield-5699364360", project.getReference());
+            setFieldIfExists(fields, "dhFormfield-5699363529", project.getTitle());
             setFieldIfExists(fields, "dhFormfield-5699364362", project.getPrincipalInvestigator().getFullName());
-            setFieldIfExists(fields, "dhFormfield-5699364366", project.getFundingSource());
+
             setFieldIfExists(fields, "dhFormfield-5699364391", submissionDate);
             setFieldIfExists(fields, "dhFormfield-5699364395", project.getStudyDuration());
-            // Ajout du promoteur (admin)
-            setFieldIfExists(fields, "NOM_DU_CHAMP_PROMOTEUR", admin.getFullName());
+
+            // Ajout du promoteur (admin) - vérifiez le nom exact du champ dans votre PDF
+            setFieldIfExists(fields, "dhFormfield-5699364366", admin.getFullName()); // Changez "promoteur" par le nom réel du champ
 
             form.flattenFields();
         } catch (Exception e) {
@@ -68,7 +73,6 @@ public class AvisFavorableService {
 
         return outputPath;
     }
-
     private void setFieldIfExists(Map<String, PdfFormField> fields, String fieldName, String value) {
         PdfFormField field = fields.get(fieldName);
         if (field != null) {

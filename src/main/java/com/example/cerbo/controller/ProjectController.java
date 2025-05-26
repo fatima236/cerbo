@@ -8,6 +8,7 @@ import com.example.cerbo.repository.*;
 import com.example.cerbo.service.AvisFavorableService;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.documentReview.DocumentReviewService;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +34,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.cerbo.entity.User;
-import java.time.format.DateTimeFormatter;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -264,9 +266,45 @@ public class ProjectController {
                     "Project not found with id: " + id);
         }
     }
+
     private final AvisFavorableService avisFavorableService;
     @PutMapping("/{id}/status")
-    public ResponseEntity<Project> updateProjectStatus(
+    public ResponseEntity<?> updateProjectStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String status = request.get("status");
+            String comment = request.get("comment");
+
+            Project project = projectService.getProjectById(id);
+
+            if ("Avis favorable".equals(status)) {
+                // Retourner les données de prévisualisation sans générer le document
+                Map<String, String> previewData = Map.of(
+                        "reference", project.getReference(),
+                        "intitule", project.getTitle(),
+                        "investigateur", "Pr. " + project.getPrincipalInvestigator().getFullName(),
+                        "promoteur", "Admin",
+                        "date_debut", project.getSubmissionDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                        "duree_etude", project.getStudyDuration(),
+                        "comment", comment,
+                        "needsConfirmation", "true"
+                );
+
+                return ResponseEntity.ok(previewData);
+            } else {
+                // Pour les autres statuts, procéder normalement
+                Project updatedProject = projectService.updateProjectStatus(id, status, comment);
+                return ResponseEntity.ok(updatedProject);
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error updating project status: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/confirm-status")
+    public ResponseEntity<Project> confirmProjectStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> request) {
         try {
@@ -275,10 +313,8 @@ public class ProjectController {
 
             Project updatedProject = projectService.updateProjectStatus(id, status, comment);
 
-            // Si le statut est "Avis favorable", générer le document
             if ("Avis favorable".equals(status)) {
                 Path avisPath = avisFavorableService.generateAvisFavorable(updatedProject);
-                // Vous pouvez sauvegarder le chemin du fichier dans le projet si nécessaire
                 updatedProject.setAvisFavorablePath(avisPath.toString());
                 projectRepository.save(updatedProject);
             }
@@ -286,10 +322,9 @@ public class ProjectController {
             return ResponseEntity.ok(updatedProject);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error updating project status: " + e.getMessage());
+                    "Error confirming project status: " + e.getMessage());
         }
     }
-
     @GetMapping("/{projectId}/avis-favorable/preview")
     public ResponseEntity<Map<String, String>> previewAvisFavorable(@PathVariable Long projectId) {
         Project project = projectRepository.findById(projectId)
@@ -313,15 +348,18 @@ public class ProjectController {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-            if (project.getAvisFavorablePath() == null) {
-                return ResponseEntity.notFound().build();
+            // Si le document n'existe pas, le générer d'abord
+            if (project.getAvisFavorablePath() == null || !Files.exists(Paths.get(project.getAvisFavorablePath()))) {
+                Path avisPath = avisFavorableService.generateAvisFavorable(project);
+                project.setAvisFavorablePath(avisPath.toString());
+                projectRepository.save(project);
             }
 
             Path filePath = Paths.get(project.getAvisFavorablePath());
             Resource resource = new UrlResource(filePath.toUri());
 
             if (!resource.exists() || !resource.isReadable()) {
-                return ResponseEntity.notFound().build();
+                throw new RuntimeException("File is not readable");
             }
 
             return ResponseEntity.ok()
@@ -332,15 +370,23 @@ public class ProjectController {
                     )
                     .body(resource);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ByteArrayResource(("Error: " + e.getMessage()).getBytes()));
         }
     }
-
     @PostMapping("/{projectId}/avis-favorable/send")
     public ResponseEntity<?> sendAvisFavorable(@PathVariable Long projectId) {
         try {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            // Vérifier si l'avis a déjà été envoyé
+            if (project.isOpinionSent()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "L'avis favorable a déjà été envoyé"
+                ));
+            }
 
             // Generate the document if it doesn't exist
             if (project.getAvisFavorablePath() == null) {
