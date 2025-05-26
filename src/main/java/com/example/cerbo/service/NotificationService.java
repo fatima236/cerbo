@@ -40,13 +40,13 @@ public class NotificationService {
     private final UserRepository userRepository;
 
     // Méthodes existantes inchangées
-    public List<Notification> sendNotification(User recipient, String title, String content) {
-        return sendNotification(Collections.singletonList(recipient), title, content);
+    public List<Notification> sendNotification(User recipient, String title, String content, String derictionUrl) {
+        return sendNotification(Collections.singletonList(recipient), title, content,derictionUrl);
     }
 
-    public List<Notification> sendNotification(List<User> recipients, String title, String content) {
+    public List<Notification> sendNotification(List<User> recipients, String title, String content ,String derictionUrl) {
         List<Notification> notifications = recipients.stream()
-                .map(user -> createNotification(user, title, content))
+                .map(user -> createNotification(user, title, content, derictionUrl))
                 .collect(Collectors.toList());
 
         List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
@@ -62,9 +62,9 @@ public class NotificationService {
         return savedNotifications;
     }
 
-    public List<Notification> sendNotificationByIds(List<Long> recipients, String title, String content) {
+    public List<Notification> sendNotificationByIds(List<Long> recipients, String title, String content,String derictionUrl) {
         List<Notification> notifications = recipients.stream()
-                .map(userId -> createNotification(userRepository.findById(userId).get(), title, content))
+                .map(userId -> createNotification(userRepository.findById(userId).get(), title, content,derictionUrl))
                 .collect(Collectors.toList());
 
         List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
@@ -82,12 +82,13 @@ public class NotificationService {
 
     // Ancienne version de createNotification (inchangée)
     @Transactional
-    public Notification createNotification(String recipientEmail, String content) {
+    public Notification createNotification(String recipientEmail, String content ,String derictionUrl) {
         User recipient = userRepository.findByEmail(recipientEmail);
 
         Notification notification = new Notification();
         notification.setRecipient(recipient);
         notification.setContent(content);
+        notification.setDirectionUrl(derictionUrl);
         notification.setSentDate(LocalDateTime.now());
         notification.setStatus(NotificationStatus.NON_LUE);
 
@@ -112,10 +113,11 @@ public class NotificationService {
     }
 
     // Méthode createNotification avec User (pour compatibilité)
-    private Notification createNotification(User user, String title, String content) {
+    private Notification createNotification(User user, String title, String content ,String derictionUrl) {
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setContent(content);
+        notification.setDirectionUrl(derictionUrl);
         notification.setRecipient(user);
         notification.setStatus(NotificationStatus.NON_LUE);
         notification.setSentDate(LocalDateTime.now());
@@ -138,7 +140,8 @@ public class NotificationService {
                 notification.getTitle(),
                 notification.getContent(),
                 notification.getSentDate(),
-                notification.getStatus()
+                notification.getStatus(),
+                notification.getDirectionUrl()
         );
     }
 
@@ -192,7 +195,8 @@ public class NotificationService {
                     .collect(Collectors.toList());
             admins.forEach(admin -> {
                 createNotification(admin, "Nouveau projet soumis",
-                        "Le projet " + event.getData().get("projectTitle") + " a été soumis.");
+                        "Le projet " + event.getData().get("projectTitle") + " a été soumis.",
+                        "/admin/projects/"+event.getData().get("projectTitle"));
 
                 sendEmailNotification(
                         admin.getEmail(),
@@ -203,30 +207,5 @@ public class NotificationService {
         }
     }
 
-    @Async
-    public void notifyProjectStatusChange(Project project) {
-        String message = "Votre projet " + project.getTitle() + " a été " +
-                project.getStatus().getDisplayName();
 
-        Notification notification = createNotification(
-                project.getPrincipalInvestigator(),
-                "Statut de projet mis à jour",
-                message
-        );
-        notificationRepository.save(notification);
-
-        sendEmailNotification(
-                project.getPrincipalInvestigator().getEmail(),
-                "Statut de projet mis à jour",
-                message
-        );
-    }
-
-    public void notifyAdmins(String message) {
-        List<User> admins = userRepository.findByRolesContaining("ADMIN");
-        admins.forEach(admin -> {
-            createNotification(admin, "Notification Admin", message);
-            sendEmailNotification(admin.getEmail(), "Notification Admin", message);
-        });
-    }
 }
