@@ -13,6 +13,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import jakarta.persistence.EntityManager;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @SpringBootApplication
+@EnableScheduling
 public class CerboApplication {
 
     @Autowired

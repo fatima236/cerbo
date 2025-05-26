@@ -78,10 +78,6 @@ public class TrainingController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/test")
-    public ResponseEntity<String> test() {
-        return ResponseEntity.ok("OK");
-    }
 
 
 

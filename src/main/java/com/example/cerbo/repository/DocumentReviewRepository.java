@@ -4,6 +4,7 @@ import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.DocumentType;
 import com.example.cerbo.entity.enums.RemarkStatus;
+import jakarta.persistence.Entity;
 import com.example.cerbo.entity.enums.ReportStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -80,5 +81,21 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
 
 
 
+    @Query("SELECT DISTINCT dr.reviewer FROM DocumentReview dr " +
+            "WHERE dr.final_submission = true " +
+            "AND dr.project.id IN (" +
+            "    SELECT mp.project.id FROM MeetingProject mp WHERE mp.meeting.id = :meetingId" +
+            ")")
+    List<User> findFinalExaminersByMeetingId(@Param("meetingId") Long meetingId);
 
+    @Query("SELECT COUNT(dr) FROM DocumentReview dr " +
+            "WHERE dr.reviewer = :reviewer " +
+            "AND dr.final_submission = :finalSubmission " +
+            "AND dr.project.id IN (" +
+            "    SELECT mp.project.id FROM MeetingProject mp WHERE mp.meeting.id = :meetingId" +
+            ")")
+    Long countByReviewerAndFinalSubmissionAndProjectMeetingId(
+            @Param("reviewer") User reviewer,
+            @Param("finalSubmission") Boolean finalSubmission,
+            @Param("meetingId") Long meetingId);
 }

@@ -209,10 +209,7 @@ public class UserController {
 
 
 
-    // [Autres méthodes existantes...]
 
-
-    // Injection par constructeur
 
 
 }

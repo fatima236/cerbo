@@ -35,4 +35,7 @@ public class MeetingProject {
 
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex = 0;
+
+    @Column(columnDefinition = "TEXT")
+    private String decision;
 }

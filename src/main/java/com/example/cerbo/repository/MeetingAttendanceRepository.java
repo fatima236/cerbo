@@ -58,4 +58,10 @@ public interface MeetingAttendanceRepository extends JpaRepository<MeetingAttend
     @Modifying
     @Query("DELETE FROM MeetingAttendance ma WHERE ma.evaluator.id = :evaluatorId")
     void deleteByEvaluatorId(@Param("evaluatorId") Long evaluatorId);
+
+    List<MeetingAttendance> findByMeetingIdAndPresentTrue(Long meetingId);
+
+    void deleteByMeetingId(Long meetingId);
+    void deleteByMeetingIdAndIsManualTrue(Long meetingId);
+
 }

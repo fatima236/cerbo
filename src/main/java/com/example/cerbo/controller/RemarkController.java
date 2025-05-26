@@ -325,14 +325,13 @@ public class RemarkController {
 
     @PutMapping("/sendResponses")
     public ResponseEntity<?> sendResponses(@PathVariable("projectId") Long projectId) {
-        // Récupérer le projet
+
         Project project = projectRepository.findById(projectId).orElse(null);
 
         if (project == null) {
             return ResponseEntity.notFound().build(); // 404 si le projet n'existe pas
         }
 
-        // Modifier le rapport le plus récent
         Report latestReport = project.getLatestReport();
         if (latestReport == null) {
             return ResponseEntity.badRequest().body("Le projet n'a pas de rapport associé.");

@@ -26,6 +26,7 @@ public class MeetingAttendanceDTO {
     private String justification;       // Justification d'absence
     private boolean justified;          // Absence justifiée ou non
     private String attendanceStatus;    // Statut formaté pour l'affichage
+    private boolean manual;     // true pour les membres ajoutés manuellement
 
     /**
      * Conversion depuis MeetingAttendance
@@ -42,6 +43,7 @@ public class MeetingAttendanceDTO {
             dto.setPresent(attendance.isPresent());
             dto.setJustification(attendance.getJustification());
             dto.setJustified(attendance.isJustified());
+            dto.setManual(attendance.isManual());
 
             // Informations de l'évaluateur
             if (attendance.getEvaluator() != null) {

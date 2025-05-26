@@ -112,29 +112,22 @@ public class ReportService {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
 
-        // Générer le PDF
         Path filePath = generateReportPdf(report);
         report.setFilePath(filePath.toString());
         report.setFileName(filePath.getFileName().toString());
         report.setStatus(ReportStatus.SENT);
         report.setSentDate(LocalDateTime.now());
 
-        // Définir une date limite de réponse (7 jours par exemple)
-        report.setResponseDeadline(LocalDateTime.now().plusDays(7));
+        report.setResponseDeadline(LocalDateTime.now().plusDays(60));
 
-        // Mettre à jour le projet
         Project project = report.getProject();
         project.setResponseDeadline(report.getResponseDeadline());
         projectRepository.save(project);
 
-        // Notifier l'investigateur principal
-//        User investigator = project.getPrincipalInvestigator();
-//        notificationService.notifyUser(
-//                investigator.getId(),
-//                "Nouveau rapport disponible",
-//                "Un rapport concernant votre projet est disponible. Veuillez y répondre avant le " +
-//                        report.getResponseDeadline().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-//        );
+        notificationService.sendNotification(project.getPrincipalInvestigator(),
+                "Nouveau rapport disponible",
+                "Un nouveau rapport a été ajouté pour le projet \"" + project.getTitle() + "\". Veuillez consulter les remarques et y répondre."
+        );
 
         return reportRepository.save(report);
     }
