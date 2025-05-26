@@ -85,6 +85,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/profile").authenticated()
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/meetings/evaluator/{evaluatorId}").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/meetings/evaluators").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/meetings/{meetingId}/attendance").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/meetings/{meetingId}/attendance").authenticated()
