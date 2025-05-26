@@ -70,7 +70,8 @@ public class Project {
     private String fundingProgram;
     private String motivationLetterPath; // Chemin du fichier stocké
     private String avisFavorablePath;
-    private Boolean opinionSent;
+    @Column(nullable = false)
+    private Boolean opinionSent = false;
     private LocalDateTime opinionSentDate;
 
 

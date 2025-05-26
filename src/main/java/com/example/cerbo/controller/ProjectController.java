@@ -325,6 +325,7 @@ public class ProjectController {
                     "Error confirming project status: " + e.getMessage());
         }
     }
+
     @GetMapping("/{projectId}/avis-favorable/preview")
     public ResponseEntity<Map<String, String>> previewAvisFavorable(@PathVariable Long projectId) {
         Project project = projectRepository.findById(projectId)
@@ -379,6 +380,11 @@ public class ProjectController {
         try {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+            // Initialiser opinionSent si null
+            if (project.getOpinionSent() == null) {
+                project.setOpinionSent(false);
+            }
 
             // Vérifier si l'avis a déjà été envoyé
             if (project.isOpinionSent()) {
@@ -594,6 +600,30 @@ public class ProjectController {
         }
 
         return fileStorageService.storeFile(file);
+    }
+
+    @GetMapping("/{projectId}/documents/{documentName}/preview")
+    public ResponseEntity<byte[]> previewDocument(
+            @PathVariable Long projectId,
+            @PathVariable String documentName) throws IOException {
+
+        Project project = projectService.getProjectById(projectId);
+        boolean documentExists = project.getDocuments().stream()
+                .anyMatch(doc -> doc.getName().equals(documentName));
+
+        if (!documentExists) {
+            throw new ResourceNotFoundException("Document not found");
+        }
+
+        byte[] fileContent = fileStorageService.loadFileAsBytes(documentName);
+        String contentType = determineContentType(documentName);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(contentType));
+        // Important: Utiliser "inline" pour la prévisualisation au lieu de "attachment"
+        headers.setContentDisposition(ContentDisposition.inline().filename(documentName).build());
+
+        return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
     }
 
     @GetMapping("/{projectId}/documents/{documentName}/content")

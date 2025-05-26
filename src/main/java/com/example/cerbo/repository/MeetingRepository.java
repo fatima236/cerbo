@@ -20,4 +20,16 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     void deleteByYear(@Param("year") int year);
     @Query("SELECT COUNT(m) FROM Meeting m WHERE YEAR(m.date) = :year")
     int countByYear(@Param("year") int year);
+
+    @Query("SELECT DISTINCT m FROM Meeting m " +
+            "JOIN m.attendees a " +
+            "WHERE a.user.id = :evaluatorId")
+    List<Meeting> findByAttendeeId(@Param("evaluatorId") Long evaluatorId);
+
+    @Query("SELECT DISTINCT m FROM Meeting m " +
+            "JOIN m.attendees a " +
+            "WHERE a.user.id = :evaluatorId AND m.year = :year")
+    List<Meeting> findByYearAndAttendeeId(
+            @Param("year") int year,
+            @Param("evaluatorId") Long evaluatorId);
 }
