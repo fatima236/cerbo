@@ -1,5 +1,6 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.ProjectDTO;
 import com.example.cerbo.dto.meeting.*;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.service.MeetingService;
@@ -888,4 +889,47 @@ public class MeetingController {
 
         return response;
     }
-}
+
+    @GetMapping("/evaluator/{evaluatorId}")
+    public ResponseEntity<List<MeetingWithProjectsDTO>> getMeetingsForEvaluator(
+            @PathVariable Long evaluatorId,
+            @RequestParam(required = false) Integer year) {
+        try {
+            log.info("Récupération des réunions pour l'évaluateur ID: {}", evaluatorId);
+
+            List<Meeting> meetings = meetingService.getMeetingsForEvaluator(evaluatorId, year);
+
+            List<MeetingWithProjectsDTO> dtos = meetings.stream()
+                    .map(this::convertToMeetingWithProjectsDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des réunions pour l'évaluateur {}: {}",
+                    evaluatorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private MeetingWithProjectsDTO convertToMeetingWithProjectsDTO(Meeting meeting) {
+        MeetingWithProjectsDTO dto = new MeetingWithProjectsDTO();
+        dto.setId(meeting.getId());
+        dto.setDate(meeting.getDate());
+        dto.setTime(meeting.getTime());
+        dto.setStatus(meeting.getStatus());
+
+        // Convert to MeetingWithProjectsDTO.ProjectDTO
+        List<MeetingWithProjectsDTO.ProjectDTO> projects = meeting.getAgendaItems().stream()
+                .filter(mp -> mp.getProject() != null)
+                .map(mp -> {
+                    MeetingWithProjectsDTO.ProjectDTO projectDto = new MeetingWithProjectsDTO.ProjectDTO();
+                    projectDto.setId(mp.getProject().getId());
+                    projectDto.setTitle(mp.getProject().getTitle());
+                    projectDto.setReference(mp.getProject().getReference());
+                    return projectDto;
+                })
+                .collect(Collectors.toList());
+
+        dto.setProjects(projects);
+        return dto;
+    }}

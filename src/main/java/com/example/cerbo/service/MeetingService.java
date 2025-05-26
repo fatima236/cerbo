@@ -5,6 +5,7 @@ import com.example.cerbo.repository.*;
 import com.example.cerbo.annotation.Loggable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -1188,6 +1189,46 @@ public class MeetingService {
         } catch (Exception e) {
             log.error("❌ Erreur génération PDF: {}", e.getMessage(), e);
             throw new RuntimeException("Impossible de générer le PDF", e);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<Meeting> getMeetingsForEvaluator(Long evaluatorId, Integer year) {
+        try {
+            log.debug("Récupération des réunions pour l'évaluateur {} (année: {})", evaluatorId, year);
+
+            // Vérifier que l'utilisateur est bien un évaluateur
+            User evaluator = userRepository.findById(evaluatorId)
+                    .orElseThrow(() -> new IllegalArgumentException("Évaluateur non trouvé"));
+
+            if (!evaluator.getRoles().contains("EVALUATEUR")) {
+                throw new IllegalArgumentException("L'utilisateur n'est pas un évaluateur");
+            }
+
+            List<Meeting> meetings;
+            if (year != null) {
+                meetings = meetingRepository.findByYearAndAttendeeId(year, evaluatorId);
+            } else {
+                meetings = meetingRepository.findByAttendeeId(evaluatorId);
+            }
+
+            // Charger les relations nécessaires
+            meetings.forEach(meeting -> {
+                Hibernate.initialize(meeting.getAgendaItems());
+                meeting.getAgendaItems().forEach(mp -> {
+                    if (mp.getProject() != null) {
+                        Hibernate.initialize(mp.getProject());
+                    }
+                });
+            });
+
+            return meetings;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Erreur technique lors de la récupération des réunions pour l'évaluateur {}",
+                    evaluatorId, e);
+            throw new RuntimeException("Erreur lors de la récupération des réunions", e);
         }
     }
 }
