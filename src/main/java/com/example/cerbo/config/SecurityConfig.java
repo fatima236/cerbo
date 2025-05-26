@@ -94,7 +94,7 @@ public class SecurityConfig {
 
                         // Projects
                         .requestMatchers("/api/projects", "/api/projects/**").hasAnyRole("ADMIN", "INVESTIGATEUR", "EVALUATEUR")
-                        .requestMatchers("/api/projects/documents/**", "/api/projects/documents/download", "/api/projects/documents/content").authenticated()
+                        .requestMatchers("/api/projects/documents/**", "/api/projects/documents/download", "/api/projects/documents/content", "api/projects/{projectId}/documents/{documentName}/preview").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/projects/evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/projects/assign-evaluators").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/evaluators/**").hasRole("ADMIN")
