@@ -80,6 +80,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/trainings").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/meeting/download-pdf").permitAll()
 
                         // JWT protected
                         .requestMatchers("/api/profile").authenticated()
