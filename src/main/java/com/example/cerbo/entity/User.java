@@ -32,7 +32,8 @@ public class User {
     private Set<String> roles;
     private boolean validated = false;
     private String photoUrl; // URL de la photo stockée
-
+    @Column(nullable = false)
+    private boolean useAI = false;
     public String getFullName() {
         return (prenom != null ? prenom + " " : "") + (nom != null ? nom : "");
     }

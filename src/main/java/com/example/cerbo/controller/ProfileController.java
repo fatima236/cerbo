@@ -1,17 +1,23 @@
 package com.example.cerbo.controller;
 
+import com.example.cerbo.dto.AIPreferenceDto;
 import com.example.cerbo.dto.UpdateProfileRequest;
 import com.example.cerbo.entity.User;
+import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.ProfileService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +138,29 @@ public class ProfileController {
                     "status", "error",
                     "message", e.getMessage()
             ));
+        }
+    }
+
+    @Autowired
+    private UserRepository userRepository;
+    @PutMapping("/ai-preference")
+    public ResponseEntity<?> updateAIPreference(@RequestBody AIPreferenceDto preferenceDto,
+                                                @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User currentUser = userRepository.findByEmail(userDetails.getUsername());
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Collections.singletonMap("error", "Utilisateur non trouvé"));
+            }
+
+            currentUser.setUseAI(preferenceDto.isUseAI());
+            User savedUser = userRepository.save(currentUser);
+
+            // Renvoie un objet simple avec le nouveau statut
+            return ResponseEntity.ok(Collections.singletonMap("useAI", savedUser.isUseAI()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Erreur lors de la mise à jour"));
         }
     }
 }
