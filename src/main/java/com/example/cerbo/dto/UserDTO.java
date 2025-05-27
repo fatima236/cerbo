@@ -12,4 +12,5 @@ public class UserDTO {
     private String lastName;
     private Set<String> roles;
     private Long projectCount;
+    private boolean useAI;
 }

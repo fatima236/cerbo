@@ -210,6 +210,7 @@ public class ProjectController {
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getLatestReportStatus());
             response.put("projectDescription", project.getProjectDescription());
+            response.put("dataDescription", project.getDataDescription());
             response.put("ethicalConsiderations", project.getEthicalConsiderations());
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
@@ -882,6 +883,7 @@ public class ProjectController {
                 projectMap.put("sampleQuantity", project.getSampleQuantity());
                 projectMap.put("projectDescription", project.getProjectDescription());
                 projectMap.put("ethicalConsiderations", project.getEthicalConsiderations());
+                projectMap.put("dataDescription", project.getDataDescription());
 
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
@@ -941,12 +943,6 @@ public class ProjectController {
             Project project = projectRepository.findByIdAndReviewerIdWithDocuments(projectId, evaluator.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
 
-            // Vérifier si le délai d'évaluation est dépassé
-            if (project.getReviewDate() != null &&
-                    LocalDateTime.now().isAfter(project.getReviewDate().plusDays(60))) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Le délai d'évaluation de ce projet est dépassé");
-            }
 
             // Trouver le document
             Document document = project.getDocuments().stream()

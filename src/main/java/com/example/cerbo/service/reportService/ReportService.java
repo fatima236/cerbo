@@ -82,7 +82,6 @@ public class ReportService {
                     .map(DocumentReview::getContent)
                     .collect(Collectors.joining("\n"));
 
-
             String syntheticContent = chatGptService.generateSyntheticRemark(prompt);
 
             DocumentReview synthetic = new DocumentReview();
