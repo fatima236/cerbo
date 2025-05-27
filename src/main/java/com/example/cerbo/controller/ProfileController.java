@@ -56,6 +56,7 @@ public class ProfileController {
             response.put("laboratoire", user.getLaboratoire() != null ? user.getLaboratoire() : "");
             response.put("affiliation", user.getAffiliation() != null ? user.getAffiliation() : "");
             response.put("photoUrl", user.getPhotoUrl() != null ? user.getPhotoUrl() : "");
+            response.put("useAI", user.getUseAI());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -108,6 +109,7 @@ public class ProfileController {
                 userMap.put("titre", user.getTitre());
                 userMap.put("affiliation", user.getAffiliation());
                 userMap.put("photoUrl", user.getPhotoUrl());
+
                 return userMap;
             }).collect(Collectors.toList());
 
@@ -156,8 +158,8 @@ public class ProfileController {
             currentUser.setUseAI(preferenceDto.isUseAI());
             User savedUser = userRepository.save(currentUser);
 
-            // Renvoie un objet simple avec le nouveau statut
-            return ResponseEntity.ok(Collections.singletonMap("useAI", savedUser.isUseAI()));
+            // Renvoie l'objet utilisateur complet
+            return ResponseEntity.ok(savedUser);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Erreur lors de la mise à jour"));
