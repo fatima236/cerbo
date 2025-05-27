@@ -514,7 +514,7 @@ public class ProjectController {
             notificationService.sendNotificationByIds(evaluatorIds,
                     "Projet assigné",
                     "Projet assigné : " + project.getTitle(),
-                    "/evaluator/dashboard/"
+                    "/evaluateur/dashboard/"
                     );
 
             return ResponseEntity.ok(Map.of(
@@ -559,7 +559,7 @@ public class ProjectController {
             notificationService.sendNotification(evaluator,
                     "Retrait du projet",
                     "Vous avez été retiré du projet \"" + project.getTitle() + "\".",
-                    "/evaluator/dashboard/"
+                    "/evaluateur/dashboard/"
                     );
 
 
@@ -1001,7 +1001,7 @@ public class ProjectController {
                     userRepository.findByRolesContaining("ADMIN"),
                     "Évaluation complétée",
                     "Le projet \"" + project.getTitle() + "\" a été évalué par " + evaluator.getNom() + ".",
-                    "/amin/projects/"+project.getId()
+                    "/admin/projects/"+project.getId()+"/vueProject"
             );
 
             return ResponseEntity.ok(Map.of(
