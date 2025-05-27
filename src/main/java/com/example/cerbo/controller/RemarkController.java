@@ -348,7 +348,9 @@ public class RemarkController {
         reportRepository.save(latestReport);
 
         notificationService.sendNotification(userRepository.findByRolesName("ADMIN"),"Nouvelle réponse à un rapport de projet",
-                "L’investigateur " + project.getPrincipalInvestigator().getFullName() + " a répondu au rapport du projet \"" + project.getTitle() + "\".");
+                "L’investigateur " + project.getPrincipalInvestigator().getFullName() + " a répondu au rapport du projet \"" + project.getTitle() + "\".",
+                "/admin/projects/"+projectId+"/report"
+                );
 
 
         return ResponseEntity.ok("Réponses envoyées avec succès.");

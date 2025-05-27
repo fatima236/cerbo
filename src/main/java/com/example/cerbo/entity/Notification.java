@@ -31,6 +31,8 @@ public class Notification {
 
     private LocalDateTime sentDate;
 
+    private String directionUrl;
+
     @Enumerated(EnumType.STRING)
     private NotificationStatus status = NotificationStatus.NON_LUE;
 
@@ -50,7 +52,8 @@ public class Notification {
                 this.title,
                 this.content,
                 this.sentDate,
-                this.status
+                this.status,
+                this.directionUrl
         );
     }
 

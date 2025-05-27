@@ -1,6 +1,18 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.entity.*;
+import com.itextpdf.io.font.constants.StandardFonts;
+import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.events.Event;
+import com.itextpdf.kernel.events.IEventHandler;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.geom.Rectangle;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.layout.Canvas;
+import com.itextpdf.layout.element.Image;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import com.example.cerbo.repository.*;
 import com.example.cerbo.annotation.Loggable;
 import lombok.RequiredArgsConstructor;
@@ -1229,6 +1241,170 @@ public class MeetingService {
             log.error("Erreur technique lors de la récupération des réunions pour l'évaluateur {}",
                     evaluatorId, e);
             throw new RuntimeException("Erreur lors de la récupération des réunions", e);
+        }
+    }
+
+    public byte[] generateMeetingsPdfWithHeaderFooter(int year) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdf = new PdfDocument(writer);
+
+        // Ajouter le gestionnaire d'événements pour header/footer
+        pdf.addEventHandler(PdfDocumentEvent.START_PAGE, new HeaderFooterHandler());
+
+        Document document = new Document(pdf);
+        // Ajustez les marges pour accommoder le header et footer
+        document.setMargins(100, 36, 70, 36); // Haut:100px, Bas:70px
+
+        try {
+            PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+
+            // Récupération des réunions
+            List<Meeting> meetings = meetingRepository.findByYear(year);
+
+            // Titre
+            Paragraph title = new Paragraph("Planning des Réunions " + year)
+                    .setFontSize(20)
+                    .setBold()
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(30);
+            document.add(title);
+
+            // Info
+            Paragraph info = new Paragraph("Comité d'Éthique - " + meetings.size() + " réunions")
+                    .setFontSize(12)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(20);
+            document.add(info);
+
+            // Tableau (même code que dans generateMeetingsPdf)
+            Table table = new Table(UnitValue.createPercentArray(new float[]{1, 3, 2, 2, 2}));
+            table.setWidth(UnitValue.createPercentValue(100));
+
+            // En-têtes
+            String[] headers = {"N°", "Date", "Heure", "Mois", "Statut"};
+            for (String header : headers) {
+                Cell cell = new Cell()
+                        .add(new Paragraph(header).setBold())
+                        .setBackgroundColor(ColorConstants.LIGHT_GRAY)
+                        .setTextAlignment(TextAlignment.CENTER);
+                table.addCell(cell);
+            }
+
+            // Données
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.FRENCH);
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+            int numeroReunion = 1;
+            for (Meeting meeting : meetings) {
+                // N°
+                table.addCell(new Cell().add(new Paragraph(String.valueOf(numeroReunion)))
+                        .setTextAlignment(TextAlignment.CENTER));
+
+                // Date
+                String dateStr = meeting.getDate() != null ?
+                        meeting.getDate().format(dateFormatter) : "Date non définie";
+                table.addCell(new Cell().add(new Paragraph(dateStr)));
+
+                // Heure
+                String timeStr = meeting.getTime() != null ?
+                        meeting.getTime().format(timeFormatter) : "Non définie";
+                table.addCell(new Cell().add(new Paragraph(timeStr))
+                        .setTextAlignment(TextAlignment.CENTER));
+
+                // Mois
+                String month = meeting.getMonth() != null ? meeting.getMonth() : "N/A";
+                table.addCell(new Cell().add(new Paragraph(month))
+                        .setTextAlignment(TextAlignment.CENTER));
+
+                // Statut
+                String status = meeting.getStatus() != null ? meeting.getStatus() : "Planifiée";
+                Cell statusCell = new Cell().add(new Paragraph(status))
+                        .setTextAlignment(TextAlignment.CENTER);
+
+                if ("Terminée".equals(status)) {
+                    statusCell.setBackgroundColor(ColorConstants.GREEN);
+                } else if ("Annulée".equals(status)) {
+                    statusCell.setBackgroundColor(ColorConstants.LIGHT_GRAY);
+                } else {
+                    statusCell.setBackgroundColor(ColorConstants.WHITE);
+                }
+
+                table.addCell(statusCell);
+                numeroReunion++;
+            }
+
+            document.add(table);
+
+            // Pied de page
+            Paragraph footer = new Paragraph("\n\nDocument généré le " +
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")))
+                    .setFontSize(10)
+                    .setTextAlignment(TextAlignment.CENTER);
+            document.add(footer);
+
+            document.close();
+
+            byte[] result = baos.toByteArray();
+            log.info("✅ PDF généré avec header/footer - {} réunions, {} bytes", meetings.size(), result.length);
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("❌ Erreur génération PDF avec header/footer: {}", e.getMessage(), e);
+            throw new RuntimeException("Impossible de générer le PDF", e);
+        }
+    }
+
+    private class HeaderFooterHandler implements IEventHandler {
+        @Override
+        public void handleEvent(Event event) {
+            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+            PdfPage page = docEvent.getPage();
+            Rectangle pageSize = page.getPageSize();
+            float marginLeft = 36; // Marge gauche de 36px (1 inch)
+            float marginRight = 36; // Marge droite de 36px
+
+            try {
+                // === HEADER ===
+                Image headerImg = new Image(ImageDataFactory.create(getClass().getResource("/static/header.png")));
+
+                // Ajuster la largeur pour tenir compte des marges
+                float headerWidth = pageSize.getWidth() - marginLeft - marginRight;
+                headerImg.setWidth(headerWidth);
+
+                // Calculer la hauteur proportionnelle
+                float headerHeight = headerImg.getImageHeight() * (headerWidth / headerImg.getImageWidth());
+
+                // Position Y: haut de page moins la hauteur de l'image
+                float headerY = pageSize.getTop() - headerHeight;
+
+                // Dessiner le header
+                new Canvas(new PdfCanvas(page), pageSize)
+                        .add(headerImg.setFixedPosition(marginLeft, headerY, headerWidth))
+                        .close();
+
+                // === FOOTER ===
+                Image footerImg = new Image(ImageDataFactory.create(getClass().getResource("/static/footer.png")));
+
+                // Ajuster la largeur pour tenir compte des marges
+                float footerWidth = pageSize.getWidth() - marginLeft - marginRight;
+                footerImg.setWidth(footerWidth);
+
+                // Calculer la hauteur proportionnelle
+                float footerHeight = footerImg.getImageHeight() * (footerWidth / footerImg.getImageWidth());
+
+                // Position Y: bas de page
+                float footerY = pageSize.getBottom();
+
+                // Dessiner le footer
+                new Canvas(new PdfCanvas(page), pageSize)
+                        .add(footerImg.setFixedPosition(marginLeft, footerY, footerWidth))
+                        .close();
+
+            } catch (Exception e) {
+                log.error("Erreur lors du chargement des images header/footer", e);
+            }
         }
     }
 }

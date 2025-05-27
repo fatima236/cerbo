@@ -22,4 +22,5 @@ public class NotificationDTO {
     private String content;
     private LocalDateTime sentDate;
     private NotificationStatus status;
+    private String directionUrl;
 }

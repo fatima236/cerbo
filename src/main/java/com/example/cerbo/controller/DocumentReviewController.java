@@ -8,14 +8,18 @@ import com.example.cerbo.exception.*;
 import com.example.cerbo.repository.*;
 import com.example.cerbo.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -91,6 +95,14 @@ public class DocumentReviewController {
             @PathVariable Long documentId,
             @RequestBody DocumentReviewRequest request,
             Authentication authentication) {
+
+        User reviewerr = userRepository.findByEmail(authentication.getName());
+        boolean isLocked = documentReviewRepository.existsByProjectIdAndReviewerAndFinalSubmissionTrue(projectId, reviewerr.getId());
+
+        if (isLocked) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Ce projet est verrouillé après soumission finale");
+        }
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé"));
@@ -202,18 +214,20 @@ public class DocumentReviewController {
 
     @PostMapping("/submit-review")
     @PreAuthorize("hasRole('EVALUATEUR')")
-    public ResponseEntity<Void> submitReview(
+    public ResponseEntity<Map<String, Object>> submitReview(
             @PathVariable Long projectId,
             Authentication authentication) {
 
         User reviewer = userRepository.findByEmail(authentication.getName());
         List<Document> documents = documentRepository.findByProjectId(projectId);
 
+        // Vérification que tous les documents ont été évalués
         long reviewedCount = documentReviewRepository.countByDocumentProjectIdAndReviewer(projectId, reviewer);
         if (reviewedCount < documents.size()) {
             throw new BusinessException("Vous devez évaluer tous les documents avant la soumission finale");
         }
 
+        // Marquer toutes les évaluations comme finalisées
         List<DocumentReview> evaluations = documentReviewRepository
                 .findByDocumentProjectIdAndReviewer(projectId, reviewer);
 
@@ -223,15 +237,38 @@ public class DocumentReviewController {
             eval.setSubmissionDate(LocalDateTime.now());
         });
 
-        documentReviewRepository.saveAll(evaluations);
+        List<DocumentReview> savedEvaluations = documentReviewRepository.saveAll(evaluations);
 
+        // Notifier l'admin
         notificationService.sendNotification(
                 userRepository.findByRolesContaining("ADMIN"),
                 "Évaluation soumise",
                 "Une évaluation a été soumise pour le projet \"" +
-                        projectRepository.findById(projectId).get().getTitle() + "\".");
+                        projectRepository.findById(projectId).get().getTitle() + "\".",
+                "/admin/projects/"+projectId+"/remarksProjects/"
+        );
 
-        return ResponseEntity.ok().build();
+        // Retourner les informations de verrouillage
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("projectId", projectId);
+        response.put("locked", true);
+        response.put("submissionDate", LocalDateTime.now());
+        response.put("evaluations", savedEvaluations.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList()));
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/is-locked")
+    @PreAuthorize("hasRole('EVALUATEUR')")
+    public ResponseEntity<Boolean> isProjectLockedForReviewer(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+        User reviewer = userRepository.findByEmail(authentication.getName());
+        boolean isLocked = documentReviewRepository.existsByProjectIdAndReviewerAndFinalSubmissionTrue(projectId, reviewer.getId());
+        return ResponseEntity.ok(isLocked);
     }
 
     @GetMapping("/reviews/me")

@@ -210,6 +210,7 @@ public class ProjectController {
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getLatestReportStatus());
             response.put("projectDescription", project.getProjectDescription());
+            response.put("dataDescription", project.getDataDescription());
             response.put("ethicalConsiderations", project.getEthicalConsiderations());
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
@@ -511,7 +512,11 @@ public class ProjectController {
 
             projectRepository.saveAndFlush(project); // Force l'écriture en base
 
-            notificationService.sendNotificationByIds(evaluatorIds, "Projet assigné", "Projet assigné : " + project.getTitle());
+            notificationService.sendNotificationByIds(evaluatorIds,
+                    "Projet assigné",
+                    "Projet assigné : " + project.getTitle(),
+                    "/evaluateur/dashboard/"
+                    );
 
             return ResponseEntity.ok(Map.of(
                     "message", "Évaluateurs assignés avec succès",
@@ -554,7 +559,9 @@ public class ProjectController {
 
             notificationService.sendNotification(evaluator,
                     "Retrait du projet",
-                    "Vous avez été retiré du projet \"" + project.getTitle() + "\".");
+                    "Vous avez été retiré du projet \"" + project.getTitle() + "\".",
+                    "/evaluateur/dashboard/"
+                    );
 
 
             return ResponseEntity.ok(Map.of(
@@ -876,6 +883,7 @@ public class ProjectController {
                 projectMap.put("sampleQuantity", project.getSampleQuantity());
                 projectMap.put("projectDescription", project.getProjectDescription());
                 projectMap.put("ethicalConsiderations", project.getEthicalConsiderations());
+                projectMap.put("dataDescription", project.getDataDescription());
 
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
@@ -994,7 +1002,8 @@ public class ProjectController {
             notificationService.sendNotification(
                     userRepository.findByRolesContaining("ADMIN"),
                     "Évaluation complétée",
-                    "Le projet \"" + project.getTitle() + "\" a été évalué par " + evaluator.getNom() + "."
+                    "Le projet \"" + project.getTitle() + "\" a été évalué par " + evaluator.getNom() + ".",
+                    "/admin/projects/"+project.getId()+"/vueProject"
             );
 
             return ResponseEntity.ok(Map.of(

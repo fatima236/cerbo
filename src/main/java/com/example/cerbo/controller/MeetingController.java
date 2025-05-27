@@ -768,7 +768,6 @@ public class MeetingController {
      * Téléchargement du planning PDF
      */
     @GetMapping("/download-pdf")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> downloadMeetingsPdf(@RequestParam int year) {
         try {
             log.info("🔄 Demande de téléchargement PDF pour l'année: {}", year);
@@ -780,9 +779,7 @@ public class MeetingController {
             }
 
             // Génération du PDF via le service
-            byte[] pdfBytes = meetingService.generateMeetingsPdf(year);
-            // OU si c'est dans MeetingAttendanceService :
-            // byte[] pdfBytes = meetingAttendanceService.generateMeetingsPdf(year);
+            byte[] pdfBytes = meetingService.generateMeetingsPdfWithHeaderFooter(year);
 
             // Headers HTTP pour le téléchargement
             HttpHeaders headers = new HttpHeaders();
