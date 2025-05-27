@@ -98,4 +98,19 @@ public interface DocumentReviewRepository extends JpaRepository<DocumentReview, 
             @Param("reviewer") User reviewer,
             @Param("finalSubmission") Boolean finalSubmission,
             @Param("meetingId") Long meetingId);
+
+    // Vérifie si un évaluateur a soumis son évaluation finale pour un projet
+    @Query("SELECT COUNT(dr) > 0 FROM DocumentReview dr " +
+            "WHERE dr.project.id = :projectId " +
+            "AND dr.reviewer.id = :reviewerId " +
+            "AND dr.final_submission = true")
+    boolean existsByProjectIdAndReviewerAndFinalSubmissionTrue(
+            @Param("projectId") Long projectId,
+            @Param("reviewerId") Long reviewerId);
+
+    // Trouver toutes les évaluations finales d'un évaluateur pour un projet
+    @Query("SELECT dr FROM DocumentReview dr WHERE dr.project.id = :projectId AND dr.reviewer = :reviewer AND dr.final_submission = true")
+    List<DocumentReview> findByProjectIdAndReviewerAndFinalSubmissionTrue(
+            @Param("projectId") Long projectId,
+            @Param("reviewer") User reviewer);
 }

@@ -74,6 +74,7 @@ public class Project {
     private Boolean opinionSent = false;
     private LocalDateTime opinionSentDate;
 
+    private LocalDateTime review_deadline=null;
 
     @Transient
     private MultipartFile motivationLetterFile; // Pour la réception du fichier

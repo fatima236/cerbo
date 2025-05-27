@@ -109,7 +109,7 @@ public class ProjectService {
         notificationService.sendNotification(userRepository.findByRolesContaining("ADMIN"),
                 "nouvel projet",
                 "nouvel projet de l'investigateur de l\'investigateur:"+principal.getNom()+" "+principal.getPrenom(),
-                "/admin/projects/"+savedProject.getId()
+                "/admin/projects/"+savedProject.getId()+"/vueProject"
                 );
 
         return projectRepository.save(savedProject);
@@ -246,7 +246,7 @@ public class ProjectService {
                         investigator,
                         title,
                         content,
-                        "investigateur/my-projects"
+                        "/investigateur/my-projects"
                 );
             }
 

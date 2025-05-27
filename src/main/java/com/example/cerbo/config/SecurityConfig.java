@@ -130,6 +130,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentName}/content").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentId}/reviews/me").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/reviews/me").hasRole("EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/is-locked").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/review").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/clear-review").hasRole("EVALUATEUR")
                         .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/documents/submit-review").hasAnyRole("ADMIN", "EVALUATEUR")
