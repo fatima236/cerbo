@@ -83,6 +83,7 @@ public class SecurityConfig {
 
                         // JWT protected
                         .requestMatchers("/api/profile").authenticated()
+                        .requestMatchers("/api/profile/ai-preference").authenticated() // Ajoutez cette ligne
                         .requestMatchers("/api/notifications").authenticated()
                         .requestMatchers("/api/meetings/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/meetings/evaluator/{evaluatorId}").authenticated()
