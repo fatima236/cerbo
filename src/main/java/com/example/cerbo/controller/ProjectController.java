@@ -210,6 +210,7 @@ public class ProjectController {
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getLatestReportStatus());
             response.put("projectDescription", project.getProjectDescription());
+            response.put("dataDescription", project.getDataDescription());
             response.put("ethicalConsiderations", project.getEthicalConsiderations());
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
@@ -882,6 +883,7 @@ public class ProjectController {
                 projectMap.put("sampleQuantity", project.getSampleQuantity());
                 projectMap.put("projectDescription", project.getProjectDescription());
                 projectMap.put("ethicalConsiderations", project.getEthicalConsiderations());
+                projectMap.put("dataDescription", project.getDataDescription());
 
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
