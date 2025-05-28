@@ -32,7 +32,8 @@ public class User {
     private Set<String> roles;
     private boolean validated = false;
     private String photoUrl; // URL de la photo stockée
-
+    @Column(nullable = false, columnDefinition = "boolean default true") // Changez à true si vous voulez que ce soit activé par défaut
+    private boolean useAI = true;
     public String getFullName() {
         return (prenom != null ? prenom + " " : "") + (nom != null ? nom : "");
     }
@@ -46,6 +47,17 @@ public class User {
     @Transient // Ne sera pas persisté en base
     private MultipartFile photoFile; // Pour la réception du fichier
     // Méthode pour vérifier si le profil est complet
+    public boolean getUseAI() {
+        return useAI;
+    }
+
+    public void setUseAI(boolean useAI) {
+        this.useAI = useAI;
+    }
+    // Ajoutez soit cette méthode (standard pour les booléens)
+    public boolean isUseAI() {
+        return useAI;
+    }
 
     // Méthode pratique pour obtenir le nom complet
 
