@@ -1,6 +1,7 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.annotation.Loggable;
+import com.example.cerbo.dto.CoInvestigateurDTO;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.DocumentType;
@@ -70,14 +71,31 @@ public class ProjectService {
         // Co-investigateurs
         Set<User> investigators = new HashSet<>();
         investigators.add(principal);
-        if (submissionDTO.getInvestigatorIds() != null) {
-            submissionDTO.getInvestigatorIds().forEach(id -> {
-                User inv = userRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Investigateur non trouvé"));
-                investigators.add(inv);
-            });
+        if (submissionDTO.getCoInvestigators() != null && !submissionDTO.getCoInvestigators().isEmpty()) {
+            for (CoInvestigateurDTO coInvDto : submissionDTO.getCoInvestigators()) {
+                // Vérifier si l'utilisateur existe déjà par email
+                User coInvestigator = userRepository.findByEmail(coInvDto.getEmail());
+
+                if (coInvestigator == null) {
+                    // Créer un nouvel utilisateur si non existant
+                    coInvestigator = User.builder()
+                            .nom(coInvDto.getName())
+                            .prenom(coInvDto.getSurname())
+                            .email(coInvDto.getEmail())
+                            .titre(coInvDto.getTitle())
+                            .affiliation(coInvDto.getAffiliation())
+                            .laboratoire(coInvDto.getAddress())
+
+                            .build();
+                    coInvestigator = userRepository.save(coInvestigator);
+                }
+
+                investigators.add(coInvestigator);
+            }
         }
+
         project.setInvestigators(investigators);
+
 
         // Save the project first to generate its ID
         Project savedProject = projectRepository.save(project);

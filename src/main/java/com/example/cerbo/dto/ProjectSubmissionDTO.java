@@ -102,4 +102,5 @@ public class ProjectSubmissionDTO {
     public void setMotivationLetterPath(String motivationLetterPath) {
         this.motivationLetterPath = motivationLetterPath;
     }
+    private List<CoInvestigateurDTO> coInvestigators = new ArrayList<>();
 }

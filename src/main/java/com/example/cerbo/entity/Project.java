@@ -71,6 +71,7 @@ public class Project {
     private String motivationLetterPath; // Chemin du fichier stocké
     private String avisFavorablePath;
     @Column(nullable = false)
+    @Builder.Default
     private Boolean opinionSent = false;
     private LocalDateTime opinionSentDate;
 
