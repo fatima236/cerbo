@@ -19,7 +19,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/admin/users")
 @CrossOrigin(origins = "http://localhost:3000")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'INVESTIGATEUR', 'EVALUATEUR')")
 public class AdminUserController {
 
     @Autowired
