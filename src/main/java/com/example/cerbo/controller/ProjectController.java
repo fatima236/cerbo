@@ -943,6 +943,12 @@ public class ProjectController {
             Project project = projectRepository.findByIdAndReviewerIdWithDocuments(projectId, evaluator.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Projet non trouvé ou non assigné à cet évaluateur"));
 
+            // Vérifier si le délai d'évaluation est dépassé
+            if (project.getReviewDate() != null &&
+                    LocalDateTime.now().isAfter(project.getReviewDate().plusDays(60))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Le délai d'évaluation de ce projet est dépassé");
+            }
 
             // Trouver le document
             Document document = project.getDocuments().stream()
