@@ -3,12 +3,14 @@ package com.example.cerbo.service.reportService;
 import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.Report;
+import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.ReportRepository;
+import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.chatGptService.ChatGptService;
 import com.itextpdf.forms.PdfAcroForm;
@@ -21,6 +23,7 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,9 +46,13 @@ public class ReportService {
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
     private final ChatGptService chatGptService;
+    private final UserRepository userRepository;
 
     @Transactional
     public Report createReport(Long projectId, List<Long> reviewIds) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(username);
+
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
         Report report = new Report();
@@ -59,7 +66,6 @@ public class ReportService {
         Map<com.example.cerbo.entity.Document, List<DocumentReview>> grouped = reviews.stream()
                 .collect(Collectors.groupingBy(DocumentReview::getDocument));
 
-        // Vérifier que toutes les remarques appartiennent au même projet
         reviews.forEach(review -> {
             if (!review.getDocument().getProject().getId().equals(projectId)) {
                 throw new IllegalArgumentException("Review does not belong to the specified project");
@@ -74,15 +80,12 @@ public class ReportService {
             com.example.cerbo.entity.Document doc = entry.getKey();
             List<DocumentReview> docRemarks = entry.getValue();
 
-//            String content = docRemarks.stream()
-//                    .map(dr -> "- " + dr.getContent())
-//                    .collect(Collectors.joining("\n"));
 
             String prompt = docRemarks.stream()
                     .map(DocumentReview::getContent)
                     .collect(Collectors.joining("\n"));
 
-            String syntheticContent = chatGptService.generateSyntheticRemark(prompt);
+            String syntheticContent = chatGptService.generateSyntheticRemark(prompt,currentUser.isUseAI());
 
             DocumentReview synthetic = new DocumentReview();
             synthetic.setDocument(doc);
