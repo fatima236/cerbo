@@ -229,6 +229,7 @@ public class ProjectController {
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getLatestReportStatus());
             response.put("projectDescription", project.getProjectDescription());
+
             response.put("dataDescription", project.getDataDescription());
             response.put("ethicalConsiderations", project.getEthicalConsiderations());
             List<Report> reports = project.getReports();

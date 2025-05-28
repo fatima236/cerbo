@@ -82,7 +82,7 @@ public class ReportService {
                     .map(DocumentReview::getContent)
                     .collect(Collectors.joining("\n"));
 
-            String syntheticContent = chatGptService.generateSyntheticRemark(prompt);
+            String syntheticContent = chatGptService.generateSyntheticRemark(prompt, true);
 
             DocumentReview synthetic = new DocumentReview();
             synthetic.setDocument(doc);
