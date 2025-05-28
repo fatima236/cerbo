@@ -190,7 +190,7 @@ public class SecurityConfig {
 
 
                         // Endpoints existants modifiés pour ADMINSYS
-                        .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS")
+                        .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS", "INVESTIGATEUR", "EVALUATEUR")
                         .requestMatchers("/api/admin/audit-logs").hasAnyRole("ADMIN", "ADMINSYS")
                         // Tout le reste
                         .anyRequest().permitAll()
