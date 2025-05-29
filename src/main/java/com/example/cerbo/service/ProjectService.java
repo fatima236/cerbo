@@ -69,32 +69,22 @@ public class ProjectService {
         project.setPrincipalInvestigator(principal);
 
         // Co-investigateurs
-        Set<User> investigators = new HashSet<>();
-        investigators.add(principal);
+
         if (submissionDTO.getCoInvestigators() != null && !submissionDTO.getCoInvestigators().isEmpty()) {
-            for (CoInvestigateurDTO coInvDto : submissionDTO.getCoInvestigators()) {
-                // Vérifier si l'utilisateur existe déjà par email
-                User coInvestigator = userRepository.findByEmail(coInvDto.getEmail());
-
-                if (coInvestigator == null) {
-                    // Créer un nouvel utilisateur si non existant
-                    coInvestigator = User.builder()
-                            .nom(coInvDto.getName())
-                            .prenom(coInvDto.getSurname())
-                            .email(coInvDto.getEmail())
-                            .titre(coInvDto.getTitle())
-                            .affiliation(coInvDto.getAffiliation())
-                            .laboratoire(coInvDto.getAddress())
-
-                            .build();
-                    coInvestigator = userRepository.save(coInvestigator);
-                }
-
-                investigators.add(coInvestigator);
-            }
+            List<Project.CoInvestigator> coInvestigators = submissionDTO.getCoInvestigators().stream()
+                    .map(dto -> Project.CoInvestigator.builder()
+                            .name(dto.getName())
+                            .surname(dto.getSurname())
+                            .email(dto.getEmail())
+                            .title(dto.getTitle())
+                            .affiliation(dto.getAffiliation())
+                            .address(dto.getAddress())
+                            .build())
+                    .collect(Collectors.toList());
+            project.setCoInvestigators(coInvestigators);
         }
 
-        project.setInvestigators(investigators);
+
 
 
         // Save the project first to generate its ID

@@ -192,9 +192,25 @@ public class ProjectController {
                     investigator.put("name", project.getPrincipalInvestigator().getNom() + " " + project.getPrincipalInvestigator().getPrenom());
                     projectMap.put("principalInvestigator", investigator);
                 }
+                if (project.getInvestigators() != null) {
+                    User principal = project.getPrincipalInvestigator();
+                    List<Map<String, String>> coInvestigators = project.getInvestigators().stream()
+                            .filter(inv -> principal != null && !inv.getId().equals(principal.getId()))
+                            .map(inv -> {
+                                Map<String, String> coInv = new HashMap<>();
+                                coInv.put("name", inv.getNom());
+                                coInv.put("surname", inv.getPrenom());
+
+                                return coInv;
+                            })
+                            .collect(Collectors.toList());
+                    projectMap.put("coInvestigators", coInvestigators);
+                }
+
 
                 return projectMap;
             }).collect(Collectors.toList());
+
 
 
 
@@ -242,6 +258,7 @@ public class ProjectController {
             }
 
 
+
             if (project.getPrincipalInvestigator() != null) {
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
@@ -254,6 +271,24 @@ public class ProjectController {
                 investigator.put("titre", project.getPrincipalInvestigator().getTitre());
                 response.put("principalInvestigator", investigator);
             }
+            if (project.getInvestigators() != null) {
+                User principal = project.getPrincipalInvestigator();
+                List<Map<String, String>> coInvestigators = project.getInvestigators().stream()
+                        .filter(inv -> principal != null && !inv.getId().equals(principal.getId()))
+                        .map(inv -> {
+                            Map<String, String> coInv = new HashMap<>();
+                            coInv.put("name", inv.getNom());
+                            coInv.put("surname", inv.getPrenom());
+                            coInv.put("email", inv.getEmail());
+                            coInv.put("title", inv.getTitre() != null ? inv.getTitre() : "");
+                            coInv.put("affiliation", inv.getAffiliation() != null ? inv.getAffiliation() : "");
+                            coInv.put("laboratory", inv.getLaboratoire() != null ? inv.getLaboratoire() : "");
+                            return coInv;
+                        })
+                        .collect(Collectors.toList());
+                response.put("coInvestigators", coInvestigators);
+            }
+
 
             // Documents
             List<Map<String, Object>> documents = project.getDocuments().stream()
@@ -751,7 +786,7 @@ public class ProjectController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            // Récupération des projets avec les investigateurs
+            // Récupération des projets avec les co-investigateurs embarqués
             List<Project> projects = projectRepository.findByPrincipalInvestigatorId(userId);
 
             List<Map<String, Object>> response = projects.stream()
@@ -776,23 +811,25 @@ public class ProjectController {
                             projectMap.put("principalInvestigatorTitre", principal.getTitre());
                         }
 
-                        // Co-investigateurs
-                        List<Map<String, String>> coInvestigators = p.getInvestigators().stream()
-                                .filter(inv -> principal != null && !inv.getId().equals(principal.getId()))
-                                .map(inv -> {
-                                    Map<String, String> coInv = new HashMap<>();
-                                    coInv.put("name", inv.getNom());
-                                    coInv.put("surname", inv.getPrenom());
-                                    coInv.put("email", inv.getEmail());
-                                    coInv.put("title", inv.getTitre() != null ? inv.getTitre() : "");
-                                    coInv.put("affiliation", inv.getAffiliation() != null ? inv.getAffiliation() : "");
-                                    coInv.put("laboratory", inv.getLaboratoire() != null ? inv.getLaboratoire() : "");
-                                    return coInv;
-                                })
-                                .collect(Collectors.toList());
-                        projectMap.put("coInvestigators", coInvestigators);
+                        // Co-investigateurs (nouvelle version avec la liste embarquée)
+                        if (p.getCoInvestigators() != null) {
+                            List<Map<String, String>> coInvestigators = p.getCoInvestigators().stream()
+                                    .map(coInv -> {
+                                        Map<String, String> coInvMap = new HashMap<>();
+                                        coInvMap.put("name", coInv.getName());
+                                        coInvMap.put("surname", coInv.getSurname());
+                                        coInvMap.put("email", coInv.getEmail());
+                                        coInvMap.put("title", coInv.getTitle() != null ? coInv.getTitle() : "");
+                                        coInvMap.put("affiliation", coInv.getAffiliation() != null ? coInv.getAffiliation() : "");
+                                        coInvMap.put("laboratory", coInv.getAddress() != null ? coInv.getAddress() : "");
+                                        return coInvMap;
+                                    })
+                                    .collect(Collectors.toList());
+                            projectMap.put("coInvestigators", coInvestigators);
+                        } else {
+                            projectMap.put("coInvestigators", Collections.emptyList());
+                        }
 
-                        // ... reste du mapping comme dans votre code original ...
                         projectMap.put("studyDuration", p.getStudyDuration());
                         projectMap.put("targetPopulation", p.getTargetPopulation());
                         projectMap.put("consentType", p.getConsentType());
