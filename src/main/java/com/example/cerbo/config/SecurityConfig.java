@@ -129,15 +129,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/assigned-to-me").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentName}/content").hasAnyRole("ADMIN", "EVALUATEUR")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentId}/reviews/me").hasRole("EVALUATEUR")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/reviews/me").hasRole("EVALUATEUR")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/is-locked").hasRole("EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/{documentId}/reviews/me").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/reviews/me").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/is-locked").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/review").hasAnyRole("ADMIN", "EVALUATEUR")
-                        .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/clear-review").hasRole("EVALUATEUR")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/{documentId}/clear-review").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.POST, "/api/projects/{projectId}/documents/submit-review").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/documents/my-reviews").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{projectId}/documents/set-deadline").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/submission-status").hasRole("EVALUATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{projectId}/submission-status").hasAnyRole("ADMIN", "EVALUATEUR")
                         .requestMatchers(HttpMethod.GET, "/api/investigator/reports/project/{projectId}").hasRole("INVESTIGATEUR")
 
                         .requestMatchers(HttpMethod.PUT, "/api/projects/{id}/status").hasRole("ADMIN")
@@ -161,8 +161,8 @@ public class SecurityConfig {
 
                         // Role-specific dashboards
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/evaluateur/**").hasRole("EVALUATEUR")
-                        .requestMatchers("/investigateur/**").hasRole("INVESTIGATEUR")
+                        .requestMatchers("/evaluateur/**").hasAnyRole("ADMIN", "EVALUATEUR")
+                        .requestMatchers("/investigateur/**").hasAnyRole("INVESTIGATEUR","ADMIN", "EVALUATEUR")
 
                         // Endpoints spécifiques ADMINSYS
                         .requestMatchers("/api/adminsys/**").hasRole("ADMINSYS")
@@ -190,7 +190,7 @@ public class SecurityConfig {
 
 
                         // Endpoints existants modifiés pour ADMINSYS
-                        .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS")
+                        .requestMatchers("/api/admin/users", "/api/admin/users/**").hasAnyRole("ADMIN", "ADMINSYS", "INVESTIGATEUR", "EVALUATEUR")
                         .requestMatchers("/api/admin/audit-logs").hasAnyRole("ADMIN", "ADMINSYS")
                         // Tout le reste
                         .anyRequest().permitAll()

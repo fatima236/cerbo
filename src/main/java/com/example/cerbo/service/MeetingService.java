@@ -1209,11 +1209,10 @@ public class MeetingService {
         try {
             log.debug("Récupération des réunions pour l'évaluateur {} (année: {})", evaluatorId, year);
 
-            // Vérifier que l'utilisateur est bien un évaluateur
             User evaluator = userRepository.findById(evaluatorId)
                     .orElseThrow(() -> new IllegalArgumentException("Évaluateur non trouvé"));
 
-            if (!evaluator.getRoles().contains("EVALUATEUR")) {
+            if (!evaluator.getRoles().contains("EVALUATEUR") && !evaluator.getRoles().contains("ADMIN")) {
                 throw new IllegalArgumentException("L'utilisateur n'est pas un évaluateur");
             }
 
