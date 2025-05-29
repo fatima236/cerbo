@@ -146,11 +146,12 @@ public class ProjectController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllProjects(        @RequestParam(required = false) String search,
-                                                    @RequestParam(required = false) String status,
-                                                    @RequestParam(defaultValue = "0") int page,
-                                                    @RequestParam(defaultValue = "10") int size,
-                                                    Authentication authentication) {
+    public ResponseEntity<?> getAllProjects(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
         try {
             log.info("Attempting to get all projects");
             log.info("Authenticated user: {}", authentication.getName());
@@ -172,9 +173,6 @@ public class ProjectController {
             Page<Project> projectsPage = projectService.findFilteredProjects(statusEnum, search, pageable);
             List<Project> projects = projectsPage.getContent();
 
-
-            // Ajoutez ce logging pour voir ce qui est récupéré depuis la base
-            //List<Project> projects = projectService.getAllProjects();
             log.info("Number of projects retrieved from DB: {}", projects.size());
             projects.forEach(p -> log.info("Project ID: {}, Title: {}", p.getId(), p.getTitle()));
 
@@ -192,27 +190,28 @@ public class ProjectController {
                     investigator.put("name", project.getPrincipalInvestigator().getNom() + " " + project.getPrincipalInvestigator().getPrenom());
                     projectMap.put("principalInvestigator", investigator);
                 }
-                if (project.getInvestigators() != null) {
-                    User principal = project.getPrincipalInvestigator();
-                    List<Map<String, String>> coInvestigators = project.getInvestigators().stream()
-                            .filter(inv -> principal != null && !inv.getId().equals(principal.getId()))
-                            .map(inv -> {
-                                Map<String, String> coInv = new HashMap<>();
-                                coInv.put("name", inv.getNom());
-                                coInv.put("surname", inv.getPrenom());
 
-                                return coInv;
+
+                if (project.getCoInvestigators() != null) {
+                    List<Map<String, String>> coInvestigators = project.getCoInvestigators().stream()
+                            .map(coInv -> {
+                                Map<String, String> coInvMap = new HashMap<>();
+                                coInvMap.put("name", coInv.getName());
+                                coInvMap.put("surname", coInv.getSurname());
+                                coInvMap.put("email", coInv.getEmail());
+                                coInvMap.put("title", coInv.getTitle() != null ? coInv.getTitle() : "");
+                                coInvMap.put("affiliation", coInv.getAffiliation() != null ? coInv.getAffiliation() : "");
+                                coInvMap.put("laboratory", coInv.getAddress() != null ? coInv.getAddress() : "");
+                                return coInvMap;
                             })
                             .collect(Collectors.toList());
                     projectMap.put("coInvestigators", coInvestigators);
+                } else {
+                    projectMap.put("coInvestigators", Collections.emptyList());
                 }
-
 
                 return projectMap;
             }).collect(Collectors.toList());
-
-
-
 
             log.info("Successfully built response for {} projects", projects.size());
             return ResponseEntity.ok(response);
@@ -225,11 +224,11 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
-
             Project project = projectRepository.findByIdWithDetails(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
             Map<String, Object> response = new HashMap<>();
+            // Informations de base du projet
             response.put("id", project.getId());
             response.put("title", project.getTitle());
             response.put("status", project.getStatus().name());
@@ -245,33 +244,49 @@ public class ProjectController {
             response.put("fundingProgram", project.getFundingProgram());
             response.put("reportStatus", project.getLatestReportStatus());
             response.put("projectDescription", project.getProjectDescription());
-
             response.put("dataDescription", project.getDataDescription());
             response.put("ethicalConsiderations", project.getEthicalConsiderations());
+
+            // Gestion des rapports
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
                 Report lastReport = reports.get(reports.size() - 1);
                 response.put("creationDateOfReport", lastReport.getCreationDate());
                 response.put("reportResponsed", lastReport.getResponsed());
             } else {
-                response.put("creationDateOfReport", null); // ou une valeur par défaut
+                response.put("creationDateOfReport", null);
             }
 
-
-
+            // Investigateur principal
             if (project.getPrincipalInvestigator() != null) {
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
                 investigator.put("email", project.getPrincipalInvestigator().getEmail());
                 investigator.put("firstName", project.getPrincipalInvestigator().getPrenom());
                 investigator.put("lastName", project.getPrincipalInvestigator().getNom());
-                // Add these new fields:
                 investigator.put("affiliation", project.getPrincipalInvestigator().getAffiliation());
                 investigator.put("laboratoire", project.getPrincipalInvestigator().getLaboratoire());
                 investigator.put("titre", project.getPrincipalInvestigator().getTitre());
                 response.put("principalInvestigator", investigator);
             }
-            if (project.getInvestigators() != null) {
+
+            // Co-investigateurs - Version unifiée
+            if (project.getCoInvestigators() != null) {
+                List<Map<String, String>> coInvestigators = project.getCoInvestigators().stream()
+                        .map(coInv -> {
+                            Map<String, String> coInvMap = new HashMap<>();
+                            coInvMap.put("name", coInv.getName());
+                            coInvMap.put("surname", coInv.getSurname());
+                            coInvMap.put("email", coInv.getEmail());
+                            coInvMap.put("title", coInv.getTitle() != null ? coInv.getTitle() : "");
+                            coInvMap.put("affiliation", coInv.getAffiliation() != null ? coInv.getAffiliation() : "");
+                            coInvMap.put("laboratory", coInv.getAddress() != null ? coInv.getAddress() : "");
+                            return coInvMap;
+                        })
+                        .collect(Collectors.toList());
+                response.put("coInvestigators", coInvestigators);
+            } else if (project.getInvestigators() != null) {
+                // Fallback pour l'ancienne structure
                 User principal = project.getPrincipalInvestigator();
                 List<Map<String, String>> coInvestigators = project.getInvestigators().stream()
                         .filter(inv -> principal != null && !inv.getId().equals(principal.getId()))
@@ -287,23 +302,28 @@ public class ProjectController {
                         })
                         .collect(Collectors.toList());
                 response.put("coInvestigators", coInvestigators);
+            } else {
+                response.put("coInvestigators", Collections.emptyList());
             }
-
 
             // Documents
             List<Map<String, Object>> documents = project.getDocuments().stream()
                     .distinct()
                     .map(doc -> {
                         Map<String, Object> docMap = new HashMap<>();
+                        docMap.put("id", doc.getId());
                         docMap.put("name", doc.getName());
                         docMap.put("type", doc.getType().name());
                         docMap.put("path", doc.getPath());
-                        docMap.put("size", doc.getSize()); // Assurez-vous d'avoir cette propriété
+                        docMap.put("size", doc.getSize());
+                        docMap.put("canReplace", documentReviewRepository.existsByDocument_IdAndReport_Status(
+                                doc.getId(), ReportStatus.SENT));
                         return docMap;
                     })
                     .collect(Collectors.toList());
             response.put("documents", documents);
 
+            // Evaluateurs
             List<Map<String, Object>> reviewers = project.getReviewers().stream()
                     .map(reviewer -> {
                         Map<String, Object> reviewerMap = new HashMap<>();
@@ -316,10 +336,20 @@ public class ProjectController {
                     .collect(Collectors.toList());
             response.put("reviewers", reviewers);
 
+            // Vérification des remarques répondues
+            if (project.getLatestReport() != null) {
+                Boolean allRemarksResponsed = documentReviewService.allReviewsResponsed(project.getLatestReport().getId());
+                response.put("allRemarksResponsed", allRemarksResponsed);
+            } else {
+                response.put("allRemarksResponsed", false);
+            }
+
             return ResponseEntity.ok(response);
+        } catch (ResourceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Project not found with id: " + id);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error retrieving project with id: " + id);
         }
     }
 
