@@ -245,7 +245,7 @@ public class DocumentReviewController {
                 "Évaluation soumise",
                 "Une évaluation a été soumise pour le projet \"" +
                         projectRepository.findById(projectId).get().getTitle() + "\".",
-                "/admin/projects/"+projectId+"/remarksProjects/"
+                "/admin/projects/"+projectId+"/remarksProject/"
         );
 
         // Retourner les informations de verrouillage

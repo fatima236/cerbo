@@ -770,7 +770,6 @@ public class ProjectController {
     }
 
     @GetMapping("/investigator/{userId}")
-    @PreAuthorize("hasRole('INVESTIGATEUR')")
     public ResponseEntity<?> getProjectsByInvestigator(@PathVariable Long userId) {
         try {
             log.info("Fetching projects for investigator ID: {}", userId);
@@ -937,7 +936,6 @@ public class ProjectController {
         }
     }
     @GetMapping("/assigned-to-me")
-    @PreAuthorize("hasRole('EVALUATEUR')")
     public ResponseEntity<?> getAssignedProjectsWithDocuments(Authentication authentication) {
         try {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -985,6 +983,7 @@ public class ProjectController {
                             docMap.put("id", doc.getId());
                             docMap.put("name", doc.getName());
                             docMap.put("size", doc.getSize());
+                            docMap.put("type", doc.getType());
                             if (review != null) {
                                 docMap.put("remark", review.getContent());
                                 docMap.put("finalSubmission", review.getFinal_submission());
