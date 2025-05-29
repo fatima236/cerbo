@@ -715,7 +715,6 @@ public class ProjectController {
     }
 
     @GetMapping("/investigator/{userId}")
-    @PreAuthorize("hasRole('INVESTIGATEUR')")
     public ResponseEntity<?> getProjectsByInvestigator(@PathVariable Long userId) {
         try {
             log.info("Fetching projects for investigator ID: {}", userId);
@@ -854,7 +853,6 @@ public class ProjectController {
         }
     }
     @GetMapping("/assigned-to-me")
-    @PreAuthorize("hasRole('EVALUATEUR')")
     public ResponseEntity<?> getAssignedProjectsWithDocuments(Authentication authentication) {
         try {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
