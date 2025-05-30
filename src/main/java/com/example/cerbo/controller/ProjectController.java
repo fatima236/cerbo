@@ -1,6 +1,7 @@
 package com.example.cerbo.controller;
 
-import com.example.cerbo.dto.CoInvestigateurDTO;
+
+import com.example.cerbo.dto.CoInvestigator;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.ReportStatus;
@@ -97,7 +98,7 @@ public class ProjectController {
 
             // Validation des co-investigateurs
             if (submissionDTO.getCoInvestigators() != null) {
-                for (CoInvestigateurDTO coInv : submissionDTO.getCoInvestigators()) {
+                for (CoInvestigator coInv : submissionDTO.getCoInvestigators()) {
                     if (coInv.getEmail().equals(principalInvestigator.getEmail())) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                 "L'investigateur principal ne peut pas être un co-investigateur");
@@ -996,15 +997,8 @@ public class ProjectController {
                 projectMap.put("ethicalConsiderations", project.getEthicalConsiderations());
                 projectMap.put("dataDescription", project.getDataDescription());
 
-                Map<String, Object> investigator = new HashMap<>();
-                investigator.put("id", project.getPrincipalInvestigator().getId());
-                investigator.put("email", project.getPrincipalInvestigator().getEmail());
-// Corriger les clés pour correspondre au frontend
-                investigator.put("prenom", project.getPrincipalInvestigator().getPrenom());
-                investigator.put("nom", project.getPrincipalInvestigator().getNom());
-                investigator.put("affiliation", project.getPrincipalInvestigator().getAffiliation());
-                investigator.put("laboratoire", project.getPrincipalInvestigator().getLaboratoire());
-                projectMap.put("principalInvestigator", investigator);
+
+
                 // Documents
                 List<Map<String, Object>> documents = project.getDocuments().stream()
                         .map(doc -> {

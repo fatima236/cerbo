@@ -1,7 +1,6 @@
 package com.example.cerbo.service;
 
 import com.example.cerbo.annotation.Loggable;
-import com.example.cerbo.dto.CoInvestigateurDTO;
 import com.example.cerbo.dto.ProjectSubmissionDTO;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.DocumentType;
