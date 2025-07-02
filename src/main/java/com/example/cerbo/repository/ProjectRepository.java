@@ -122,4 +122,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     long countByStatus(ProjectStatus status);
 
     List<Project> findByResponseDeadlineBeforeAndStatusNot(LocalDateTime date, ProjectStatus status);
+
+
 }

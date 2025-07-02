@@ -3,29 +3,32 @@ package com.example.cerbo.service.reportService;
 import com.example.cerbo.entity.DocumentReview;
 import com.example.cerbo.entity.Project;
 import com.example.cerbo.entity.Report;
-import com.example.cerbo.entity.User;
 import com.example.cerbo.entity.enums.RemarkStatus;
 import com.example.cerbo.entity.enums.ReportStatus;
 import com.example.cerbo.exception.ResourceNotFoundException;
 import com.example.cerbo.repository.DocumentReviewRepository;
 import com.example.cerbo.repository.ProjectRepository;
 import com.example.cerbo.repository.ReportRepository;
-import com.example.cerbo.repository.UserRepository;
 import com.example.cerbo.service.NotificationService;
 import com.example.cerbo.service.chatGptService.ChatGptService;
 import com.itextpdf.forms.PdfAcroForm;
 import com.itextpdf.forms.fields.PdfFormField;
+
+
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+
 import lombok.AllArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.*;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -38,22 +41,13 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final DocumentReviewRepository documentReviewRepository;
     private final ProjectRepository projectRepository;
-    private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ChatGptService chatGptService;
 
     @Transactional
     public Report createReport(Long projectId, List<Long> reviewIds) {
-        // Récupérer l'utilisateur courant
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(username);
-        if (currentUser == null) {
-            throw new ResourceNotFoundException("User not found");
-        }
-
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
         Report report = new Report();
         report.setProject(project);
         report.setCreationDate(LocalDateTime.now());
@@ -80,12 +74,15 @@ public class ReportService {
             com.example.cerbo.entity.Document doc = entry.getKey();
             List<DocumentReview> docRemarks = entry.getValue();
 
+//            String content = docRemarks.stream()
+//                    .map(dr -> "- " + dr.getContent())
+//                    .collect(Collectors.joining("\n"));
+
             String prompt = docRemarks.stream()
                     .map(DocumentReview::getContent)
                     .collect(Collectors.joining("\n"));
 
-            // Utiliser la préférence IA de l'utilisateur
-            String syntheticContent = chatGptService.generateSyntheticRemark(prompt, currentUser.isUseAI());
+            String syntheticContent = chatGptService.generateSyntheticRemark(prompt, true);
 
             DocumentReview synthetic = new DocumentReview();
             synthetic.setDocument(doc);
@@ -102,8 +99,12 @@ public class ReportService {
         }
 
         projectRepository.save(project);
+
         report.setStatus(ReportStatus.NON_ENVOYE);
-        return reportRepository.save(report);
+
+        Report savedReport = reportRepository.save(report);
+
+        return savedReport;
     }
 
     @Transactional
@@ -133,7 +134,9 @@ public class ReportService {
         return reportRepository.save(report);
     }
 
+
     public Path generateReportPdf(Report report) throws Exception {
+
         String fileName = "rapport_" + report.getId() + ".pdf";
         Path folder = Path.of("uploads/reports");
 
@@ -141,7 +144,7 @@ public class ReportService {
             Files.createDirectories(folder);
         }
 
-        Path templatePath = Path.of("src/main/resources/template/Rapport_template.pdf");
+        Path templatePath = Path.of("src/main/resources/template/Rapport_template.pdf"); // modèle à préparer
         Path outputPath = folder.resolve(fileName);
 
         try(
@@ -149,17 +152,17 @@ public class ReportService {
                 PdfWriter writer = new PdfWriter(outputPath.toFile());
                 PdfDocument pdfDoc = new PdfDocument(reader, writer);
                 Document document = new Document(pdfDoc)
-        ){
+                ){
             PdfAcroForm form = PdfAcroForm.getAcroForm(pdfDoc, true);
             Map<String, PdfFormField> fields = form.getFormFields();
             Project project = report.getProject();
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             fields.get("Text9").setValue("Oujda le "+report.getCreationDate().format(dateFormatter));
             fields.get("Text2").setValue("A Monsieur/Madame le Pr."+project.getPrincipalInvestigator().getFullName());
-            fields.get("Text3").setValue("Le Comité d'Ethique pour la Recherche Biomédicale d'Oujda (CERBO) a été saisi le "+project.getSubmissionDate().format(dateFormatter)
-                    +" d'une demande d'avis concernant votre projet de recherche intitulé <<"+project.getTitle()+">>.");
-            fields.get("Text4").setValue("Demande classée sous le N° d'ordre : "+project.getReference());
-            fields.get("Text8").setValue("Le comité s'est réuni le "+report.getCreationDate().format(dateFormatter));
+            fields.get("Text3").setValue("Le Comité d’Ethique pour la Recherche Biomédicale d’Oujda (CERBO) a été saisi le "+project.getSubmissionDate().format(dateFormatter)
+            +" d’une demande d’avis concernant votre projet de recherche intitulé <<"+project.getTitle()+">>.");
+            fields.get("Text4").setValue("Demande classée sous le N° d’ordre : "+project.getReference());
+            fields.get("Text8").setValue("Le comité s’est réuni le "+report.getCreationDate().format(dateFormatter)); // ou date de réunion réelle
 
             List<DocumentReview> reviews = documentReviewRepository
                     .findByReportIdAndIncludedInReportTrue(report.getId());
@@ -171,11 +174,17 @@ public class ReportService {
             fields.get("Text7").setValue(remarks);
 
             form.flattenFields();
-            document.close();
-            pdfDoc.close();
+
+            document.close();       // si tu utilises `Document`
+            pdfDoc.close();         // dans tous les cas
+
 
             return outputPath;
+
+
         }
+
+
     }
 
     @Transactional(readOnly = true)

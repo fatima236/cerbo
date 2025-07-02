@@ -1,5 +1,7 @@
 package com.example.cerbo.controller;
 
+
+import com.example.cerbo.dto.CoInvestigator;
 import com.example.cerbo.entity.*;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.ReportStatus;
@@ -74,7 +76,6 @@ public class ProjectController {
             @RequestPart(value = "projectDescriptionFile", required = false) MultipartFile projectDescriptionFile,
             @RequestPart(value = "ethicalConsiderationsFile", required = false) MultipartFile ethicalConsiderationsFile,
             @RequestPart(value = "otherDocuments", required = false) MultipartFile[] otherDocuments,
-
             @RequestPart(value = "motivationLetter", required = false) MultipartFile motivationLetter,
             HttpServletRequest request) {
 
@@ -84,7 +85,6 @@ public class ProjectController {
         }
 
         try {
-            log.info("Received project submission request");
             UserDetails userDetails = (UserDetails) auth.getPrincipal();
             User principalInvestigator = userRepository.findByEmail(userDetails.getUsername());
 
@@ -92,9 +92,27 @@ public class ProjectController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Authenticated user not found");
             }
 
+            // Désérialisation du JSON
             ProjectSubmissionDTO submissionDTO = objectMapper.readValue(projectDataJson, ProjectSubmissionDTO.class);
             submissionDTO.setPrincipalInvestigatorId(principalInvestigator.getId());
 
+            // Validation des co-investigateurs
+            if (submissionDTO.getCoInvestigators() != null) {
+                for (CoInvestigator coInv : submissionDTO.getCoInvestigators()) {
+                    if (coInv.getEmail().equals(principalInvestigator.getEmail())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "L'investigateur principal ne peut pas être un co-investigateur");
+                    }
+
+                    // Validation supplémentaire si nécessaire
+                    if (coInv.getName() == null || coInv.getName().trim().isEmpty()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Le nom du co-investigateur est obligatoire");
+                    }
+                }
+            }
+
+            // Traitement des fichiers
             submissionDTO.setInfoSheetFrPath(processFile(infoSheetFr));
             submissionDTO.setInfoSheetArPath(processFile(infoSheetAr));
             submissionDTO.setConsentFormFrPath(processFile(consentFormFr));
@@ -104,6 +122,7 @@ public class ProjectController {
             submissionDTO.setProjectDescriptionFilePath(processFile(projectDescriptionFile));
             submissionDTO.setEthicalConsiderationsFilePath(processFile(ethicalConsiderationsFile));
             submissionDTO.setMotivationLetterPath(processFile(motivationLetter));
+
             // Traiter les autres documents
             if (otherDocuments != null && otherDocuments.length > 0) {
                 List<String> otherDocsPaths = new ArrayList<>();
@@ -112,26 +131,28 @@ public class ProjectController {
                 }
                 submissionDTO.setOtherDocumentsPaths(otherDocsPaths);
             }
+
             Project project = projectService.submitProject(submissionDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(project);
 
         } catch (JsonProcessingException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid JSON format");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Format JSON invalide");
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error processing files");
+                    "Erreur de traitement des fichiers");
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error submitting project: " + e.getMessage());
+                    "Erreur lors de la soumission du projet: " + e.getMessage());
         }
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllProjects(        @RequestParam(required = false) String search,
-                                                    @RequestParam(required = false) String status,
-                                                    @RequestParam(defaultValue = "0") int page,
-                                                    @RequestParam(defaultValue = "10") int size,
-                                                    Authentication authentication) {
+    public ResponseEntity<?> getAllProjects(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
         try {
             log.info("Attempting to get all projects");
             log.info("Authenticated user: {}", authentication.getName());
@@ -153,9 +174,6 @@ public class ProjectController {
             Page<Project> projectsPage = projectService.findFilteredProjects(statusEnum, search, pageable);
             List<Project> projects = projectsPage.getContent();
 
-
-            // Ajoutez ce logging pour voir ce qui est récupéré depuis la base
-            //List<Project> projects = projectService.getAllProjects();
             log.info("Number of projects retrieved from DB: {}", projects.size());
             projects.forEach(p -> log.info("Project ID: {}, Title: {}", p.getId(), p.getTitle()));
 
@@ -174,10 +192,27 @@ public class ProjectController {
                     projectMap.put("principalInvestigator", investigator);
                 }
 
+
+                if (project.getCoInvestigators() != null) {
+                    List<Map<String, String>> coInvestigators = project.getCoInvestigators().stream()
+                            .map(coInv -> {
+                                Map<String, String> coInvMap = new HashMap<>();
+                                coInvMap.put("name", coInv.getName());
+                                coInvMap.put("surname", coInv.getSurname());
+                                coInvMap.put("email", coInv.getEmail());
+                                coInvMap.put("title", coInv.getTitle() != null ? coInv.getTitle() : "");
+                                coInvMap.put("affiliation", coInv.getAffiliation() != null ? coInv.getAffiliation() : "");
+                                coInvMap.put("laboratory", coInv.getAddress() != null ? coInv.getAddress() : "");
+                                return coInvMap;
+                            })
+                            .collect(Collectors.toList());
+                    projectMap.put("coInvestigators", coInvestigators);
+                } else {
+                    projectMap.put("coInvestigators", Collections.emptyList());
+                }
+
                 return projectMap;
             }).collect(Collectors.toList());
-
-
 
             log.info("Successfully built response for {} projects", projects.size());
             return ResponseEntity.ok(response);
@@ -190,11 +225,11 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getProjectById(@PathVariable Long id) {
         try {
-
             Project project = projectRepository.findByIdWithDetails(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
             Map<String, Object> response = new HashMap<>();
+            // Informations de base du projet
             response.put("id", project.getId());
             response.put("title", project.getTitle());
             response.put("status", project.getStatus().name());
@@ -212,27 +247,64 @@ public class ProjectController {
             response.put("projectDescription", project.getProjectDescription());
             response.put("dataDescription", project.getDataDescription());
             response.put("ethicalConsiderations", project.getEthicalConsiderations());
+
+            // Gestion des rapports
             List<Report> reports = project.getReports();
             if (reports != null && !reports.isEmpty()) {
                 Report lastReport = reports.get(reports.size() - 1);
                 response.put("creationDateOfReport", lastReport.getCreationDate());
                 response.put("reportResponsed", lastReport.getResponsed());
             } else {
-                response.put("creationDateOfReport", null); // ou une valeur par défaut
+                response.put("creationDateOfReport", null);
             }
 
-
+            // Investigateur principal
             if (project.getPrincipalInvestigator() != null) {
                 Map<String, Object> investigator = new HashMap<>();
                 investigator.put("id", project.getPrincipalInvestigator().getId());
                 investigator.put("email", project.getPrincipalInvestigator().getEmail());
                 investigator.put("firstName", project.getPrincipalInvestigator().getPrenom());
                 investigator.put("lastName", project.getPrincipalInvestigator().getNom());
-                // Add these new fields:
                 investigator.put("affiliation", project.getPrincipalInvestigator().getAffiliation());
                 investigator.put("laboratoire", project.getPrincipalInvestigator().getLaboratoire());
                 investigator.put("titre", project.getPrincipalInvestigator().getTitre());
                 response.put("principalInvestigator", investigator);
+            }
+
+            // Co-investigateurs - Version unifiée
+            if (project.getCoInvestigators() != null) {
+                List<Map<String, String>> coInvestigators = project.getCoInvestigators().stream()
+                        .map(coInv -> {
+                            Map<String, String> coInvMap = new HashMap<>();
+                            coInvMap.put("name", coInv.getName());
+                            coInvMap.put("surname", coInv.getSurname());
+                            coInvMap.put("email", coInv.getEmail());
+                            coInvMap.put("title", coInv.getTitle() != null ? coInv.getTitle() : "");
+                            coInvMap.put("affiliation", coInv.getAffiliation() != null ? coInv.getAffiliation() : "");
+                            coInvMap.put("laboratory", coInv.getAddress() != null ? coInv.getAddress() : "");
+                            return coInvMap;
+                        })
+                        .collect(Collectors.toList());
+                response.put("coInvestigators", coInvestigators);
+            } else if (project.getInvestigators() != null) {
+                // Fallback pour l'ancienne structure
+                User principal = project.getPrincipalInvestigator();
+                List<Map<String, String>> coInvestigators = project.getInvestigators().stream()
+                        .filter(inv -> principal != null && !inv.getId().equals(principal.getId()))
+                        .map(inv -> {
+                            Map<String, String> coInv = new HashMap<>();
+                            coInv.put("name", inv.getNom());
+                            coInv.put("surname", inv.getPrenom());
+                            coInv.put("email", inv.getEmail());
+                            coInv.put("title", inv.getTitre() != null ? inv.getTitre() : "");
+                            coInv.put("affiliation", inv.getAffiliation() != null ? inv.getAffiliation() : "");
+                            coInv.put("laboratory", inv.getLaboratoire() != null ? inv.getLaboratoire() : "");
+                            return coInv;
+                        })
+                        .collect(Collectors.toList());
+                response.put("coInvestigators", coInvestigators);
+            } else {
+                response.put("coInvestigators", Collections.emptyList());
             }
 
             // Documents
@@ -240,15 +312,19 @@ public class ProjectController {
                     .distinct()
                     .map(doc -> {
                         Map<String, Object> docMap = new HashMap<>();
+                        docMap.put("id", doc.getId());
                         docMap.put("name", doc.getName());
                         docMap.put("type", doc.getType().name());
                         docMap.put("path", doc.getPath());
-                        docMap.put("size", doc.getSize()); // Assurez-vous d'avoir cette propriété
+                        docMap.put("size", doc.getSize());
+                        docMap.put("canReplace", documentReviewRepository.existsByDocument_IdAndReport_Status(
+                                doc.getId(), ReportStatus.SENT));
                         return docMap;
                     })
                     .collect(Collectors.toList());
             response.put("documents", documents);
 
+            // Evaluateurs
             List<Map<String, Object>> reviewers = project.getReviewers().stream()
                     .map(reviewer -> {
                         Map<String, Object> reviewerMap = new HashMap<>();
@@ -261,10 +337,20 @@ public class ProjectController {
                     .collect(Collectors.toList());
             response.put("reviewers", reviewers);
 
+            // Vérification des remarques répondues
+            if (project.getLatestReport() != null) {
+                Boolean allRemarksResponsed = documentReviewService.allReviewsResponsed(project.getLatestReport().getId());
+                response.put("allRemarksResponsed", allRemarksResponsed);
+            } else {
+                response.put("allRemarksResponsed", false);
+            }
+
             return ResponseEntity.ok(response);
+        } catch (ResourceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Project not found with id: " + id);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error retrieving project with id: " + id);
         }
     }
 
@@ -730,37 +816,60 @@ public class ProjectController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            // Utilisez la méthode existante du repository
+            // Récupération des projets avec les co-investigateurs embarqués
             List<Project> projects = projectRepository.findByPrincipalInvestigatorId(userId);
 
-            // Simplifiez la réponse
             List<Map<String, Object>> response = projects.stream()
                     .map(p -> {
                         Map<String, Object> projectMap = new HashMap<>();
+                        // Informations de base du projet
                         projectMap.put("id", p.getId());
                         projectMap.put("title", p.getTitle());
                         projectMap.put("status", p.getStatus().toString());
                         projectMap.put("submissionDate", p.getSubmissionDate());
-                        projectMap.put("reference", p.getReference());User investigator = p.getPrincipalInvestigator();
-                        if (p.getConsentType() != null &&
-                                (p.getConsentType().equalsIgnoreCase("différé") ||
-                                        p.getConsentType().equalsIgnoreCase("Dérogation"))) {
-                            projectMap.put("motivationLetter", p.getMotivationLetterPath());
+                        projectMap.put("reference", p.getReference());
+
+                        // Investigateur principal
+                        User principal = p.getPrincipalInvestigator();
+                        if (principal != null) {
+                            projectMap.put("principalInvestigatorCivilite", principal.getCivilite());
+                            projectMap.put("principalInvestigatorName",
+                                    (principal.getNom() + " " + principal.getPrenom()).trim());
+                            projectMap.put("principalInvestigatorEmail", principal.getEmail());
+                            projectMap.put("principalInvestigatorAffiliation", principal.getAffiliation());
+                            projectMap.put("principalInvestigatorLaboratory", principal.getLaboratoire());
+                            projectMap.put("principalInvestigatorTitre", principal.getTitre());
                         }
-                        if (investigator != null) {
-                            projectMap.put("principalInvestigatorCivilite", investigator.getCivilite());
-                            projectMap.put("principalInvestigatorName", investigator.getFullName());
-                            projectMap.put("principalInvestigatorEmail", investigator.getEmail());
-                            projectMap.put("principalInvestigatorAffiliation", investigator.getAffiliation());
-                            projectMap.put("principalInvestigatorLaboratory", investigator.getLaboratoire());
-                            projectMap.put("principalInvestigatorTitre", investigator.getTitre());
+
+                        // Co-investigateurs (nouvelle version avec la liste embarquée)
+                        if (p.getCoInvestigators() != null) {
+                            List<Map<String, String>> coInvestigators = p.getCoInvestigators().stream()
+                                    .map(coInv -> {
+                                        Map<String, String> coInvMap = new HashMap<>();
+                                        coInvMap.put("name", coInv.getName());
+                                        coInvMap.put("surname", coInv.getSurname());
+                                        coInvMap.put("email", coInv.getEmail());
+                                        coInvMap.put("title", coInv.getTitle() != null ? coInv.getTitle() : "");
+                                        coInvMap.put("affiliation", coInv.getAffiliation() != null ? coInv.getAffiliation() : "");
+                                        coInvMap.put("laboratory", coInv.getAddress() != null ? coInv.getAddress() : "");
+                                        return coInvMap;
+                                    })
+                                    .collect(Collectors.toList());
+                            projectMap.put("coInvestigators", coInvestigators);
+                        } else {
+                            projectMap.put("coInvestigators", Collections.emptyList());
                         }
 
                         projectMap.put("studyDuration", p.getStudyDuration());
                         projectMap.put("targetPopulation", p.getTargetPopulation());
                         projectMap.put("consentType", p.getConsentType());
-                        projectMap.put("fundingSource", p.getFundingSource());
-                        projectMap.put("fundingProgram", p.getFundingProgram());
+
+                        if (p.getConsentType() != null &&
+                                (p.getConsentType().equalsIgnoreCase("différé") ||
+                                        p.getConsentType().equalsIgnoreCase("dérogation"))) {
+                            projectMap.put("motivationLetter", p.getMotivationLetterPath());
+                        }
+
                         projectMap.put("sampling", p.getSampling() != null ?
                                 (p.getSampling() ? "Oui" : "Non") : "Non spécifié");
                         projectMap.put("sampleType", p.getSampleType());
@@ -769,28 +878,33 @@ public class ProjectController {
                         projectMap.put("fundingProgram", p.getFundingProgram());
                         projectMap.put("projectDescription", p.getProjectDescription());
                         projectMap.put("dataDescription", p.getDataDescription());
+                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());
 
-                        projectMap.put("ethicalConsiderations", p.getEthicalConsiderations());if (p.getLatestReport() != null) {
+                        // Gestion des rapports
+                        if (p.getLatestReport() != null) {
                             projectMap.put("reportStatus", p.getLatestReport().getStatus());
                             projectMap.put("responsed", p.getLatestReport().getResponsed());
                         } else {
-                            projectMap.put("reportStatus", null); // ou une valeur par défaut comme "Non défini"
-                            projectMap.put("responsed", null); // ou false / "Non répondu"
+                            projectMap.put("reportStatus", null);
+                            projectMap.put("responsed", null);
                         }
+
+                        // Vérification des remarques répondues
                         Boolean allRemarksResponsed = false;
-                        if(p.getLatestReport() != null) {
+                        if (p.getLatestReport() != null) {
                             allRemarksResponsed = documentReviewService.allReviewsResponsed(p.getLatestReport().getId());
                         }
-                        projectMap.put("allRemarksResponsed", allRemarksResponsed );
+                        projectMap.put("allRemarksResponsed", allRemarksResponsed);
 
-
+                        // Documents
                         projectMap.put("documents", p.getDocuments().stream()
                                 .map(d -> Map.of(
+                                        "id", d.getId(),
                                         "name", d.getName(),
                                         "path", d.getPath(),
-                                        "id" ,d.getId(),
-                                        "type",d.getType(),
-                                        "canReplace",documentReviewRepository.existsByDocument_IdAndReport_Status(d.getId(), ReportStatus.SENT)
+                                        "type", d.getType(),
+                                        "canReplace", documentReviewRepository.existsByDocument_IdAndReport_Status(
+                                                d.getId(), ReportStatus.SENT)
                                 ))
                                 .collect(Collectors.toList()));
 
@@ -804,7 +918,7 @@ public class ProjectController {
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "error", "Internal server error",
-                            "message", e.toString(), // Utilisez toString() pour plus de détails
+                            "message", e.getMessage(),
                             "timestamp", LocalDateTime.now()
                     ));
         }
@@ -883,15 +997,8 @@ public class ProjectController {
                 projectMap.put("ethicalConsiderations", project.getEthicalConsiderations());
                 projectMap.put("dataDescription", project.getDataDescription());
 
-                Map<String, Object> investigator = new HashMap<>();
-                investigator.put("id", project.getPrincipalInvestigator().getId());
-                investigator.put("email", project.getPrincipalInvestigator().getEmail());
-// Corriger les clés pour correspondre au frontend
-                investigator.put("prenom", project.getPrincipalInvestigator().getPrenom());
-                investigator.put("nom", project.getPrincipalInvestigator().getNom());
-                investigator.put("affiliation", project.getPrincipalInvestigator().getAffiliation());
-                investigator.put("laboratoire", project.getPrincipalInvestigator().getLaboratoire());
-                projectMap.put("principalInvestigator", investigator);
+
+
                 // Documents
                 List<Map<String, Object>> documents = project.getDocuments().stream()
                         .map(doc -> {
@@ -900,6 +1007,7 @@ public class ProjectController {
                             docMap.put("id", doc.getId());
                             docMap.put("name", doc.getName());
                             docMap.put("size", doc.getSize());
+                            docMap.put("type", doc.getType());
                             if (review != null) {
                                 docMap.put("remark", review.getContent());
                                 docMap.put("finalSubmission", review.getFinal_submission());

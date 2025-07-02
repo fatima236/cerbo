@@ -1,5 +1,6 @@
 package com.example.cerbo.entity;
 
+import com.example.cerbo.dto.CoInvestigator;
 import com.example.cerbo.entity.enums.EvaluationStatus;
 import com.example.cerbo.entity.enums.ProjectStatus;
 import com.example.cerbo.entity.enums.ReportStatus;
@@ -71,6 +72,7 @@ public class Project {
     private String motivationLetterPath; // Chemin du fichier stocké
     private String avisFavorablePath;
     @Column(nullable = false)
+    @Builder.Default
     private Boolean opinionSent = false;
     private LocalDateTime opinionSentDate;
 
@@ -207,5 +209,23 @@ public class Project {
     @ManyToOne
     @JoinColumn(name = "meeting_id")
     private Meeting meeting;
+    @ElementCollection
+    @CollectionTable(name = "project_co_investigators", joinColumns = @JoinColumn(name = "project_id"))
+    private List<CoInvestigator> coInvestigators = new ArrayList<>();
+
+    @Embeddable
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CoInvestigator {
+        private String name;
+        private String surname;
+        private String email;
+        private String title;
+        private String affiliation;
+        private String address;
+    }
+
 
 }

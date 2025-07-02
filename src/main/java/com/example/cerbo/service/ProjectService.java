@@ -68,16 +68,23 @@ public class ProjectService {
         project.setPrincipalInvestigator(principal);
 
         // Co-investigateurs
-        Set<User> investigators = new HashSet<>();
-        investigators.add(principal);
-        if (submissionDTO.getInvestigatorIds() != null) {
-            submissionDTO.getInvestigatorIds().forEach(id -> {
-                User inv = userRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Investigateur non trouvé"));
-                investigators.add(inv);
-            });
+
+        if (submissionDTO.getCoInvestigators() != null && !submissionDTO.getCoInvestigators().isEmpty()) {
+            List<Project.CoInvestigator> coInvestigators = submissionDTO.getCoInvestigators().stream()
+                    .map(dto -> Project.CoInvestigator.builder()
+                            .name(dto.getName())
+                            .surname(dto.getSurname())
+                            .email(dto.getEmail())
+                            .title(dto.getTitle())
+                            .affiliation(dto.getAffiliation())
+                            .address(dto.getAddress())
+                            .build())
+                    .collect(Collectors.toList());
+            project.setCoInvestigators(coInvestigators);
         }
-        project.setInvestigators(investigators);
+
+
+
 
         // Save the project first to generate its ID
         Project savedProject = projectRepository.save(project);
