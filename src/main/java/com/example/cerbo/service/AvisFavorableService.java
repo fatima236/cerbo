@@ -59,7 +59,7 @@ public class AvisFavorableService {
             setFieldIfExists(fields, "dhFormfield-5699363529", project.getTitle());
             setFieldIfExists(fields, "dhFormfield-5699364362", project.getPrincipalInvestigator().getFullName());
 
-            setFieldIfExists(fields, "dhFormfield-5699364391", submissionDate);
+            setFieldIfExists(fields, "dhFormfield-5699364391", currentDate);
             setFieldIfExists(fields, "dhFormfield-5699364395", project.getStudyDuration());
 
             // Ajout du promoteur (admin) - vérifiez le nom exact du champ dans votre PDF
