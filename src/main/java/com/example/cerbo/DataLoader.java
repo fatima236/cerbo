@@ -27,7 +27,7 @@ public class DataLoader implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        createAdminIfNotExists("admin@example.com", "Admin123!");
+        createAdminIfNotExists("rboulouiz@gmail.com", "Cerbooujdaapp@");
     }
 
     private void createAdminIfNotExists(String email, String password) {

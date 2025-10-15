@@ -77,9 +77,4 @@ public class TrainingController {
         trainingRepository.deleteById(trainingId);
         return ResponseEntity.noContent().build();
     }
-
-
-
-
-
 }

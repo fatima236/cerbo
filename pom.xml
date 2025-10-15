@@ -222,12 +222,12 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.30</version> <!-- ou version plus récente -->
+            <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/javax.validation/validation-api -->
         <dependency>
-            <groupId>jakarta.validation</groupId>  <!-- Notez le changement de groupId -->
+            <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <version>3.0.2</version>
         </dependency>
@@ -251,7 +251,7 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.3</version> <!-- ou la version la plus récente -->
+            <version>5.2.3</version>
         </dependency>
 
         <dependency>
@@ -296,7 +296,7 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>false</filtering> <!-- Add this -->
+                <filtering>false</filtering>
             </resource>
         </resources>
         <plugins>
